@@ -1344,24 +1344,8 @@ const MessageComponent = memo(({ message, index, prevMessage, createDiff, onFile
                                       <span className="font-medium">File updated successfully</span>
                                     </div>
                                     <button
-                                      onClick={async () => {
-                                        if (!onFileOpen) return;
-
-                                        // Fetch FULL file content with diff from git
-                                        try {
-                                          const response = await authenticatedFetch(`/api/git/file-with-diff?project=${encodeURIComponent(selectedProject?.name)}&file=${encodeURIComponent(fileEditMatch[1])}`);
-                                          const data = await response.json();
-
-                                          if (!data.error && data.oldContent !== undefined && data.currentContent !== undefined) {
-                                            onFileOpen(fileEditMatch[1], {
-                                              old_string: data.oldContent || '',
-                                              new_string: data.currentContent || ''
-                                            });
-                                          } else {
-                                            onFileOpen(fileEditMatch[1]);
-                                          }
-                                        } catch (error) {
-                                          console.error('Error fetching file diff:', error);
+                                      onClick={() => {
+                                        if (onFileOpen) {
                                           onFileOpen(fileEditMatch[1]);
                                         }
                                       }}
@@ -1382,24 +1366,8 @@ const MessageComponent = memo(({ message, index, prevMessage, createDiff, onFile
                                       <span className="font-medium">File created successfully</span>
                                     </div>
                                     <button
-                                      onClick={async () => {
-                                        if (!onFileOpen) return;
-
-                                        // Fetch FULL file content with diff from git
-                                        try {
-                                          const response = await authenticatedFetch(`/api/git/file-with-diff?project=${encodeURIComponent(selectedProject?.name)}&file=${encodeURIComponent(fileCreateMatch[1])}`);
-                                          const data = await response.json();
-
-                                          if (!data.error && data.oldContent !== undefined && data.currentContent !== undefined) {
-                                            onFileOpen(fileCreateMatch[1], {
-                                              old_string: data.oldContent || '',
-                                              new_string: data.currentContent || ''
-                                            });
-                                          } else {
-                                            onFileOpen(fileCreateMatch[1]);
-                                          }
-                                        } catch (error) {
-                                          console.error('Error fetching file diff:', error);
+                                      onClick={() => {
+                                        if (onFileOpen) {
                                           onFileOpen(fileCreateMatch[1]);
                                         }
                                       }}

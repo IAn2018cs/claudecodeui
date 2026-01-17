@@ -7,9 +7,7 @@ import { css } from '@codemirror/lang-css';
 import { json } from '@codemirror/lang-json';
 import { markdown } from '@codemirror/lang-markdown';
 import { oneDark } from '@codemirror/theme-one-dark';
-import { EditorView, showPanel, ViewPlugin } from '@codemirror/view';
-import { unifiedMergeView, getChunks } from '@codemirror/merge';
-import { showMinimap } from '@replit/codemirror-minimap';
+import { EditorView, showPanel } from '@codemirror/view';
 import { X, Save, Download, Maximize2, Minimize2 } from 'lucide-react';
 import { api } from '../utils/api';
 
@@ -23,12 +21,8 @@ function CodeEditor({ file, onClose, projectPath, isSidebar = false, isExpanded 
     return savedTheme ? savedTheme === 'dark' : true;
   });
   const [saveSuccess, setSaveSuccess] = useState(false);
-  const [showDiff, setShowDiff] = useState(!!file.diffInfo);
   const [wordWrap, setWordWrap] = useState(() => {
     return localStorage.getItem('codeEditorWordWrap') === 'true';
-  });
-  const [minimapEnabled, setMinimapEnabled] = useState(() => {
-    return localStorage.getItem('codeEditorShowMinimap') !== 'false';
   });
   const [showLineNumbers, setShowLineNumbers] = useState(() => {
     return localStorage.getItem('codeEditorLineNumbers') !== 'false';
@@ -38,124 +32,18 @@ function CodeEditor({ file, onClose, projectPath, isSidebar = false, isExpanded 
   });
   const editorRef = useRef(null);
 
-  // Create minimap extension with chunk-based gutters
-  const minimapExtension = useMemo(() => {
-    if (!file.diffInfo || !showDiff || !minimapEnabled) return [];
-
-    const gutters = {};
-
-    return [
-      showMinimap.compute(['doc'], (state) => {
-        // Get actual chunks from merge view
-        const chunksData = getChunks(state);
-        const chunks = chunksData?.chunks || [];
-
-        // Clear previous gutters
-        Object.keys(gutters).forEach(key => delete gutters[key]);
-
-        // Mark lines that are part of chunks
-        chunks.forEach(chunk => {
-          // Mark the lines in the B side (current document)
-          const fromLine = state.doc.lineAt(chunk.fromB).number;
-          const toLine = state.doc.lineAt(Math.min(chunk.toB, state.doc.length)).number;
-
-          for (let lineNum = fromLine; lineNum <= toLine; lineNum++) {
-            gutters[lineNum] = isDarkMode ? 'rgba(34, 197, 94, 0.8)' : 'rgba(34, 197, 94, 1)';
-          }
-        });
-
-        return {
-          create: () => ({ dom: document.createElement('div') }),
-          displayText: 'blocks',
-          showOverlay: 'always',
-          gutters: [gutters]
-        };
-      })
-    ];
-  }, [file.diffInfo, showDiff, minimapEnabled, isDarkMode]);
-
-  // Create extension to scroll to first chunk on mount
-  const scrollToFirstChunkExtension = useMemo(() => {
-    if (!file.diffInfo || !showDiff) return [];
-
-    return [
-      ViewPlugin.fromClass(class {
-        constructor(view) {
-          // Delay to ensure merge view is fully initialized
-          setTimeout(() => {
-            const chunksData = getChunks(view.state);
-            const chunks = chunksData?.chunks || [];
-
-            if (chunks.length > 0) {
-              const firstChunk = chunks[0];
-
-              // Scroll to the first chunk
-              view.dispatch({
-                effects: EditorView.scrollIntoView(firstChunk.fromB, { y: 'center' })
-              });
-            }
-          }, 100);
-        }
-
-        update() {}
-        destroy() {}
-      })
-    ];
-  }, [file.diffInfo, showDiff]);
-
   // Create editor toolbar panel - always visible
   const editorToolbarPanel = useMemo(() => {
-    const createPanel = (view) => {
+    const createPanel = () => {
       const dom = document.createElement('div');
       dom.className = 'cm-editor-toolbar-panel';
 
-      let currentIndex = 0;
-
       const updatePanel = () => {
-        // Check if we have diff info and it's enabled
-        const hasDiff = file.diffInfo && showDiff;
-        const chunksData = hasDiff ? getChunks(view.state) : null;
-        const chunks = chunksData?.chunks || [];
-        const chunkCount = chunks.length;
-
         // Build the toolbar HTML
-        let toolbarHTML = '<div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">';
-
-        // Left side - diff navigation (if applicable)
-        toolbarHTML += '<div style="display: flex; align-items: center; gap: 8px;">';
-        if (hasDiff) {
-          toolbarHTML += `
-            <span style="font-weight: 500;">${chunkCount > 0 ? `${currentIndex + 1}/${chunkCount}` : '0'} changes</span>
-            <button class="cm-diff-nav-btn cm-diff-nav-prev" title="Previous change" ${chunkCount === 0 ? 'disabled' : ''}>
-              <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7" />
-              </svg>
-            </button>
-            <button class="cm-diff-nav-btn cm-diff-nav-next" title="Next change" ${chunkCount === 0 ? 'disabled' : ''}>
-              <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-              </svg>
-            </button>
-          `;
-        }
-        toolbarHTML += '</div>';
+        let toolbarHTML = '<div style="display: flex; align-items: center; justify-content: flex-end; width: 100%;">';
 
         // Right side - action buttons
         toolbarHTML += '<div style="display: flex; align-items: center; gap: 4px;">';
-
-        // Show/hide diff button (only if there's diff info)
-        if (file.diffInfo) {
-          toolbarHTML += `
-            <button class="cm-toolbar-btn cm-toggle-diff-btn" title="${showDiff ? 'Hide diff highlighting' : 'Show diff highlighting'}">
-              <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                ${showDiff ?
-                  '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />' :
-                  '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />'
-                }
-              </svg>
-            </button>
-          `;
-        }
 
         // Settings button
         toolbarHTML += `
@@ -185,46 +73,6 @@ function CodeEditor({ file, onClose, projectPath, isSidebar = false, isExpanded 
 
         dom.innerHTML = toolbarHTML;
 
-        // Attach event listeners for diff navigation
-        if (hasDiff) {
-          const prevBtn = dom.querySelector('.cm-diff-nav-prev');
-          const nextBtn = dom.querySelector('.cm-diff-nav-next');
-
-          prevBtn?.addEventListener('click', () => {
-            if (chunks.length === 0) return;
-            currentIndex = currentIndex > 0 ? currentIndex - 1 : chunks.length - 1;
-
-            const chunk = chunks[currentIndex];
-            if (chunk) {
-              view.dispatch({
-                effects: EditorView.scrollIntoView(chunk.fromB, { y: 'center' })
-              });
-            }
-            updatePanel();
-          });
-
-          nextBtn?.addEventListener('click', () => {
-            if (chunks.length === 0) return;
-            currentIndex = currentIndex < chunks.length - 1 ? currentIndex + 1 : 0;
-
-            const chunk = chunks[currentIndex];
-            if (chunk) {
-              view.dispatch({
-                effects: EditorView.scrollIntoView(chunk.fromB, { y: 'center' })
-              });
-            }
-            updatePanel();
-          });
-        }
-
-        // Attach event listener for toggle diff button
-        if (file.diffInfo) {
-          const toggleDiffBtn = dom.querySelector('.cm-toggle-diff-btn');
-          toggleDiffBtn?.addEventListener('click', () => {
-            setShowDiff(!showDiff);
-          });
-        }
-
         // Attach event listener for settings button
         const settingsBtn = dom.querySelector('.cm-settings-btn');
         settingsBtn?.addEventListener('click', () => {
@@ -252,7 +100,7 @@ function CodeEditor({ file, onClose, projectPath, isSidebar = false, isExpanded 
     };
 
     return [showPanel.of(createPanel)];
-  }, [file.diffInfo, showDiff, isSidebar, isExpanded, onToggleExpand]);
+  }, [isSidebar, isExpanded, onToggleExpand]);
 
   // Get language extension based on file extension
   const getLanguageExtension = (filename) => {
@@ -288,17 +136,7 @@ function CodeEditor({ file, onClose, projectPath, isSidebar = false, isExpanded 
       try {
         setLoading(true);
 
-        // If we have diffInfo with both old and new content, we can show the diff directly
-        // This handles both GitPanel (full content) and ChatInterface (full content from API)
-        if (file.diffInfo && file.diffInfo.new_string !== undefined && file.diffInfo.old_string !== undefined) {
-          // Use the new_string as the content to display
-          // The unifiedMergeView will compare it against old_string
-          setContent(file.diffInfo.new_string);
-          setLoading(false);
-          return;
-        }
-
-        // Otherwise, load from disk
+        // Load file from disk
         const response = await api.readFile(file.projectName, file.path);
 
         if (!response.ok) {
@@ -400,11 +238,6 @@ function CodeEditor({ file, onClose, projectPath, isSidebar = false, isExpanded 
         setWordWrap(newWordWrap === 'true');
       }
 
-      const newShowMinimap = localStorage.getItem('codeEditorShowMinimap');
-      if (newShowMinimap !== null) {
-        setMinimapEnabled(newShowMinimap !== 'false');
-      }
-
       const newShowLineNumbers = localStorage.getItem('codeEditorLineNumbers');
       if (newShowLineNumbers !== null) {
         setShowLineNumbers(newShowLineNumbers !== 'false');
@@ -484,41 +317,6 @@ function CodeEditor({ file, onClose, projectPath, isSidebar = false, isExpanded 
     <>
       <style>
         {`
-          /* Light background for full line changes */
-          .cm-deletedChunk {
-            background-color: ${isDarkMode ? 'rgba(239, 68, 68, 0.15)' : 'rgba(255, 235, 235, 1)'} !important;
-            border-left: 3px solid ${isDarkMode ? 'rgba(239, 68, 68, 0.6)' : 'rgb(239, 68, 68)'} !important;
-            padding-left: 4px !important;
-          }
-
-          .cm-insertedChunk {
-            background-color: ${isDarkMode ? 'rgba(34, 197, 94, 0.15)' : 'rgba(230, 255, 237, 1)'} !important;
-            border-left: 3px solid ${isDarkMode ? 'rgba(34, 197, 94, 0.6)' : 'rgb(34, 197, 94)'} !important;
-            padding-left: 4px !important;
-          }
-
-          /* Override linear-gradient underline and use solid darker background for partial changes */
-          .cm-editor.cm-merge-b .cm-changedText {
-            background: ${isDarkMode ? 'rgba(34, 197, 94, 0.4)' : 'rgba(34, 197, 94, 0.3)'} !important;
-            padding-top: 2px !important;
-            padding-bottom: 2px !important;
-            margin-top: -2px !important;
-            margin-bottom: -2px !important;
-          }
-
-          .cm-editor .cm-deletedChunk .cm-changedText {
-            background: ${isDarkMode ? 'rgba(239, 68, 68, 0.4)' : 'rgba(239, 68, 68, 0.3)'} !important;
-            padding-top: 2px !important;
-            padding-bottom: 2px !important;
-            margin-top: -2px !important;
-            margin-bottom: -2px !important;
-          }
-
-          /* Minimap gutter styling */
-          .cm-gutter.cm-gutter-minimap {
-            background-color: ${isDarkMode ? '#1e1e1e' : '#f5f5f5'};
-          }
-
           /* Editor toolbar panel styling */
           .cm-editor-toolbar-panel {
             padding: 8px 12px;
@@ -528,7 +326,6 @@ function CodeEditor({ file, onClose, projectPath, isSidebar = false, isExpanded 
             font-size: 14px;
           }
 
-          .cm-diff-nav-btn,
           .cm-toolbar-btn {
             padding: 4px;
             background: transparent;
@@ -542,14 +339,8 @@ function CodeEditor({ file, onClose, projectPath, isSidebar = false, isExpanded 
             transition: background-color 0.2s;
           }
 
-          .cm-diff-nav-btn:hover,
           .cm-toolbar-btn:hover {
             background-color: ${isDarkMode ? '#374151' : '#f3f4f6'};
-          }
-
-          .cm-diff-nav-btn:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
           }
         `}
       </style>
@@ -572,11 +363,6 @@ function CodeEditor({ file, onClose, projectPath, isSidebar = false, isExpanded 
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2 min-w-0">
                 <h3 className="font-medium text-gray-900 dark:text-white truncate">{file.name}</h3>
-                {file.diffInfo && (
-                  <span className="text-xs bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-300 px-2 py-1 rounded whitespace-nowrap">
-                    Showing changes
-                  </span>
-                )}
               </div>
               <p className="text-sm text-gray-500 dark:text-gray-400 truncate">{file.path}</p>
             </div>
@@ -645,21 +431,6 @@ function CodeEditor({ file, onClose, projectPath, isSidebar = false, isExpanded 
               ...getLanguageExtension(file.name),
               // Always show the toolbar
               ...editorToolbarPanel,
-              // Only show diff-related extensions when diff is enabled
-              ...(file.diffInfo && showDiff && file.diffInfo.old_string !== undefined
-                ? [
-                    unifiedMergeView({
-                      original: file.diffInfo.old_string,
-                      mergeControls: false,
-                      highlightChanges: true,
-                      syntaxHighlightDeletions: false,
-                      gutter: true
-                      // NOTE: NO collapseUnchanged - this shows the full file!
-                    }),
-                    ...minimapExtension,
-                    ...scrollToFirstChunkExtension
-                  ]
-                : []),
               ...(wordWrap ? [EditorView.lineWrapping] : [])
             ]}
             theme={isDarkMode ? oneDark : undefined}

@@ -16,7 +16,6 @@ import ChatInterface from './ChatInterface';
 import FileTree from './FileTree';
 import CodeEditor from './CodeEditor';
 import StandaloneShell from './StandaloneShell';
-import GitPanel from './GitPanel';
 import ErrorBoundary from './ErrorBoundary';
 import ClaudeLogo from './ClaudeLogo';
 import Tooltip from './Tooltip';
@@ -251,9 +250,7 @@ function MainContent({
                 ) : (
                   <div className="min-w-0">
                     <h2 className="text-sm sm:text-base font-semibold text-gray-900 dark:text-white">
-                      {activeTab === 'files' ? 'Project Files' :
-                        activeTab === 'git' ? 'Source Control' :
-                          'Project'}
+                      {activeTab === 'files' ? 'Project Files' : 'Project'}
                     </h2>
                     <div className="text-xs text-gray-500 dark:text-gray-400 truncate">
                       {selectedProject.displayName}
@@ -312,22 +309,6 @@ function MainContent({
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-5l-2-2H5a2 2 0 00-2 2z" />
                     </svg>
                     <span className="hidden md:hidden lg:inline">Files</span>
-                  </span>
-                </button>
-              </Tooltip>
-              <Tooltip content="Source Control" position="bottom">
-                <button
-                  onClick={() => setActiveTab('git')}
-                  className={`relative px-2 sm:px-3 py-1.5 text-xs sm:text-sm font-medium rounded-md transition-all duration-200 ${activeTab === 'git'
-                      ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
-                      : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-200 dark:hover:bg-gray-700'
-                    }`}
-                >
-                  <span className="flex items-center gap-1 sm:gap-1.5">
-                    <svg className="w-3 sm:w-3.5 h-3 sm:h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                    </svg>
-                    <span className="hidden md:hidden lg:inline">Source Control</span>
                   </span>
                 </button>
               </Tooltip>
@@ -394,11 +375,6 @@ function MainContent({
                 session={selectedSession}
                 showHeader={false}
               />
-            </div>
-          )}
-          {activeTab === 'git' && (
-            <div className="h-full overflow-hidden">
-              <GitPanel selectedProject={selectedProject} isMobile={isMobile} onFileOpen={handleFileOpen} />
             </div>
           )}
           <div className={`h-full overflow-hidden ${activeTab === 'preview' ? 'block' : 'hidden'}`}>

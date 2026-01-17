@@ -59,7 +59,6 @@ import mime from 'mime-types';
 
 import { getProjects, getSessions, getSessionMessages, renameProject, deleteSession, deleteProject, addProjectManually, extractProjectDirectory, clearProjectDirectoryCache } from './projects.js';
 import { queryClaudeSDK, abortClaudeSDKSession, isClaudeSDKSessionActive, getActiveClaudeSDKSessions, resolveToolApproval } from './claude-sdk.js';
-import gitRoutes from './routes/git.js';
 import authRoutes from './routes/auth.js';
 import mcpRoutes from './routes/mcp.js';
 import mcpUtilsRoutes from './routes/mcp-utils.js';
@@ -234,9 +233,6 @@ app.use('/api/auth', authRoutes);
 
 // Projects API Routes (protected)
 app.use('/api/projects', authenticateToken, projectsRoutes);
-
-// Git API Routes (protected)
-app.use('/api/git', authenticateToken, gitRoutes);
 
 // MCP API Routes (protected)
 app.use('/api/mcp', authenticateToken, mcpRoutes);
