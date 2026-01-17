@@ -45,25 +45,16 @@ export const api = {
   // Protected endpoints
   // config endpoint removed - no longer needed (frontend uses window.location)
   projects: () => authenticatedFetch('/api/projects'),
-  sessions: (projectName, limit = 5, offset = 0) => 
+  sessions: (projectName, limit = 5, offset = 0) =>
     authenticatedFetch(`/api/projects/${projectName}/sessions?limit=${limit}&offset=${offset}`),
-  sessionMessages: (projectName, sessionId, limit = null, offset = 0, provider = 'claude') => {
+  sessionMessages: (projectName, sessionId, limit = null, offset = 0) => {
     const params = new URLSearchParams();
     if (limit !== null) {
       params.append('limit', limit);
       params.append('offset', offset);
     }
     const queryString = params.toString();
-
-    // Route to the correct endpoint based on provider
-    let url;
-    if (provider === 'codex') {
-      url = `/api/codex/sessions/${sessionId}/messages${queryString ? `?${queryString}` : ''}`;
-    } else if (provider === 'cursor') {
-      url = `/api/cursor/sessions/${sessionId}/messages${queryString ? `?${queryString}` : ''}`;
-    } else {
-      url = `/api/projects/${projectName}/sessions/${sessionId}/messages${queryString ? `?${queryString}` : ''}`;
-    }
+    const url = `/api/projects/${projectName}/sessions/${sessionId}/messages${queryString ? `?${queryString}` : ''}`;
     return authenticatedFetch(url);
   },
   renameProject: (projectName, displayName) =>
@@ -73,10 +64,6 @@ export const api = {
     }),
   deleteSession: (projectName, sessionId) =>
     authenticatedFetch(`/api/projects/${projectName}/sessions/${sessionId}`, {
-      method: 'DELETE',
-    }),
-  deleteCodexSession: (sessionId) =>
-    authenticatedFetch(`/api/codex/sessions/${sessionId}`, {
       method: 'DELETE',
     }),
   deleteProject: (projectName) =>
@@ -109,68 +96,12 @@ export const api = {
       headers: {}, // Let browser set Content-Type for FormData
     }),
 
-  // TaskMaster endpoints
-  taskmaster: {
-    // Initialize TaskMaster in a project
-    init: (projectName) => 
-      authenticatedFetch(`/api/taskmaster/init/${projectName}`, {
-        method: 'POST',
-      }),
-    
-    // Add a new task
-    addTask: (projectName, { prompt, title, description, priority, dependencies }) =>
-      authenticatedFetch(`/api/taskmaster/add-task/${projectName}`, {
-        method: 'POST',
-        body: JSON.stringify({ prompt, title, description, priority, dependencies }),
-      }),
-    
-    // Parse PRD to generate tasks
-    parsePRD: (projectName, { fileName, numTasks, append }) =>
-      authenticatedFetch(`/api/taskmaster/parse-prd/${projectName}`, {
-        method: 'POST',
-        body: JSON.stringify({ fileName, numTasks, append }),
-      }),
-
-    // Get available PRD templates
-    getTemplates: () =>
-      authenticatedFetch('/api/taskmaster/prd-templates'),
-
-    // Apply a PRD template
-    applyTemplate: (projectName, { templateId, fileName, customizations }) =>
-      authenticatedFetch(`/api/taskmaster/apply-template/${projectName}`, {
-        method: 'POST',
-        body: JSON.stringify({ templateId, fileName, customizations }),
-      }),
-
-    // Update a task
-    updateTask: (projectName, taskId, updates) =>
-      authenticatedFetch(`/api/taskmaster/update-task/${projectName}/${taskId}`, {
-        method: 'PUT',
-        body: JSON.stringify(updates),
-      }),
-  },
-  
   // Browse filesystem for project suggestions
   browseFilesystem: (dirPath = null) => {
     const params = new URLSearchParams();
     if (dirPath) params.append('path', dirPath);
 
     return authenticatedFetch(`/api/browse-filesystem?${params}`);
-  },
-
-  // User endpoints
-  user: {
-    gitConfig: () => authenticatedFetch('/api/user/git-config'),
-    updateGitConfig: (gitName, gitEmail) =>
-      authenticatedFetch('/api/user/git-config', {
-        method: 'POST',
-        body: JSON.stringify({ gitName, gitEmail }),
-      }),
-    onboardingStatus: () => authenticatedFetch('/api/user/onboarding-status'),
-    completeOnboarding: () =>
-      authenticatedFetch('/api/user/complete-onboarding', {
-        method: 'POST',
-      }),
   },
 
   // Generic GET method for any endpoint

@@ -1,22 +1,10 @@
 import ClaudeLogo from '../ClaudeLogo';
-import CursorLogo from '../CursorLogo';
-import CodexLogo from '../CodexLogo';
 
 const agentConfig = {
   claude: {
     name: 'Claude',
     color: 'blue',
     Logo: ClaudeLogo,
-  },
-  cursor: {
-    name: 'Cursor',
-    color: 'purple',
-    Logo: CursorLogo,
-  },
-  codex: {
-    name: 'Codex',
-    color: 'gray',
-    Logo: CodexLogo,
   },
 };
 
@@ -27,22 +15,10 @@ const colorClasses = {
     bg: 'bg-blue-50 dark:bg-blue-900/20',
     dot: 'bg-blue-500',
   },
-  purple: {
-    border: 'border-l-purple-500 md:border-l-purple-500',
-    borderBottom: 'border-b-purple-500',
-    bg: 'bg-purple-50 dark:bg-purple-900/20',
-    dot: 'bg-purple-500',
-  },
-  gray: {
-    border: 'border-l-gray-700 dark:border-l-gray-300',
-    borderBottom: 'border-b-gray-700 dark:border-b-gray-300',
-    bg: 'bg-gray-100 dark:bg-gray-800/50',
-    dot: 'bg-gray-700 dark:bg-gray-300',
-  },
 };
 
 export default function AgentListItem({ agentId, authStatus, isSelected, onClick, isMobile = false }) {
-  const config = agentConfig[agentId];
+  const config = agentConfig[agentId] || agentConfig.claude;
   const colors = colorClasses[config.color];
   const { Logo } = config;
 
@@ -51,11 +27,10 @@ export default function AgentListItem({ agentId, authStatus, isSelected, onClick
     return (
       <button
         onClick={onClick}
-        className={`flex-1 text-center py-3 px-2 border-b-2 transition-colors ${
-          isSelected
+        className={`flex-1 text-center py-3 px-2 border-b-2 transition-colors ${isSelected
             ? `${colors.borderBottom} ${colors.bg}`
             : 'border-transparent hover:bg-gray-50 dark:hover:bg-gray-800'
-        }`}
+          }`}
       >
         <div className="flex flex-col items-center gap-1">
           <Logo className="w-5 h-5" />
@@ -72,11 +47,10 @@ export default function AgentListItem({ agentId, authStatus, isSelected, onClick
   return (
     <button
       onClick={onClick}
-      className={`w-full text-left p-3 border-l-4 transition-colors ${
-        isSelected
+      className={`w-full text-left p-3 border-l-4 transition-colors ${isSelected
           ? `${colors.border} ${colors.bg}`
           : 'border-transparent hover:bg-gray-50 dark:hover:bg-gray-800'
-      }`}
+        }`}
     >
       <div className="flex items-center gap-2 mb-1">
         <Logo className="w-4 h-4" />

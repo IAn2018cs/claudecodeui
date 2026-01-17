@@ -37,9 +37,16 @@ export default defineConfig(({ command, mode }) => {
               '@codemirror/lang-json',
               '@codemirror/lang-markdown',
               '@codemirror/lang-python',
-              '@codemirror/theme-one-dark'
+              '@codemirror/theme-one-dark',
+              '@codemirror/merge',
+              '@replit/codemirror-minimap'
             ],
-            'vendor-xterm': ['@xterm/xterm', '@xterm/addon-fit', '@xterm/addon-clipboard', '@xterm/addon-webgl']
+            'vendor-xterm': ['@xterm/xterm', '@xterm/addon-fit', '@xterm/addon-clipboard', '@xterm/addon-webgl', '@xterm/addon-web-links'],
+            'vendor-markdown': ['react-markdown', 'remark-gfm', 'remark-math', 'rehype-katex'],
+            'vendor-syntax': ['react-syntax-highlighter'],
+            'vendor-icons': ['lucide-react'],
+            'vendor-katex': ['katex'],
+            'vendor-utils': ['fuse.js', 'clsx', 'tailwind-merge', 'class-variance-authority']
           }
         }
       }

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, FolderPlus, GitBranch, Key, ChevronRight, ChevronLeft, Check, Loader2, AlertCircle } from 'lucide-react';
+import { X, FolderPlus, GitBranch, ChevronRight, ChevronLeft, Check, Loader2, AlertCircle } from 'lucide-react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { api } from '../utils/api';
@@ -12,24 +12,12 @@ const ProjectCreationWizard = ({ onClose, onProjectCreated }) => {
   // Form state
   const [workspacePath, setWorkspacePath] = useState('');
   const [githubUrl, setGithubUrl] = useState('');
-  const [selectedGithubToken, setSelectedGithubToken] = useState('');
-  const [tokenMode, setTokenMode] = useState('stored'); // 'stored' | 'new' | 'none'
-  const [newGithubToken, setNewGithubToken] = useState('');
 
   // UI state
   const [isCreating, setIsCreating] = useState(false);
   const [error, setError] = useState(null);
-  const [availableTokens, setAvailableTokens] = useState([]);
-  const [loadingTokens, setLoadingTokens] = useState(false);
   const [pathSuggestions, setPathSuggestions] = useState([]);
   const [showPathDropdown, setShowPathDropdown] = useState(false);
-
-  // Load available GitHub tokens when needed
-  useEffect(() => {
-    if (step === 2 && workspaceType === 'new' && githubUrl) {
-      loadGithubTokens();
-    }
-  }, [step, workspaceType, githubUrl]);
 
   // Load path suggestions
   useEffect(() => {
@@ -40,26 +28,6 @@ const ProjectCreationWizard = ({ onClose, onProjectCreated }) => {
       setShowPathDropdown(false);
     }
   }, [workspacePath]);
-
-  const loadGithubTokens = async () => {
-    try {
-      setLoadingTokens(true);
-      const response = await api.get('/settings/credentials?type=github_token');
-      const data = await response.json();
-
-      const activeTokens = (data.credentials || []).filter(t => t.is_active);
-      setAvailableTokens(activeTokens);
-
-      // Auto-select first token if available
-      if (activeTokens.length > 0 && !selectedGithubToken) {
-        setSelectedGithubToken(activeTokens[0].id.toString());
-      }
-    } catch (error) {
-      console.error('Error loading GitHub tokens:', error);
-    } finally {
-      setLoadingTokens(false);
-    }
-  };
 
   const loadPathSuggestions = async (inputPath) => {
     try {
@@ -121,12 +89,6 @@ const ProjectCreationWizard = ({ onClose, onProjectCreated }) => {
       // Add GitHub info if creating new workspace with GitHub URL
       if (workspaceType === 'new' && githubUrl) {
         payload.githubUrl = githubUrl.trim();
-
-        if (tokenMode === 'stored' && selectedGithubToken) {
-          payload.githubTokenId = parseInt(selectedGithubToken);
-        } else if (tokenMode === 'new' && newGithubToken) {
-          payload.newGithubToken = newGithubToken.trim();
-        }
       }
 
       const response = await api.createWorkspace(payload);
@@ -335,133 +297,9 @@ const ProjectCreationWizard = ({ onClose, onProjectCreated }) => {
                       className="w-full"
                     />
                     <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                      Leave empty to create an empty workspace, or provide a GitHub URL to clone
+                      Leave empty to create an empty workspace, or provide a public GitHub URL to clone
                     </p>
                   </div>
-
-                  {/* GitHub Token (only if GitHub URL is provided) */}
-                  {githubUrl && (
-                    <div className="bg-gray-50 dark:bg-gray-900/50 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
-                      <div className="flex items-start gap-3 mb-4">
-                        <Key className="w-5 h-5 text-gray-600 dark:text-gray-400 flex-shrink-0 mt-0.5" />
-                        <div className="flex-1">
-                          <h5 className="font-medium text-gray-900 dark:text-white mb-1">
-                            GitHub Authentication (Optional)
-                          </h5>
-                          <p className="text-sm text-gray-600 dark:text-gray-400">
-                            Only required for private repositories. Public repos can be cloned without authentication.
-                          </p>
-                        </div>
-                      </div>
-
-                      {loadingTokens ? (
-                        <div className="flex items-center gap-2 text-sm text-gray-500">
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                          Loading stored tokens...
-                        </div>
-                      ) : availableTokens.length > 0 ? (
-                        <>
-                          {/* Token Selection Tabs */}
-                          <div className="grid grid-cols-3 gap-2 mb-4">
-                            <button
-                              onClick={() => setTokenMode('stored')}
-                              className={`px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
-                                tokenMode === 'stored'
-                                  ? 'bg-blue-500 text-white'
-                                  : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
-                              }`}
-                            >
-                              Stored Token
-                            </button>
-                            <button
-                              onClick={() => setTokenMode('new')}
-                              className={`px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
-                                tokenMode === 'new'
-                                  ? 'bg-blue-500 text-white'
-                                  : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
-                              }`}
-                            >
-                              New Token
-                            </button>
-                            <button
-                              onClick={() => {
-                                setTokenMode('none');
-                                setSelectedGithubToken('');
-                                setNewGithubToken('');
-                              }}
-                              className={`px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
-                                tokenMode === 'none'
-                                  ? 'bg-green-500 text-white'
-                                  : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
-                              }`}
-                            >
-                              None (Public)
-                            </button>
-                          </div>
-
-                          {tokenMode === 'stored' ? (
-                            <div>
-                              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                Select Token
-                              </label>
-                              <select
-                                value={selectedGithubToken}
-                                onChange={(e) => setSelectedGithubToken(e.target.value)}
-                                className="w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-sm"
-                              >
-                                <option value="">-- Select a token --</option>
-                                {availableTokens.map((token) => (
-                                  <option key={token.id} value={token.id}>
-                                    {token.credential_name}
-                                  </option>
-                                ))}
-                              </select>
-                            </div>
-                          ) : tokenMode === 'new' ? (
-                            <div>
-                              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                GitHub Token
-                              </label>
-                              <Input
-                                type="password"
-                                value={newGithubToken}
-                                onChange={(e) => setNewGithubToken(e.target.value)}
-                                placeholder="ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-                                className="w-full"
-                              />
-                              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                                This token will be used only for this operation
-                              </p>
-                            </div>
-                          ) : null}
-                        </>
-                      ) : (
-                        <div className="space-y-4">
-                          <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-3 border border-blue-200 dark:border-blue-800">
-                            <p className="text-sm text-blue-800 dark:text-blue-200">
-                              💡 <strong>Public repositories</strong> don't require authentication. You can skip providing a token if cloning a public repo.
-                            </p>
-                          </div>
-
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                              GitHub Token (Optional for Public Repos)
-                            </label>
-                            <Input
-                              type="password"
-                              value={newGithubToken}
-                              onChange={(e) => setNewGithubToken(e.target.value)}
-                              placeholder="ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx (leave empty for public repos)"
-                              className="w-full"
-                            />
-                            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                              No stored tokens available. You can add tokens in Settings → API Keys for easier reuse.
-                            </p>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  )}
                 </>
               )}
             </div>
@@ -488,24 +326,12 @@ const ProjectCreationWizard = ({ onClose, onProjectCreated }) => {
                     </span>
                   </div>
                   {workspaceType === 'new' && githubUrl && (
-                    <>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-gray-600 dark:text-gray-400">Clone From:</span>
-                        <span className="font-mono text-xs text-gray-900 dark:text-white break-all">
-                          {githubUrl}
-                        </span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-gray-600 dark:text-gray-400">Authentication:</span>
-                        <span className="text-xs text-gray-900 dark:text-white">
-                          {tokenMode === 'stored' && selectedGithubToken
-                            ? `Using stored token: ${availableTokens.find(t => t.id.toString() === selectedGithubToken)?.credential_name || 'Unknown'}`
-                            : tokenMode === 'new' && newGithubToken
-                            ? 'Using provided token'
-                            : 'No authentication'}
-                        </span>
-                      </div>
-                    </>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600 dark:text-gray-400">Clone From:</span>
+                      <span className="font-mono text-xs text-gray-900 dark:text-white break-all">
+                        {githubUrl}
+                      </span>
+                    </div>
                   )}
                 </div>
               </div>

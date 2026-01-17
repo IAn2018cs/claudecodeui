@@ -2,14 +2,9 @@ import { useState, useEffect } from 'react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Badge } from './ui/badge';
-import { X, Plus, Settings as SettingsIcon, Shield, AlertTriangle, Moon, Sun, Server, Edit3, Trash2, Globe, Terminal, Zap, FolderOpen, LogIn, Key, GitBranch, Check } from 'lucide-react';
+import { X, Plus, Settings as SettingsIcon, Shield, AlertTriangle, Moon, Sun, Server, Edit3, Trash2, Globe, Terminal, Zap, FolderOpen, LogIn, Check } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 import ClaudeLogo from './ClaudeLogo';
-import CursorLogo from './CursorLogo';
-import CodexLogo from './CodexLogo';
-import CredentialsSettings from './CredentialsSettings';
-import GitSettings from './GitSettings';
-import TasksSettings from './TasksSettings';
 import LoginModal from './LoginModal';
 import { authenticatedFetch } from '../utils/api';
 
@@ -55,7 +50,7 @@ function Settings({ isOpen, onClose, projects = [], initialTab = 'agents' }) {
   const [mcpToolsLoading, setMcpToolsLoading] = useState({});
   const [activeTab, setActiveTab] = useState(initialTab);
   const [jsonValidationError, setJsonValidationError] = useState('');
-  const [selectedAgent, setSelectedAgent] = useState('claude'); // 'claude', 'cursor', or 'codex'
+  const [selectedAgent, setSelectedAgent] = useState('claude'); // Only Claude is supported
   const [selectedCategory, setSelectedCategory] = useState('account'); // 'account', 'permissions', or 'mcp'
 
   // Code Editor settings
@@ -74,48 +69,12 @@ function Settings({ isOpen, onClose, projects = [], initialTab = 'agents' }) {
   const [codeEditorFontSize, setCodeEditorFontSize] = useState(() =>
     localStorage.getItem('codeEditorFontSize') || '14'
   );
-  
-  // Cursor-specific states
-  const [cursorAllowedCommands, setCursorAllowedCommands] = useState([]);
-  const [cursorDisallowedCommands, setCursorDisallowedCommands] = useState([]);
-  const [cursorSkipPermissions, setCursorSkipPermissions] = useState(false);
-  const [newCursorCommand, setNewCursorCommand] = useState('');
-  const [newCursorDisallowedCommand, setNewCursorDisallowedCommand] = useState('');
-  const [cursorMcpServers, setCursorMcpServers] = useState([]);
-
-  // Codex-specific states
-  const [codexMcpServers, setCodexMcpServers] = useState([]);
-  const [codexPermissionMode, setCodexPermissionMode] = useState('default');
-  const [showCodexMcpForm, setShowCodexMcpForm] = useState(false);
-  const [codexMcpFormData, setCodexMcpFormData] = useState({
-    name: '',
-    type: 'stdio',
-    config: {
-      command: '',
-      args: [],
-      env: {}
-    }
-  });
-  const [editingCodexMcpServer, setEditingCodexMcpServer] = useState(null);
-  const [codexMcpLoading, setCodexMcpLoading] = useState(false);
 
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [loginProvider, setLoginProvider] = useState('');
   const [selectedProject, setSelectedProject] = useState(null);
 
   const [claudeAuthStatus, setClaudeAuthStatus] = useState({
-    authenticated: false,
-    email: null,
-    loading: true,
-    error: null
-  });
-  const [cursorAuthStatus, setCursorAuthStatus] = useState({
-    authenticated: false,
-    email: null,
-    loading: true,
-    error: null
-  });
-  const [codexAuthStatus, setCodexAuthStatus] = useState({
     authenticated: false,
     email: null,
     loading: true,
@@ -139,74 +98,6 @@ function Settings({ isOpen, onClose, projects = [], initialTab = 'agents' }) {
     'WebFetch',
     'WebSearch'
   ];
-  
-  // Common shell commands for Cursor
-  const commonCursorCommands = [
-    'Shell(ls)',
-    'Shell(mkdir)',
-    'Shell(cd)',
-    'Shell(cat)',
-    'Shell(echo)',
-    'Shell(git status)',
-    'Shell(git diff)',
-    'Shell(git log)',
-    'Shell(npm install)',
-    'Shell(npm run)',
-    'Shell(python)',
-    'Shell(node)'
-  ];
-
-  // Fetch Cursor MCP servers
-  const fetchCursorMcpServers = async () => {
-    try {
-      const response = await authenticatedFetch('/api/cursor/mcp');
-
-      if (response.ok) {
-        const data = await response.json();
-        setCursorMcpServers(data.servers || []);
-      } else {
-        console.error('Failed to fetch Cursor MCP servers');
-      }
-    } catch (error) {
-      console.error('Error fetching Cursor MCP servers:', error);
-    }
-  };
-
-  const fetchCodexMcpServers = async () => {
-    try {
-      const configResponse = await authenticatedFetch('/api/codex/mcp/config/read');
-
-      if (configResponse.ok) {
-        const configData = await configResponse.json();
-        if (configData.success && configData.servers) {
-          setCodexMcpServers(configData.servers);
-          return;
-        }
-      }
-
-      const cliResponse = await authenticatedFetch('/api/codex/mcp/cli/list');
-
-      if (cliResponse.ok) {
-        const cliData = await cliResponse.json();
-        if (cliData.success && cliData.servers) {
-          const servers = cliData.servers.map(server => ({
-            id: server.name,
-            name: server.name,
-            type: server.type || 'stdio',
-            scope: 'user',
-            config: {
-              command: server.command || '',
-              args: server.args || [],
-              env: server.env || {}
-            }
-          }));
-          setCodexMcpServers(servers);
-        }
-      }
-    } catch (error) {
-      console.error('Error fetching Codex MCP servers:', error);
-    }
-  };
 
   // MCP API functions
   const fetchMcpServers = async () => {
@@ -369,134 +260,10 @@ function Settings({ isOpen, onClose, projects = [], initialTab = 'agents' }) {
     }
   };
 
-  const saveCodexMcpServer = async (serverData) => {
-    try {
-      if (editingCodexMcpServer) {
-        await deleteCodexMcpServer(editingCodexMcpServer.id);
-      }
-
-      const response = await authenticatedFetch('/api/codex/mcp/cli/add', {
-        method: 'POST',
-        body: JSON.stringify({
-          name: serverData.name,
-          command: serverData.config?.command,
-          args: serverData.config?.args || [],
-          env: serverData.config?.env || {}
-        })
-      });
-
-      if (response.ok) {
-        const result = await response.json();
-        if (result.success) {
-          await fetchCodexMcpServers();
-          return true;
-        } else {
-          throw new Error(result.error || 'Failed to save Codex MCP server');
-        }
-      } else {
-        const error = await response.json();
-        throw new Error(error.error || 'Failed to save server');
-      }
-    } catch (error) {
-      console.error('Error saving Codex MCP server:', error);
-      throw error;
-    }
-  };
-
-  const deleteCodexMcpServer = async (serverId) => {
-    try {
-      const response = await authenticatedFetch(`/api/codex/mcp/cli/remove/${serverId}`, {
-        method: 'DELETE'
-      });
-
-      if (response.ok) {
-        const result = await response.json();
-        if (result.success) {
-          await fetchCodexMcpServers();
-          return true;
-        } else {
-          throw new Error(result.error || 'Failed to delete Codex MCP server');
-        }
-      } else {
-        const error = await response.json();
-        throw new Error(error.error || 'Failed to delete server');
-      }
-    } catch (error) {
-      console.error('Error deleting Codex MCP server:', error);
-      throw error;
-    }
-  };
-
-  const resetCodexMcpForm = () => {
-    setCodexMcpFormData({
-      name: '',
-      type: 'stdio',
-      config: {
-        command: '',
-        args: [],
-        env: {}
-      }
-    });
-    setEditingCodexMcpServer(null);
-    setShowCodexMcpForm(false);
-  };
-
-  const openCodexMcpForm = (server = null) => {
-    if (server) {
-      setEditingCodexMcpServer(server);
-      setCodexMcpFormData({
-        name: server.name,
-        type: server.type || 'stdio',
-        config: {
-          command: server.config?.command || '',
-          args: server.config?.args || [],
-          env: server.config?.env || {}
-        }
-      });
-    } else {
-      resetCodexMcpForm();
-    }
-    setShowCodexMcpForm(true);
-  };
-
-  const handleCodexMcpSubmit = async (e) => {
-    e.preventDefault();
-    setCodexMcpLoading(true);
-
-    try {
-      if (editingCodexMcpServer) {
-        // Delete old server first, then add new one
-        await deleteCodexMcpServer(editingCodexMcpServer.name);
-      }
-      await saveCodexMcpServer(codexMcpFormData);
-      resetCodexMcpForm();
-      setSaveStatus('success');
-    } catch (error) {
-      alert(`Error: ${error.message}`);
-      setSaveStatus('error');
-    } finally {
-      setCodexMcpLoading(false);
-    }
-  };
-
-  const handleCodexMcpDelete = async (serverName) => {
-    if (confirm('Are you sure you want to delete this MCP server?')) {
-      try {
-        await deleteCodexMcpServer(serverName);
-        setSaveStatus('success');
-      } catch (error) {
-        alert(`Error: ${error.message}`);
-        setSaveStatus('error');
-      }
-    }
-  };
-
   useEffect(() => {
     if (isOpen) {
       loadSettings();
       checkClaudeAuthStatus();
-      checkCursorAuthStatus();
-      checkCodexAuthStatus();
       setActiveTab(initialTab);
     }
   }, [isOpen, initialTab]);
@@ -529,10 +296,10 @@ function Settings({ isOpen, onClose, projects = [], initialTab = 'agents' }) {
 
   const loadSettings = async () => {
     try {
-      
+
       // Load Claude settings from localStorage
       const savedSettings = localStorage.getItem('claude-settings');
-      
+
       if (savedSettings) {
         const settings = JSON.parse(savedSettings);
         setAllowedTools(settings.allowedTools || []);
@@ -546,40 +313,9 @@ function Settings({ isOpen, onClose, projects = [], initialTab = 'agents' }) {
         setSkipPermissions(false);
         setProjectSortOrder('name');
       }
-      
-      // Load Cursor settings from localStorage
-      const savedCursorSettings = localStorage.getItem('cursor-tools-settings');
-
-      if (savedCursorSettings) {
-        const cursorSettings = JSON.parse(savedCursorSettings);
-        setCursorAllowedCommands(cursorSettings.allowedCommands || []);
-        setCursorDisallowedCommands(cursorSettings.disallowedCommands || []);
-        setCursorSkipPermissions(cursorSettings.skipPermissions || false);
-      } else {
-        // Set Cursor defaults
-        setCursorAllowedCommands([]);
-        setCursorDisallowedCommands([]);
-        setCursorSkipPermissions(false);
-      }
-
-      // Load Codex settings from localStorage
-      const savedCodexSettings = localStorage.getItem('codex-settings');
-
-      if (savedCodexSettings) {
-        const codexSettings = JSON.parse(savedCodexSettings);
-        setCodexPermissionMode(codexSettings.permissionMode || 'default');
-      } else {
-        setCodexPermissionMode('default');
-      }
 
       // Load MCP servers from API
       await fetchMcpServers();
-
-      // Load Cursor MCP servers
-      await fetchCursorMcpServers();
-
-      // Load Codex MCP servers
-      await fetchCodexMcpServers();
     } catch (error) {
       console.error('Error loading tool settings:', error);
       setAllowedTools([]);
@@ -620,82 +356,8 @@ function Settings({ isOpen, onClose, projects = [], initialTab = 'agents' }) {
     }
   };
 
-  const checkCursorAuthStatus = async () => {
-    try {
-      const response = await authenticatedFetch('/api/cli/cursor/status');
-
-      if (response.ok) {
-        const data = await response.json();
-        setCursorAuthStatus({
-          authenticated: data.authenticated,
-          email: data.email,
-          loading: false,
-          error: data.error || null
-        });
-      } else {
-        setCursorAuthStatus({
-          authenticated: false,
-          email: null,
-          loading: false,
-          error: 'Failed to check authentication status'
-        });
-      }
-    } catch (error) {
-      console.error('Error checking Cursor auth status:', error);
-      setCursorAuthStatus({
-        authenticated: false,
-        email: null,
-        loading: false,
-        error: error.message
-      });
-    }
-  };
-
-  const checkCodexAuthStatus = async () => {
-    try {
-      const response = await authenticatedFetch('/api/cli/codex/status');
-
-      if (response.ok) {
-        const data = await response.json();
-        setCodexAuthStatus({
-          authenticated: data.authenticated,
-          email: data.email,
-          loading: false,
-          error: data.error || null
-        });
-      } else {
-        setCodexAuthStatus({
-          authenticated: false,
-          email: null,
-          loading: false,
-          error: 'Failed to check authentication status'
-        });
-      }
-    } catch (error) {
-      console.error('Error checking Codex auth status:', error);
-      setCodexAuthStatus({
-        authenticated: false,
-        email: null,
-        loading: false,
-        error: error.message
-      });
-    }
-  };
-
   const handleClaudeLogin = () => {
     setLoginProvider('claude');
-    setSelectedProject(projects?.[0] || { name: 'default', fullPath: process.cwd() });
-    setShowLoginModal(true);
-  };
-
-  const handleCursorLogin = () => {
-    setLoginProvider('cursor');
-    setSelectedProject(projects?.[0] || { name: 'default', fullPath: process.cwd() });
-    setShowLoginModal(true);
-  };
-
-  const handleCodexLogin = () => {
-    setLoginProvider('codex');
     setSelectedProject(projects?.[0] || { name: 'default', fullPath: process.cwd() });
     setShowLoginModal(true);
   };
@@ -703,21 +365,14 @@ function Settings({ isOpen, onClose, projects = [], initialTab = 'agents' }) {
   const handleLoginComplete = (exitCode) => {
     if (exitCode === 0) {
       setSaveStatus('success');
-
-      if (loginProvider === 'claude') {
-        checkClaudeAuthStatus();
-      } else if (loginProvider === 'cursor') {
-        checkCursorAuthStatus();
-      } else if (loginProvider === 'codex') {
-        checkCodexAuthStatus();
-      }
+      checkClaudeAuthStatus();
     }
   };
 
   const saveSettings = () => {
     setIsSaving(true);
     setSaveStatus(null);
-    
+
     try {
       // Save Claude settings
       const claudeSettings = {
@@ -727,28 +382,12 @@ function Settings({ isOpen, onClose, projects = [], initialTab = 'agents' }) {
         projectSortOrder,
         lastUpdated: new Date().toISOString()
       };
-      
-      // Save Cursor settings
-      const cursorSettings = {
-        allowedCommands: cursorAllowedCommands,
-        disallowedCommands: cursorDisallowedCommands,
-        skipPermissions: cursorSkipPermissions,
-        lastUpdated: new Date().toISOString()
-      };
-
-      // Save Codex settings
-      const codexSettings = {
-        permissionMode: codexPermissionMode,
-        lastUpdated: new Date().toISOString()
-      };
 
       // Save to localStorage
       localStorage.setItem('claude-settings', JSON.stringify(claudeSettings));
-      localStorage.setItem('cursor-tools-settings', JSON.stringify(cursorSettings));
-      localStorage.setItem('codex-settings', JSON.stringify(codexSettings));
 
       setSaveStatus('success');
-      
+
       setTimeout(() => {
         onClose();
       }, 1000);
@@ -826,9 +465,9 @@ function Settings({ isOpen, onClose, projects = [], initialTab = 'agents' }) {
 
   const handleMcpSubmit = async (e) => {
     e.preventDefault();
-    
+
     setMcpLoading(true);
-    
+
     try {
       if (mcpFormData.importMode === 'json') {
         // Use JSON import endpoint
@@ -887,13 +526,13 @@ function Settings({ isOpen, onClose, projects = [], initialTab = 'agents' }) {
       const result = await testMcpServer(serverId, scope);
       setMcpTestResults({ ...mcpTestResults, [serverId]: result });
     } catch (error) {
-      setMcpTestResults({ 
-        ...mcpTestResults, 
-        [serverId]: { 
-          success: false, 
+      setMcpTestResults({
+        ...mcpTestResults,
+        [serverId]: {
+          success: false,
           message: error.message,
           details: []
-        } 
+        }
       });
     }
   };
@@ -904,14 +543,14 @@ function Settings({ isOpen, onClose, projects = [], initialTab = 'agents' }) {
       const result = await discoverMcpTools(serverId, scope);
       setMcpServerTools({ ...mcpServerTools, [serverId]: result });
     } catch (error) {
-      setMcpServerTools({ 
-        ...mcpServerTools, 
-        [serverId]: { 
-          success: false, 
-          tools: [], 
-          resources: [], 
-          prompts: [] 
-        } 
+      setMcpServerTools({
+        ...mcpServerTools,
+        [serverId]: {
+          success: false,
+          tools: [],
+          resources: [],
+          prompts: []
+        }
       });
     } finally {
       setMcpToolsLoading({ ...mcpToolsLoading, [serverId]: false });
@@ -966,285 +605,245 @@ function Settings({ isOpen, onClose, projects = [], initialTab = 'agents' }) {
             <div className="flex px-4 md:px-6">
               <button
                 onClick={() => setActiveTab('agents')}
-                className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
-                  activeTab === 'agents'
-                    ? 'border-blue-600 text-blue-600 dark:text-blue-400'
-                    : 'border-transparent text-muted-foreground hover:text-foreground'
-                }`}
+                className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${activeTab === 'agents'
+                  ? 'border-blue-600 text-blue-600 dark:text-blue-400'
+                  : 'border-transparent text-muted-foreground hover:text-foreground'
+                  }`}
               >
                 Agents
               </button>
               <button
                 onClick={() => setActiveTab('appearance')}
-                className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
-                  activeTab === 'appearance'
-                    ? 'border-blue-600 text-blue-600 dark:text-blue-400'
-                    : 'border-transparent text-muted-foreground hover:text-foreground'
-                }`}
+                className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${activeTab === 'appearance'
+                  ? 'border-blue-600 text-blue-600 dark:text-blue-400'
+                  : 'border-transparent text-muted-foreground hover:text-foreground'
+                  }`}
               >
                 Appearance
-              </button>
-              <button
-                onClick={() => setActiveTab('git')}
-                className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
-                  activeTab === 'git'
-                    ? 'border-blue-600 text-blue-600 dark:text-blue-400'
-                    : 'border-transparent text-muted-foreground hover:text-foreground'
-                }`}
-              >
-                <GitBranch className="w-4 h-4 inline mr-2" />
-                Git
-              </button>
-              <button
-                onClick={() => setActiveTab('api')}
-                className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
-                  activeTab === 'api'
-                    ? 'border-blue-600 text-blue-600 dark:text-blue-400'
-                    : 'border-transparent text-muted-foreground hover:text-foreground'
-                }`}
-              >
-                <Key className="w-4 h-4 inline mr-2" />
-                API & Tokens
-              </button>
-              <button
-                onClick={() => setActiveTab('tasks')}
-                className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
-                  activeTab === 'tasks'
-                    ? 'border-blue-600 text-blue-600 dark:text-blue-400'
-                    : 'border-transparent text-muted-foreground hover:text-foreground'
-                }`}
-              >
-                Tasks
               </button>
             </div>
           </div>
 
           <div className="p-4 md:p-6 space-y-6 md:space-y-8 pb-safe-area-inset-bottom">
-            
+
             {/* Appearance Tab */}
             {activeTab === 'appearance' && (
               <div className="space-y-6 md:space-y-8">
-               {activeTab === 'appearance' && (
-  <div className="space-y-6 md:space-y-8">
-    {/* Theme Settings */}
-    <div className="space-y-4">
-      <div className="bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <div className="font-medium text-foreground">
-              Dark Mode
-            </div>
-            <div className="text-sm text-muted-foreground">
-              Toggle between light and dark themes
-            </div>
-          </div>
-          <button
-            onClick={toggleDarkMode}
-            className="relative inline-flex h-8 w-14 items-center rounded-full bg-gray-200 dark:bg-gray-700 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900"
-            role="switch"
-            aria-checked={isDarkMode}
-            aria-label="Toggle dark mode"
-          >
-            <span className="sr-only">Toggle dark mode</span>
-            <span
-              className={`${
-                isDarkMode ? 'translate-x-7' : 'translate-x-1'
-              } inline-block h-6 w-6 transform rounded-full bg-white shadow-lg transition-transform duration-200 flex items-center justify-center`}
-            >
-              {isDarkMode ? (
-                <Moon className="w-3.5 h-3.5 text-gray-700" />
-              ) : (
-                <Sun className="w-3.5 h-3.5 text-yellow-500" />
-              )}
-            </span>
-          </button>
-        </div>
-      </div>
-    </div>
+                {activeTab === 'appearance' && (
+                  <div className="space-y-6 md:space-y-8">
+                    {/* Theme Settings */}
+                    <div className="space-y-4">
+                      <div className="bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <div className="font-medium text-foreground">
+                              Dark Mode
+                            </div>
+                            <div className="text-sm text-muted-foreground">
+                              Toggle between light and dark themes
+                            </div>
+                          </div>
+                          <button
+                            onClick={toggleDarkMode}
+                            className="relative inline-flex h-8 w-14 items-center rounded-full bg-gray-200 dark:bg-gray-700 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900"
+                            role="switch"
+                            aria-checked={isDarkMode}
+                            aria-label="Toggle dark mode"
+                          >
+                            <span className="sr-only">Toggle dark mode</span>
+                            <span
+                              className={`${isDarkMode ? 'translate-x-7' : 'translate-x-1'
+                                } inline-block h-6 w-6 transform rounded-full bg-white shadow-lg transition-transform duration-200 flex items-center justify-center`}
+                            >
+                              {isDarkMode ? (
+                                <Moon className="w-3.5 h-3.5 text-gray-700" />
+                              ) : (
+                                <Sun className="w-3.5 h-3.5 text-yellow-500" />
+                              )}
+                            </span>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
 
-    {/* Project Sorting */}
-    <div className="space-y-4">
-      <div className="bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <div className="font-medium text-foreground">
-              Project Sorting
-            </div>
-            <div className="text-sm text-muted-foreground">
-              How projects are ordered in the sidebar
-            </div>
-          </div>
-          <select
-            value={projectSortOrder}
-            onChange={(e) => setProjectSortOrder(e.target.value)}
-            className="text-sm bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 rounded-lg focus:ring-blue-500 focus:border-blue-500 p-2 w-32"
-          >
-            <option value="name">Alphabetical</option>
-            <option value="date">Recent Activity</option>
-          </select>
-        </div>
-      </div>
-    </div>
+                    {/* Project Sorting */}
+                    <div className="space-y-4">
+                      <div className="bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <div className="font-medium text-foreground">
+                              Project Sorting
+                            </div>
+                            <div className="text-sm text-muted-foreground">
+                              How projects are ordered in the sidebar
+                            </div>
+                          </div>
+                          <select
+                            value={projectSortOrder}
+                            onChange={(e) => setProjectSortOrder(e.target.value)}
+                            className="text-sm bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 rounded-lg focus:ring-blue-500 focus:border-blue-500 p-2 w-32"
+                          >
+                            <option value="name">Alphabetical</option>
+                            <option value="date">Recent Activity</option>
+                          </select>
+                        </div>
+                      </div>
+                    </div>
 
-    {/* Code Editor Settings */}
-    <div className="space-y-4">
-      <h3 className="text-lg font-semibold text-foreground">Code Editor</h3>
+                    {/* Code Editor Settings */}
+                    <div className="space-y-4">
+                      <h3 className="text-lg font-semibold text-foreground">Code Editor</h3>
 
-      {/* Editor Theme */}
-      <div className="bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <div className="font-medium text-foreground">
-              Editor Theme
-            </div>
-            <div className="text-sm text-muted-foreground">
-              Default theme for the code editor
-            </div>
-          </div>
-          <button
-            onClick={() => setCodeEditorTheme(codeEditorTheme === 'dark' ? 'light' : 'dark')}
-            className="relative inline-flex h-8 w-14 items-center rounded-full bg-gray-200 dark:bg-gray-700 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900"
-            role="switch"
-            aria-checked={codeEditorTheme === 'dark'}
-            aria-label="Toggle editor theme"
-          >
-            <span className="sr-only">Toggle editor theme</span>
-            <span
-              className={`${
-                codeEditorTheme === 'dark' ? 'translate-x-7' : 'translate-x-1'
-              } inline-block h-6 w-6 transform rounded-full bg-white shadow-lg transition-transform duration-200 flex items-center justify-center`}
-            >
-              {codeEditorTheme === 'dark' ? (
-                <Moon className="w-3.5 h-3.5 text-gray-700" />
-              ) : (
-                <Sun className="w-3.5 h-3.5 text-yellow-500" />
-              )}
-            </span>
-          </button>
-        </div>
-      </div>
+                      {/* Editor Theme */}
+                      <div className="bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <div className="font-medium text-foreground">
+                              Editor Theme
+                            </div>
+                            <div className="text-sm text-muted-foreground">
+                              Default theme for the code editor
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => setCodeEditorTheme(codeEditorTheme === 'dark' ? 'light' : 'dark')}
+                            className="relative inline-flex h-8 w-14 items-center rounded-full bg-gray-200 dark:bg-gray-700 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900"
+                            role="switch"
+                            aria-checked={codeEditorTheme === 'dark'}
+                            aria-label="Toggle editor theme"
+                          >
+                            <span className="sr-only">Toggle editor theme</span>
+                            <span
+                              className={`${codeEditorTheme === 'dark' ? 'translate-x-7' : 'translate-x-1'
+                                } inline-block h-6 w-6 transform rounded-full bg-white shadow-lg transition-transform duration-200 flex items-center justify-center`}
+                            >
+                              {codeEditorTheme === 'dark' ? (
+                                <Moon className="w-3.5 h-3.5 text-gray-700" />
+                              ) : (
+                                <Sun className="w-3.5 h-3.5 text-yellow-500" />
+                              )}
+                            </span>
+                          </button>
+                        </div>
+                      </div>
 
-      {/* Word Wrap */}
-      <div className="bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <div className="font-medium text-foreground">
-              Word Wrap
-            </div>
-            <div className="text-sm text-muted-foreground">
-              Enable word wrapping by default in the editor
-            </div>
-          </div>
-          <button
-            onClick={() => setCodeEditorWordWrap(!codeEditorWordWrap)}
-            className="relative inline-flex h-8 w-14 items-center rounded-full bg-gray-200 dark:bg-gray-700 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900"
-            role="switch"
-            aria-checked={codeEditorWordWrap}
-            aria-label="Toggle word wrap"
-          >
-            <span className="sr-only">Toggle word wrap</span>
-            <span
-              className={`${
-                codeEditorWordWrap ? 'translate-x-7' : 'translate-x-1'
-              } inline-block h-6 w-6 transform rounded-full bg-white shadow-lg transition-transform duration-200`}
-            />
-          </button>
-        </div>
-      </div>
+                      {/* Word Wrap */}
+                      <div className="bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <div className="font-medium text-foreground">
+                              Word Wrap
+                            </div>
+                            <div className="text-sm text-muted-foreground">
+                              Enable word wrapping by default in the editor
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => setCodeEditorWordWrap(!codeEditorWordWrap)}
+                            className="relative inline-flex h-8 w-14 items-center rounded-full bg-gray-200 dark:bg-gray-700 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900"
+                            role="switch"
+                            aria-checked={codeEditorWordWrap}
+                            aria-label="Toggle word wrap"
+                          >
+                            <span className="sr-only">Toggle word wrap</span>
+                            <span
+                              className={`${codeEditorWordWrap ? 'translate-x-7' : 'translate-x-1'
+                                } inline-block h-6 w-6 transform rounded-full bg-white shadow-lg transition-transform duration-200`}
+                            />
+                          </button>
+                        </div>
+                      </div>
 
-      {/* Show Minimap */}
-      <div className="bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <div className="font-medium text-foreground">
-              Show Minimap
-            </div>
-            <div className="text-sm text-muted-foreground">
-              Display a minimap for easier navigation in diff view
-            </div>
-          </div>
-          <button
-            onClick={() => setCodeEditorShowMinimap(!codeEditorShowMinimap)}
-            className="relative inline-flex h-8 w-14 items-center rounded-full bg-gray-200 dark:bg-gray-700 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900"
-            role="switch"
-            aria-checked={codeEditorShowMinimap}
-            aria-label="Toggle minimap"
-          >
-            <span className="sr-only">Toggle minimap</span>
-            <span
-              className={`${
-                codeEditorShowMinimap ? 'translate-x-7' : 'translate-x-1'
-              } inline-block h-6 w-6 transform rounded-full bg-white shadow-lg transition-transform duration-200`}
-            />
-          </button>
-        </div>
-      </div>
+                      {/* Show Minimap */}
+                      <div className="bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <div className="font-medium text-foreground">
+                              Show Minimap
+                            </div>
+                            <div className="text-sm text-muted-foreground">
+                              Display a minimap for easier navigation in diff view
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => setCodeEditorShowMinimap(!codeEditorShowMinimap)}
+                            className="relative inline-flex h-8 w-14 items-center rounded-full bg-gray-200 dark:bg-gray-700 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900"
+                            role="switch"
+                            aria-checked={codeEditorShowMinimap}
+                            aria-label="Toggle minimap"
+                          >
+                            <span className="sr-only">Toggle minimap</span>
+                            <span
+                              className={`${codeEditorShowMinimap ? 'translate-x-7' : 'translate-x-1'
+                                } inline-block h-6 w-6 transform rounded-full bg-white shadow-lg transition-transform duration-200`}
+                            />
+                          </button>
+                        </div>
+                      </div>
 
-      {/* Show Line Numbers */}
-      <div className="bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <div className="font-medium text-foreground">
-              Show Line Numbers
-            </div>
-            <div className="text-sm text-muted-foreground">
-              Display line numbers in the editor
-            </div>
-          </div>
-          <button
-            onClick={() => setCodeEditorLineNumbers(!codeEditorLineNumbers)}
-            className="relative inline-flex h-8 w-14 items-center rounded-full bg-gray-200 dark:bg-gray-700 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900"
-            role="switch"
-            aria-checked={codeEditorLineNumbers}
-            aria-label="Toggle line numbers"
-          >
-            <span className="sr-only">Toggle line numbers</span>
-            <span
-              className={`${
-                codeEditorLineNumbers ? 'translate-x-7' : 'translate-x-1'
-              } inline-block h-6 w-6 transform rounded-full bg-white shadow-lg transition-transform duration-200`}
-            />
-          </button>
-        </div>
-      </div>
+                      {/* Show Line Numbers */}
+                      <div className="bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <div className="font-medium text-foreground">
+                              Show Line Numbers
+                            </div>
+                            <div className="text-sm text-muted-foreground">
+                              Display line numbers in the editor
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => setCodeEditorLineNumbers(!codeEditorLineNumbers)}
+                            className="relative inline-flex h-8 w-14 items-center rounded-full bg-gray-200 dark:bg-gray-700 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900"
+                            role="switch"
+                            aria-checked={codeEditorLineNumbers}
+                            aria-label="Toggle line numbers"
+                          >
+                            <span className="sr-only">Toggle line numbers</span>
+                            <span
+                              className={`${codeEditorLineNumbers ? 'translate-x-7' : 'translate-x-1'
+                                } inline-block h-6 w-6 transform rounded-full bg-white shadow-lg transition-transform duration-200`}
+                            />
+                          </button>
+                        </div>
+                      </div>
 
-      {/* Font Size */}
-      <div className="bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <div className="font-medium text-foreground">
-              Font Size
-            </div>
-            <div className="text-sm text-muted-foreground">
-              Editor font size in pixels
-            </div>
-          </div>
-          <select
-            value={codeEditorFontSize}
-            onChange={(e) => setCodeEditorFontSize(e.target.value)}
-            className="text-sm bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 rounded-lg focus:ring-blue-500 focus:border-blue-500 p-2 w-24"
-          >
-            <option value="10">10px</option>
-            <option value="11">11px</option>
-            <option value="12">12px</option>
-            <option value="13">13px</option>
-            <option value="14">14px</option>
-            <option value="15">15px</option>
-            <option value="16">16px</option>
-            <option value="18">18px</option>
-            <option value="20">20px</option>
-          </select>
-        </div>
-      </div>
-    </div>
-  </div>
-)}
+                      {/* Font Size */}
+                      <div className="bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <div className="font-medium text-foreground">
+                              Font Size
+                            </div>
+                            <div className="text-sm text-muted-foreground">
+                              Editor font size in pixels
+                            </div>
+                          </div>
+                          <select
+                            value={codeEditorFontSize}
+                            onChange={(e) => setCodeEditorFontSize(e.target.value)}
+                            className="text-sm bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 rounded-lg focus:ring-blue-500 focus:border-blue-500 p-2 w-24"
+                          >
+                            <option value="10">10px</option>
+                            <option value="11">11px</option>
+                            <option value="12">12px</option>
+                            <option value="13">13px</option>
+                            <option value="14">14px</option>
+                            <option value="15">15px</option>
+                            <option value="16">16px</option>
+                            <option value="18">18px</option>
+                            <option value="20">20px</option>
+                          </select>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
 
               </div>
             )}
 
-            {/* Git Tab */}
-            {activeTab === 'git' && <GitSettings />}
+
 
             {/* Agents Tab */}
             {activeTab === 'agents' && (
@@ -1259,20 +858,6 @@ function Settings({ isOpen, onClose, projects = [], initialTab = 'agents' }) {
                       onClick={() => setSelectedAgent('claude')}
                       isMobile={true}
                     />
-                    <AgentListItem
-                      agentId="cursor"
-                      authStatus={cursorAuthStatus}
-                      isSelected={selectedAgent === 'cursor'}
-                      onClick={() => setSelectedAgent('cursor')}
-                      isMobile={true}
-                    />
-                    <AgentListItem
-                      agentId="codex"
-                      authStatus={codexAuthStatus}
-                      isSelected={selectedAgent === 'codex'}
-                      onClick={() => setSelectedAgent('codex')}
-                      isMobile={true}
-                    />
                   </div>
                 </div>
 
@@ -1285,18 +870,6 @@ function Settings({ isOpen, onClose, projects = [], initialTab = 'agents' }) {
                       isSelected={selectedAgent === 'claude'}
                       onClick={() => setSelectedAgent('claude')}
                     />
-                    <AgentListItem
-                      agentId="cursor"
-                      authStatus={cursorAuthStatus}
-                      isSelected={selectedAgent === 'cursor'}
-                      onClick={() => setSelectedAgent('cursor')}
-                    />
-                    <AgentListItem
-                      agentId="codex"
-                      authStatus={codexAuthStatus}
-                      isSelected={selectedAgent === 'codex'}
-                      onClick={() => setSelectedAgent('codex')}
-                    />
                   </div>
                 </div>
 
@@ -1307,31 +880,28 @@ function Settings({ isOpen, onClose, projects = [], initialTab = 'agents' }) {
                     <div className="flex px-2 md:px-4 overflow-x-auto">
                       <button
                         onClick={() => setSelectedCategory('account')}
-                        className={`px-3 md:px-4 py-2 md:py-3 text-xs md:text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
-                          selectedCategory === 'account'
-                            ? 'border-blue-600 text-blue-600 dark:text-blue-400'
-                            : 'border-transparent text-muted-foreground hover:text-foreground'
-                        }`}
+                        className={`px-3 md:px-4 py-2 md:py-3 text-xs md:text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${selectedCategory === 'account'
+                          ? 'border-blue-600 text-blue-600 dark:text-blue-400'
+                          : 'border-transparent text-muted-foreground hover:text-foreground'
+                          }`}
                       >
                         Account
                       </button>
                       <button
                         onClick={() => setSelectedCategory('permissions')}
-                        className={`px-3 md:px-4 py-2 md:py-3 text-xs md:text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
-                          selectedCategory === 'permissions'
-                            ? 'border-blue-600 text-blue-600 dark:text-blue-400'
-                            : 'border-transparent text-muted-foreground hover:text-foreground'
-                        }`}
+                        className={`px-3 md:px-4 py-2 md:py-3 text-xs md:text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${selectedCategory === 'permissions'
+                          ? 'border-blue-600 text-blue-600 dark:text-blue-400'
+                          : 'border-transparent text-muted-foreground hover:text-foreground'
+                          }`}
                       >
                         Permissions
                       </button>
                       <button
                         onClick={() => setSelectedCategory('mcp')}
-                        className={`px-3 md:px-4 py-2 md:py-3 text-xs md:text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
-                          selectedCategory === 'mcp'
-                            ? 'border-blue-600 text-blue-600 dark:text-blue-400'
-                            : 'border-transparent text-muted-foreground hover:text-foreground'
-                        }`}
+                        className={`px-3 md:px-4 py-2 md:py-3 text-xs md:text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${selectedCategory === 'mcp'
+                          ? 'border-blue-600 text-blue-600 dark:text-blue-400'
+                          : 'border-transparent text-muted-foreground hover:text-foreground'
+                          }`}
                       >
                         MCP Servers
                       </button>
@@ -1344,21 +914,13 @@ function Settings({ isOpen, onClose, projects = [], initialTab = 'agents' }) {
                     {selectedCategory === 'account' && (
                       <AccountContent
                         agent={selectedAgent}
-                        authStatus={
-                          selectedAgent === 'claude' ? claudeAuthStatus :
-                          selectedAgent === 'cursor' ? cursorAuthStatus :
-                          codexAuthStatus
-                        }
-                        onLogin={
-                          selectedAgent === 'claude' ? handleClaudeLogin :
-                          selectedAgent === 'cursor' ? handleCursorLogin :
-                          handleCodexLogin
-                        }
+                        authStatus={claudeAuthStatus}
+                        onLogin={handleClaudeLogin}
                       />
                     )}
 
                     {/* Permissions Category */}
-                    {selectedCategory === 'permissions' && selectedAgent === 'claude' && (
+                    {selectedCategory === 'permissions' && (
                       <PermissionsContent
                         agent="claude"
                         skipPermissions={skipPermissions}
@@ -1374,32 +936,8 @@ function Settings({ isOpen, onClose, projects = [], initialTab = 'agents' }) {
                       />
                     )}
 
-                    {selectedCategory === 'permissions' && selectedAgent === 'cursor' && (
-                      <PermissionsContent
-                        agent="cursor"
-                        skipPermissions={cursorSkipPermissions}
-                        setSkipPermissions={setCursorSkipPermissions}
-                        allowedCommands={cursorAllowedCommands}
-                        setAllowedCommands={setCursorAllowedCommands}
-                        disallowedCommands={cursorDisallowedCommands}
-                        setDisallowedCommands={setCursorDisallowedCommands}
-                        newAllowedCommand={newCursorCommand}
-                        setNewAllowedCommand={setNewCursorCommand}
-                        newDisallowedCommand={newCursorDisallowedCommand}
-                        setNewDisallowedCommand={setNewCursorDisallowedCommand}
-                      />
-                    )}
-
-                    {selectedCategory === 'permissions' && selectedAgent === 'codex' && (
-                      <PermissionsContent
-                        agent="codex"
-                        permissionMode={codexPermissionMode}
-                        setPermissionMode={setCodexPermissionMode}
-                      />
-                    )}
-
                     {/* MCP Servers Category */}
-                    {selectedCategory === 'mcp' && selectedAgent === 'claude' && (
+                    {selectedCategory === 'mcp' && (
                       <McpServersContent
                         agent="claude"
                         servers={mcpServers}
@@ -1411,26 +949,6 @@ function Settings({ isOpen, onClose, projects = [], initialTab = 'agents' }) {
                         testResults={mcpTestResults}
                         serverTools={mcpServerTools}
                         toolsLoading={mcpToolsLoading}
-                      />
-                    )}
-
-                    {selectedCategory === 'mcp' && selectedAgent === 'cursor' && (
-                      <McpServersContent
-                        agent="cursor"
-                        servers={cursorMcpServers}
-                        onAdd={() => {/* TODO: Add cursor MCP form */}}
-                        onEdit={(server) => {/* TODO: Edit cursor MCP form */}}
-                        onDelete={(serverId) => {/* TODO: Delete cursor MCP */}}
-                      />
-                    )}
-
-                    {selectedCategory === 'mcp' && selectedAgent === 'codex' && (
-                      <McpServersContent
-                        agent="codex"
-                        servers={codexMcpServers}
-                        onAdd={() => openCodexMcpForm()}
-                        onEdit={(server) => openCodexMcpForm(server)}
-                        onDelete={(serverId) => handleCodexMcpDelete(serverId)}
                       />
                     )}
                   </div>
@@ -1450,34 +968,32 @@ function Settings({ isOpen, onClose, projects = [], initialTab = 'agents' }) {
                       <X className="w-4 h-4" />
                     </Button>
                   </div>
-                  
+
                   <form onSubmit={handleMcpSubmit} className="p-4 space-y-4">
 
                     {!editingMcpServer && (
-                    <div className="flex gap-2 mb-4">
-                      <button
-                        type="button"
-                        onClick={() => setMcpFormData(prev => ({...prev, importMode: 'form'}))}
-                        className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                          mcpFormData.importMode === 'form'
+                      <div className="flex gap-2 mb-4">
+                        <button
+                          type="button"
+                          onClick={() => setMcpFormData(prev => ({ ...prev, importMode: 'form' }))}
+                          className={`px-4 py-2 rounded-lg font-medium transition-colors ${mcpFormData.importMode === 'form'
                             ? 'bg-blue-600 text-white'
                             : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
-                        }`}
-                      >
-                        Form Input
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setMcpFormData(prev => ({...prev, importMode: 'json'}))}
-                        className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                          mcpFormData.importMode === 'json'
+                            }`}
+                        >
+                          Form Input
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setMcpFormData(prev => ({ ...prev, importMode: 'json' }))}
+                          className={`px-4 py-2 rounded-lg font-medium transition-colors ${mcpFormData.importMode === 'json'
                             ? 'bg-blue-600 text-white'
                             : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
-                        }`}
-                      >
-                        JSON Import
-                      </button>
-                    </div>
+                            }`}
+                        >
+                          JSON Import
+                        </button>
+                      </div>
                     )}
 
                     {/* Show current scope when editing */}
@@ -1513,12 +1029,11 @@ function Settings({ isOpen, onClose, projects = [], initialTab = 'agents' }) {
                           <div className="flex gap-2">
                             <button
                               type="button"
-                              onClick={() => setMcpFormData(prev => ({...prev, scope: 'user', projectPath: ''}))}
-                              className={`flex-1 px-4 py-2 rounded-lg font-medium transition-colors ${
-                                mcpFormData.scope === 'user'
-                                  ? 'bg-blue-600 text-white'
-                                  : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
-                              }`}
+                              onClick={() => setMcpFormData(prev => ({ ...prev, scope: 'user', projectPath: '' }))}
+                              className={`flex-1 px-4 py-2 rounded-lg font-medium transition-colors ${mcpFormData.scope === 'user'
+                                ? 'bg-blue-600 text-white'
+                                : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
+                                }`}
                             >
                               <div className="flex items-center justify-center gap-2">
                                 <Globe className="w-4 h-4" />
@@ -1527,12 +1042,11 @@ function Settings({ isOpen, onClose, projects = [], initialTab = 'agents' }) {
                             </button>
                             <button
                               type="button"
-                              onClick={() => setMcpFormData(prev => ({...prev, scope: 'local'}))}
-                              className={`flex-1 px-4 py-2 rounded-lg font-medium transition-colors ${
-                                mcpFormData.scope === 'local'
-                                  ? 'bg-blue-600 text-white'
-                                  : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
-                              }`}
+                              onClick={() => setMcpFormData(prev => ({ ...prev, scope: 'local' }))}
+                              className={`flex-1 px-4 py-2 rounded-lg font-medium transition-colors ${mcpFormData.scope === 'local'
+                                ? 'bg-blue-600 text-white'
+                                : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
+                                }`}
                             >
                               <div className="flex items-center justify-center gap-2">
                                 <FolderOpen className="w-4 h-4" />
@@ -1541,7 +1055,7 @@ function Settings({ isOpen, onClose, projects = [], initialTab = 'agents' }) {
                             </button>
                           </div>
                           <p className="text-xs text-muted-foreground mt-2">
-                            {mcpFormData.scope === 'user' 
+                            {mcpFormData.scope === 'user'
                               ? 'User scope: Available across all projects on your machine'
                               : 'Local scope: Only available in the selected project'
                             }
@@ -1556,7 +1070,7 @@ function Settings({ isOpen, onClose, projects = [], initialTab = 'agents' }) {
                             </label>
                             <select
                               value={mcpFormData.projectPath}
-                              onChange={(e) => setMcpFormData(prev => ({...prev, projectPath: e.target.value}))}
+                              onChange={(e) => setMcpFormData(prev => ({ ...prev, projectPath: e.target.value }))}
                               className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-lg focus:ring-blue-500 focus:border-blue-500"
                               required={mcpFormData.scope === 'local'}
                             >
@@ -1586,13 +1100,13 @@ function Settings({ isOpen, onClose, projects = [], initialTab = 'agents' }) {
                         <Input
                           value={mcpFormData.name}
                           onChange={(e) => {
-                            setMcpFormData(prev => ({...prev, name: e.target.value}));
+                            setMcpFormData(prev => ({ ...prev, name: e.target.value }));
                           }}
                           placeholder="my-server"
                           required
                         />
                       </div>
-                      
+
                       {mcpFormData.importMode === 'form' && (
                         <div>
                           <label className="block text-sm font-medium text-foreground mb-2">
@@ -1601,7 +1115,7 @@ function Settings({ isOpen, onClose, projects = [], initialTab = 'agents' }) {
                           <select
                             value={mcpFormData.type}
                             onChange={(e) => {
-                              setMcpFormData(prev => ({...prev, type: e.target.value}));
+                              setMcpFormData(prev => ({ ...prev, type: e.target.value }));
                             }}
                             className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-lg focus:ring-blue-500 focus:border-blue-500"
                           >
@@ -1636,7 +1150,7 @@ function Settings({ isOpen, onClose, projects = [], initialTab = 'agents' }) {
                           <textarea
                             value={mcpFormData.jsonInput}
                             onChange={(e) => {
-                              setMcpFormData(prev => ({...prev, jsonInput: e.target.value}));
+                              setMcpFormData(prev => ({ ...prev, jsonInput: e.target.value }));
                               // Validate JSON as user types
                               try {
                                 if (e.target.value.trim()) {
@@ -1691,7 +1205,7 @@ function Settings({ isOpen, onClose, projects = [], initialTab = 'agents' }) {
                             required
                           />
                         </div>
-                        
+
                         <div>
                           <label className="block text-sm font-medium text-foreground mb-2">
                             Arguments (one per line)
@@ -1725,26 +1239,26 @@ function Settings({ isOpen, onClose, projects = [], initialTab = 'agents' }) {
                     {/* Environment Variables - Only show in form mode */}
                     {mcpFormData.importMode === 'form' && (
                       <div>
-                      <label className="block text-sm font-medium text-foreground mb-2">
-                        Environment Variables (KEY=value, one per line)
-                      </label>
-                      <textarea
-                        value={Object.entries(mcpFormData.config.env || {}).map(([k, v]) => `${k}=${v}`).join('\n')}
-                        onChange={(e) => {
-                          const env = {};
-                          e.target.value.split('\n').forEach(line => {
-                            const [key, ...valueParts] = line.split('=');
-                            if (key && key.trim()) {
-                              env[key.trim()] = valueParts.join('=').trim();
-                            }
-                          });
-                          updateMcpConfig('env', env);
-                        }}
-                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-lg focus:ring-blue-500 focus:border-blue-500"
-                        rows="3"
-                        placeholder="API_KEY=your-key&#10;DEBUG=true"
-                      />
-                    </div>
+                        <label className="block text-sm font-medium text-foreground mb-2">
+                          Environment Variables (KEY=value, one per line)
+                        </label>
+                        <textarea
+                          value={Object.entries(mcpFormData.config.env || {}).map(([k, v]) => `${k}=${v}`).join('\n')}
+                          onChange={(e) => {
+                            const env = {};
+                            e.target.value.split('\n').forEach(line => {
+                              const [key, ...valueParts] = line.split('=');
+                              if (key && key.trim()) {
+                                env[key.trim()] = valueParts.join('=').trim();
+                              }
+                            });
+                            updateMcpConfig('env', env);
+                          }}
+                          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                          rows="3"
+                          placeholder="API_KEY=your-key&#10;DEBUG=true"
+                        />
+                      </div>
                     )}
 
                     {mcpFormData.importMode === 'form' && (mcpFormData.type === 'sse' || mcpFormData.type === 'http') && (
@@ -1776,9 +1290,9 @@ function Settings({ isOpen, onClose, projects = [], initialTab = 'agents' }) {
                       <Button type="button" variant="outline" onClick={resetMcpForm}>
                         Cancel
                       </Button>
-                      <Button 
-                        type="submit" 
-                        disabled={mcpLoading} 
+                      <Button
+                        type="submit"
+                        disabled={mcpLoading}
                         className="bg-purple-600 hover:bg-purple-700 disabled:opacity-50"
                       >
                         {mcpLoading ? 'Saving...' : (editingMcpServer ? 'Update Server' : 'Add Server')}
@@ -1786,119 +1300,6 @@ function Settings({ isOpen, onClose, projects = [], initialTab = 'agents' }) {
                     </div>
                   </form>
                 </div>
-              </div>
-            )}
-
-            {/* Codex MCP Server Form Modal */}
-            {showCodexMcpForm && (
-              <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[110] p-4">
-                <div className="bg-background border border-border rounded-lg w-full max-w-lg max-h-[90vh] overflow-y-auto">
-                  <div className="flex items-center justify-between p-4 border-b border-border">
-                    <h3 className="text-lg font-medium text-foreground">
-                      {editingCodexMcpServer ? 'Edit MCP Server' : 'Add MCP Server'}
-                    </h3>
-                    <Button variant="ghost" size="sm" onClick={resetCodexMcpForm}>
-                      <X className="w-4 h-4" />
-                    </Button>
-                  </div>
-
-                  <form onSubmit={handleCodexMcpSubmit} className="p-4 space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium text-foreground mb-2">
-                        Server Name *
-                      </label>
-                      <Input
-                        value={codexMcpFormData.name}
-                        onChange={(e) => setCodexMcpFormData(prev => ({...prev, name: e.target.value}))}
-                        placeholder="my-mcp-server"
-                        required
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-foreground mb-2">
-                        Command *
-                      </label>
-                      <Input
-                        value={codexMcpFormData.config?.command || ''}
-                        onChange={(e) => setCodexMcpFormData(prev => ({
-                          ...prev,
-                          config: { ...prev.config, command: e.target.value }
-                        }))}
-                        placeholder="npx @my-org/mcp-server"
-                        required
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-foreground mb-2">
-                        Arguments (one per line)
-                      </label>
-                      <textarea
-                        value={(codexMcpFormData.config?.args || []).join('\n')}
-                        onChange={(e) => setCodexMcpFormData(prev => ({
-                          ...prev,
-                          config: { ...prev.config, args: e.target.value.split('\n').filter(a => a.trim()) }
-                        }))}
-                        placeholder="--port&#10;3000"
-                        rows={3}
-                        className="w-full px-3 py-2 text-sm bg-background border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-ring"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-foreground mb-2">
-                        Environment Variables (KEY=VALUE, one per line)
-                      </label>
-                      <textarea
-                        value={Object.entries(codexMcpFormData.config?.env || {}).map(([k, v]) => `${k}=${v}`).join('\n')}
-                        onChange={(e) => {
-                          const env = {};
-                          e.target.value.split('\n').forEach(line => {
-                            const [key, ...valueParts] = line.split('=');
-                            if (key && valueParts.length > 0) {
-                              env[key.trim()] = valueParts.join('=').trim();
-                            }
-                          });
-                          setCodexMcpFormData(prev => ({
-                            ...prev,
-                            config: { ...prev.config, env }
-                          }));
-                        }}
-                        placeholder="API_KEY=xxx&#10;DEBUG=true"
-                        rows={3}
-                        className="w-full px-3 py-2 text-sm bg-background border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-ring"
-                      />
-                    </div>
-
-                    <div className="flex justify-end gap-2 pt-4 border-t border-border">
-                      <Button type="button" variant="outline" onClick={resetCodexMcpForm}>
-                        Cancel
-                      </Button>
-                      <Button
-                        type="submit"
-                        disabled={codexMcpLoading || !codexMcpFormData.name || !codexMcpFormData.config?.command}
-                        className="bg-green-600 hover:bg-green-700 text-white"
-                      >
-                        {codexMcpLoading ? 'Saving...' : (editingCodexMcpServer ? 'Update Server' : 'Add Server')}
-                      </Button>
-                    </div>
-                  </form>
-                </div>
-              </div>
-            )}
-
-            {/* Tasks Tab */}
-            {activeTab === 'tasks' && (
-              <div className="space-y-6 md:space-y-8">
-                <TasksSettings />
-              </div>
-            )}
-
-            {/* API & Tokens Tab */}
-            {activeTab === 'api' && (
-              <div className="space-y-6 md:space-y-8">
-                <CredentialsSettings />
               </div>
             )}
           </div>
@@ -1924,16 +1325,16 @@ function Settings({ isOpen, onClose, projects = [], initialTab = 'agents' }) {
             )}
           </div>
           <div className="flex items-center gap-3 order-1 sm:order-2">
-            <Button 
-              variant="outline" 
-              onClick={onClose} 
+            <Button
+              variant="outline"
+              onClick={onClose}
               disabled={isSaving}
               className="flex-1 sm:flex-none h-10 touch-manipulation"
             >
               Cancel
             </Button>
-            <Button 
-              onClick={saveSettings} 
+            <Button
+              onClick={saveSettings}
               disabled={isSaving}
               className="flex-1 sm:flex-none h-10 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 touch-manipulation"
             >

@@ -2,12 +2,11 @@ import { X } from 'lucide-react';
 import StandaloneShell from './StandaloneShell';
 
 /**
- * Reusable login modal component for Claude, Cursor, and Codex CLI authentication
+ * Login modal component for Claude CLI authentication
  *
  * @param {Object} props
  * @param {boolean} props.isOpen - Whether the modal is visible
  * @param {Function} props.onClose - Callback when modal is closed
- * @param {'claude'|'cursor'|'codex'} props.provider - Which CLI provider to authenticate with
  * @param {Object} props.project - Project object containing name and path information
  * @param {Function} props.onComplete - Callback when login process completes (receives exitCode)
  * @param {string} props.customCommand - Optional custom command to override defaults
@@ -15,7 +14,6 @@ import StandaloneShell from './StandaloneShell';
 function LoginModal({
   isOpen,
   onClose,
-  provider = 'claude',
   project,
   onComplete,
   customCommand
@@ -24,32 +22,11 @@ function LoginModal({
 
   const getCommand = () => {
     if (customCommand) return customCommand;
-
-    const isPlatform = import.meta.env.VITE_IS_PLATFORM === 'true';
-
-    switch (provider) {
-      case 'claude':
-        return 'claude setup-token --dangerously-skip-permissions';
-      case 'cursor':
-        return 'cursor-agent login';
-      case 'codex':
-        return isPlatform ? 'codex login --device-auth' : 'codex login';
-      default:
-        return 'claude setup-token --dangerously-skip-permissions';
-    }
+    return 'claude setup-token --dangerously-skip-permissions';
   };
 
   const getTitle = () => {
-    switch (provider) {
-      case 'claude':
-        return 'Claude CLI Login';
-      case 'cursor':
-        return 'Cursor CLI Login';
-      case 'codex':
-        return 'Codex CLI Login';
-      default:
-        return 'CLI Login';
-    }
+    return 'Claude CLI Login';
   };
 
   const handleComplete = (exitCode) => {

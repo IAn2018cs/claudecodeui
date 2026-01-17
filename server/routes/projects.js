@@ -155,13 +155,11 @@ async function validateWorkspacePath(requestedPath) {
  * Body:
  * - workspaceType: 'existing' | 'new'
  * - path: string (workspace path)
- * - githubUrl?: string (optional, for new workspaces)
- * - githubTokenId?: number (optional, ID of stored token)
- * - newGithubToken?: string (optional, one-time token)
+ * - githubUrl?: string (optional, for new workspaces - public repos only)
  */
 router.post('/create-workspace', async (req, res) => {
   try {
-    const { workspaceType, path: workspacePath, githubUrl, githubTokenId, newGithubToken } = req.body;
+    const { workspaceType, path: workspacePath, githubUrl } = req.body;
 
     // Validate required fields
     if (!workspaceType || !workspacePath) {
@@ -228,27 +226,11 @@ router.post('/create-workspace', async (req, res) => {
       // Create the directory
       await fs.mkdir(absolutePath, { recursive: true });
 
-      // If GitHub URL is provided, clone the repository
+      // If GitHub URL is provided, clone the repository (public repos only)
       if (githubUrl) {
-        let githubToken = null;
-
-        // Get GitHub token if needed
-        if (githubTokenId) {
-          // Fetch token from database
-          const token = await getGithubTokenById(githubTokenId, req.user.id);
-          if (!token) {
-            // Clean up created directory
-            await fs.rm(absolutePath, { recursive: true, force: true });
-            return res.status(404).json({ error: 'GitHub token not found' });
-          }
-          githubToken = token.github_token;
-        } else if (newGithubToken) {
-          githubToken = newGithubToken;
-        }
-
-        // Clone the repository
+        // Clone the repository (no authentication - public repos only)
         try {
-          await cloneGitHubRepository(githubUrl, absolutePath, githubToken);
+          await cloneGitHubRepository(githubUrl, absolutePath);
         } catch (error) {
           // Clean up created directory on failure
           try {
@@ -283,49 +265,11 @@ router.post('/create-workspace', async (req, res) => {
 });
 
 /**
- * Helper function to get GitHub token from database
+ * Helper function to clone a GitHub repository (public repos only)
  */
-async function getGithubTokenById(tokenId, userId) {
-  const { getDatabase } = await import('../database/db.js');
-  const db = await getDatabase();
-
-  const credential = await db.get(
-    'SELECT * FROM user_credentials WHERE id = ? AND user_id = ? AND credential_type = ? AND is_active = 1',
-    [tokenId, userId, 'github_token']
-  );
-
-  // Return in the expected format (github_token field for compatibility)
-  if (credential) {
-    return {
-      ...credential,
-      github_token: credential.credential_value
-    };
-  }
-
-  return null;
-}
-
-/**
- * Helper function to clone a GitHub repository
- */
-function cloneGitHubRepository(githubUrl, destinationPath, githubToken = null) {
+function cloneGitHubRepository(githubUrl, destinationPath) {
   return new Promise((resolve, reject) => {
-    // Parse GitHub URL and inject token if provided
-    let cloneUrl = githubUrl;
-
-    if (githubToken) {
-      try {
-        const url = new URL(githubUrl);
-        // Format: https://TOKEN@github.com/user/repo.git
-        url.username = githubToken;
-        url.password = '';
-        cloneUrl = url.toString();
-      } catch (error) {
-        return reject(new Error('Invalid GitHub URL format'));
-      }
-    }
-
-    const gitProcess = spawn('git', ['clone', cloneUrl, destinationPath], {
+    const gitProcess = spawn('git', ['clone', githubUrl, destinationPath], {
       stdio: ['ignore', 'pipe', 'pipe'],
       env: {
         ...process.env,

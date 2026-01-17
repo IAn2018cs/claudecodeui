@@ -26,10 +26,6 @@ import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { useDropzone } from 'react-dropzone';
 import TodoList from './TodoList';
 import ClaudeLogo from './ClaudeLogo.jsx';
-import CursorLogo from './CursorLogo.jsx';
-import CodexLogo from './CodexLogo.jsx';
-import NextTaskBanner from './NextTaskBanner.jsx';
-import { useTasksSettings } from '../contexts/TasksSettingsContext';
 
 import ClaudeStatus from './ClaudeStatus';
 import TokenUsagePie from './TokenUsagePie';
@@ -37,7 +33,7 @@ import { MicButton } from './MicButton.jsx';
 import { api, authenticatedFetch } from '../utils/api';
 import Fuse from 'fuse.js';
 import CommandMenu from './CommandMenu';
-import { CLAUDE_MODELS, CURSOR_MODELS, CODEX_MODELS } from '../../shared/modelConstants';
+import { CLAUDE_MODELS } from '../../shared/modelConstants';
 
 import { safeJsonParse } from '../lib/utils.js';
 
@@ -81,8 +77,8 @@ function unescapeWithMathProtection(text) {
 
   // Process escape sequences on non-math content
   processedText = processedText.replace(/\\n/g, '\n')
-                               .replace(/\\t/g, '\t')
-                               .replace(/\\r/g, '\r');
+    .replace(/\\t/g, '\t')
+    .replace(/\\r/g, '\r');
 
   // Restore math formulas
   processedText = processedText.replace(
@@ -147,7 +143,7 @@ function formatUsageLimitText(text) {
       const tzHuman = city ? `${gmt} (${city})` : gmt;
 
       // Readable date like "8 Jun 2025"
-      const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
       const dateReadable = `${reset.getDate()} ${months[reset.getMonth()]} ${reset.getFullYear()}`;
 
       return `Claude usage limit reached. Your limit will reset at **${timeStr} ${tzHuman}** - ${dateReadable}`;
@@ -175,7 +171,7 @@ const safeLocalStorage = {
           console.warn('Could not parse chat messages for truncation:', parseError);
         }
       }
-      
+
       localStorage.setItem(key, value);
     } catch (error) {
       if (error.name === 'QuotaExceededError') {
@@ -183,7 +179,7 @@ const safeLocalStorage = {
         // Clear old chat messages to free up space
         const keys = Object.keys(localStorage);
         const chatKeys = keys.filter(k => k.startsWith('chat_messages_')).sort();
-        
+
         // Remove oldest chat data first, keeping only the 3 most recent projects
         if (chatKeys.length > 3) {
           chatKeys.slice(0, chatKeys.length - 3).forEach(k => {
@@ -191,13 +187,13 @@ const safeLocalStorage = {
             console.log(`Removed old chat data: ${k}`);
           });
         }
-        
+
         // If still failing, clear draft inputs too
         const draftKeys = keys.filter(k => k.startsWith('draft_input_'));
         draftKeys.forEach(k => {
           localStorage.removeItem(k);
         });
-        
+
         // Try again with reduced data
         try {
           localStorage.setItem(key, value);
@@ -348,9 +344,8 @@ const markdownComponents = {
     if (shouldInline) {
       return (
         <code
-          className={`font-mono text-[0.9em] px-1.5 py-0.5 rounded-md bg-gray-100 text-gray-900 border border-gray-200 dark:bg-gray-800/60 dark:text-gray-100 dark:border-gray-700 whitespace-pre-wrap break-words ${
-            className || ''
-          }`}
+          className={`font-mono text-[0.9em] px-1.5 py-0.5 rounded-md bg-gray-100 text-gray-900 border border-gray-200 dark:bg-gray-800/60 dark:text-gray-100 dark:border-gray-700 whitespace-pre-wrap break-words ${className || ''
+            }`}
           {...props}
         >
           {children}
@@ -378,7 +373,7 @@ const markdownComponents = {
             ta.style.opacity = '0';
             document.body.appendChild(ta);
             ta.select();
-            try { document.execCommand('copy'); } catch {}
+            try { document.execCommand('copy'); } catch { }
             document.body.removeChild(ta);
             doSet();
           });
@@ -389,11 +384,11 @@ const markdownComponents = {
           ta.style.opacity = '0';
           document.body.appendChild(ta);
           ta.select();
-          try { document.execCommand('copy'); } catch {}
+          try { document.execCommand('copy'); } catch { }
           document.body.removeChild(ta);
           doSet();
         }
-      } catch {}
+      } catch { }
     };
 
     // Code block with syntax highlighting
@@ -486,10 +481,10 @@ const markdownComponents = {
 // Memoized message component to prevent unnecessary re-renders
 const MessageComponent = memo(({ message, index, prevMessage, createDiff, onFileOpen, onShowSettings, onGrantToolPermission, autoExpandTools, showRawParameters, showThinking, selectedProject, provider }) => {
   const isGrouped = prevMessage && prevMessage.type === message.type &&
-                   ((prevMessage.type === 'assistant') ||
-                    (prevMessage.type === 'user') ||
-                    (prevMessage.type === 'tool') ||
-                    (prevMessage.type === 'error'));
+    ((prevMessage.type === 'assistant') ||
+      (prevMessage.type === 'user') ||
+      (prevMessage.type === 'tool') ||
+      (prevMessage.type === 'error'));
   const messageRef = React.useRef(null);
   const [isExpanded, setIsExpanded] = React.useState(false);
   const permissionSuggestion = getClaudePermissionSuggestion(message, provider);
@@ -501,7 +496,7 @@ const MessageComponent = memo(({ message, index, prevMessage, createDiff, onFile
 
   React.useEffect(() => {
     if (!autoExpandTools || !messageRef.current || !message.isToolUse) return;
-    
+
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
@@ -517,9 +512,9 @@ const MessageComponent = memo(({ message, index, prevMessage, createDiff, onFile
       },
       { threshold: 0.1 }
     );
-    
+
     observer.observe(messageRef.current);
-    
+
     return () => {
       if (messageRef.current) {
         observer.unobserve(messageRef.current);
@@ -577,23 +572,17 @@ const MessageComponent = memo(({ message, index, prevMessage, createDiff, onFile
                 </div>
               ) : (
                 <div className="w-8 h-8 rounded-full flex items-center justify-center text-white text-sm flex-shrink-0 p-1">
-                  {(localStorage.getItem('selected-provider') || 'claude') === 'cursor' ? (
-                    <CursorLogo className="w-full h-full" />
-                  ) : (localStorage.getItem('selected-provider') || 'claude') === 'codex' ? (
-                    <CodexLogo className="w-full h-full" />
-                  ) : (
-                    <ClaudeLogo className="w-full h-full" />
-                  )}
+                  <ClaudeLogo className="w-full h-full" />
                 </div>
               )}
               <div className="text-sm font-medium text-gray-900 dark:text-white">
-                {message.type === 'error' ? 'Error' : message.type === 'tool' ? 'Tool' : ((localStorage.getItem('selected-provider') || 'claude') === 'cursor' ? 'Cursor' : (localStorage.getItem('selected-provider') || 'claude') === 'codex' ? 'Codex' : 'Claude')}
+                {message.type === 'error' ? 'Error' : message.type === 'tool' ? 'Tool' : 'Claude'}
               </div>
             </div>
           )}
-          
+
           <div className="w-full">
-            
+
             {message.isToolUse && !['Read', 'TodoWrite', 'TodoRead'].includes(message.toolName) ? (
               (() => {
                 // Minimize Grep and Glob tools since they happen frequently
@@ -643,100 +632,62 @@ const MessageComponent = memo(({ message, index, prevMessage, createDiff, onFile
 
                 // Full display for other tools
                 return (
-              <div className="group relative bg-gradient-to-br from-blue-50/50 to-indigo-50/50 dark:from-blue-950/20 dark:to-indigo-950/20 border border-blue-100/30 dark:border-blue-800/30 rounded-lg p-3 mb-2">
-                {/* Decorative gradient overlay */}
-                <div className="absolute inset-0 bg-gradient-to-br from-blue-500/3 to-indigo-500/3 dark:from-blue-400/3 dark:to-indigo-400/3 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                  <div className="group relative bg-gradient-to-br from-blue-50/50 to-indigo-50/50 dark:from-blue-950/20 dark:to-indigo-950/20 border border-blue-100/30 dark:border-blue-800/30 rounded-lg p-3 mb-2">
+                    {/* Decorative gradient overlay */}
+                    <div className="absolute inset-0 bg-gradient-to-br from-blue-500/3 to-indigo-500/3 dark:from-blue-400/3 dark:to-indigo-400/3 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
 
-                <div className="relative flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-3">
-                    <div className="relative w-8 h-8 bg-gradient-to-br from-blue-500 to-indigo-600 dark:from-blue-400 dark:to-indigo-500 rounded-lg flex items-center justify-center shadow-lg shadow-blue-500/20 dark:shadow-blue-400/20">
-                      <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                      </svg>
-                      {/* Subtle pulse animation */}
-                      <div className="absolute inset-0 rounded-lg bg-blue-500 dark:bg-blue-400 animate-pulse opacity-20"></div>
+                    <div className="relative flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-3">
+                        <div className="relative w-8 h-8 bg-gradient-to-br from-blue-500 to-indigo-600 dark:from-blue-400 dark:to-indigo-500 rounded-lg flex items-center justify-center shadow-lg shadow-blue-500/20 dark:shadow-blue-400/20">
+                          <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                          </svg>
+                          {/* Subtle pulse animation */}
+                          <div className="absolute inset-0 rounded-lg bg-blue-500 dark:bg-blue-400 animate-pulse opacity-20"></div>
+                        </div>
+                        <div className="flex flex-col">
+                          <span className="font-semibold text-gray-900 dark:text-white text-sm">
+                            {message.toolName}
+                          </span>
+                          <span className="text-xs text-gray-500 dark:text-gray-400 font-mono">
+                            {message.toolId}
+                          </span>
+                        </div>
+                      </div>
+                      {onShowSettings && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onShowSettings();
+                          }}
+                          className="p-2 rounded-lg hover:bg-white/60 dark:hover:bg-gray-800/60 transition-all duration-200 group/btn backdrop-blur-sm"
+                          title="Tool Settings"
+                        >
+                          <svg className="w-4 h-4 text-gray-600 dark:text-gray-400 group-hover/btn:text-blue-600 dark:group-hover/btn:text-blue-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                          </svg>
+                        </button>
+                      )}
                     </div>
-                    <div className="flex flex-col">
-                      <span className="font-semibold text-gray-900 dark:text-white text-sm">
-                        {message.toolName}
-                      </span>
-                      <span className="text-xs text-gray-500 dark:text-gray-400 font-mono">
-                        {message.toolId}
-                      </span>
-                    </div>
-                  </div>
-                  {onShowSettings && (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onShowSettings();
-                      }}
-                      className="p-2 rounded-lg hover:bg-white/60 dark:hover:bg-gray-800/60 transition-all duration-200 group/btn backdrop-blur-sm"
-                      title="Tool Settings"
-                    >
-                      <svg className="w-4 h-4 text-gray-600 dark:text-gray-400 group-hover/btn:text-blue-600 dark:group-hover/btn:text-blue-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                      </svg>
-                    </button>
-                  )}
-                </div>
-                {message.toolInput && message.toolName === 'Edit' && (() => {
-                  try {
-                    const input = JSON.parse(message.toolInput);
-                    if (input.file_path && input.old_string && input.new_string) {
-                      return (
-                        <details className="relative mt-3 group/details" open={autoExpandTools}>
-                          <summary className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200 p-2.5 rounded-lg hover:bg-white/50 dark:hover:bg-gray-800/50">
-                            <svg className="w-4 h-4 transition-transform duration-200 group-open/details:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                            </svg>
-                            <span className="flex items-center gap-2">
-                              <span>View edit diff for</span>
-                            </span> 
-                            <button
-                              onClick={async (e) => {
-                                e.preventDefault();
-                                e.stopPropagation();
-                                if (!onFileOpen) return;
-
-                                try {
-                                  // Fetch the current file (after the edit)
-                                  const response = await api.readFile(selectedProject?.name, input.file_path);
-                                  const data = await response.json();
-
-                                  if (!response.ok || data.error) {
-                                    console.error('Failed to fetch file:', data.error);
-                                    onFileOpen(input.file_path);
-                                    return;
-                                  }
-
-                                  const currentContent = data.content || '';
-
-                                  // Reverse apply the edit: replace new_string back to old_string to get the file BEFORE the edit
-                                  const oldContent = currentContent.replace(input.new_string, input.old_string);
-
-                                  // Pass the full file before and after the edit
-                                  onFileOpen(input.file_path, {
-                                    old_string: oldContent,
-                                    new_string: currentContent
-                                  });
-                                } catch (error) {
-                                  console.error('Error preparing diff:', error);
-                                  onFileOpen(input.file_path);
-                                }
-                              }}
-                              className="px-2.5 py-1 rounded-md bg-white/60 dark:bg-gray-800/60 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 font-mono text-xs font-medium transition-all duration-200 shadow-sm"
-                            >
-                              {input.file_path.split('/').pop()}
-                            </button>
-                          </summary>
-                          <div className="mt-3 pl-6">
-                            <div className="bg-white dark:bg-gray-900/50 border border-gray-200/60 dark:border-gray-700/60 rounded-lg overflow-hidden shadow-sm">
-                              <div className="flex items-center justify-between px-4 py-2.5 bg-gradient-to-r from-gray-50 to-gray-100/50 dark:from-gray-800/80 dark:to-gray-800/40 border-b border-gray-200/60 dark:border-gray-700/60 backdrop-blur-sm">
+                    {message.toolInput && message.toolName === 'Edit' && (() => {
+                      try {
+                        const input = JSON.parse(message.toolInput);
+                        if (input.file_path && input.old_string && input.new_string) {
+                          return (
+                            <details className="relative mt-3 group/details" open={autoExpandTools}>
+                              <summary className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200 p-2.5 rounded-lg hover:bg-white/50 dark:hover:bg-gray-800/50">
+                                <svg className="w-4 h-4 transition-transform duration-200 group-open/details:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                </svg>
+                                <span className="flex items-center gap-2">
+                                  <span>View edit diff for</span>
+                                </span>
                                 <button
-                                  onClick={async () => {
+                                  onClick={async (e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
                                     if (!onFileOpen) return;
 
                                     try {
@@ -751,7 +702,8 @@ const MessageComponent = memo(({ message, index, prevMessage, createDiff, onFile
                                       }
 
                                       const currentContent = data.content || '';
-                                      // Reverse apply the edit: replace new_string back to old_string
+
+                                      // Reverse apply the edit: replace new_string back to old_string to get the file BEFORE the edit
                                       const oldContent = currentContent.replace(input.new_string, input.old_string);
 
                                       // Pass the full file before and after the edit
@@ -764,132 +716,134 @@ const MessageComponent = memo(({ message, index, prevMessage, createDiff, onFile
                                       onFileOpen(input.file_path);
                                     }
                                   }}
-                                  className="text-xs font-mono text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 truncate cursor-pointer font-medium transition-colors"
+                                  className="px-2.5 py-1 rounded-md bg-white/60 dark:bg-gray-800/60 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 font-mono text-xs font-medium transition-all duration-200 shadow-sm"
                                 >
-                                  {input.file_path}
+                                  {input.file_path.split('/').pop()}
                                 </button>
-                                <span className="text-xs text-gray-500 dark:text-gray-400 font-medium px-2 py-0.5 bg-gray-100 dark:bg-gray-700/50 rounded">
-                                  Diff
-                                </span>
-                              </div>
-                              <div className="text-xs font-mono">
-                                {createDiff(input.old_string, input.new_string).map((diffLine, i) => (
-                                  <div key={i} className="flex">
-                                    <span className={`w-8 text-center border-r ${
-                                      diffLine.type === 'removed' 
-                                        ? 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 border-red-200 dark:border-red-800'
-                                        : 'bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 border-green-200 dark:border-green-800'
-                                    }`}>
-                                      {diffLine.type === 'removed' ? '-' : '+'}
-                                    </span>
-                                    <span className={`px-2 py-0.5 flex-1 whitespace-pre-wrap ${
-                                      diffLine.type === 'removed'
-                                        ? 'bg-red-50 dark:bg-red-900/20 text-red-800 dark:text-red-200'
-                                        : 'bg-green-50 dark:bg-green-900/20 text-green-800 dark:text-green-200'
-                                    }`}>
-                                      {diffLine.content}
+                              </summary>
+                              <div className="mt-3 pl-6">
+                                <div className="bg-white dark:bg-gray-900/50 border border-gray-200/60 dark:border-gray-700/60 rounded-lg overflow-hidden shadow-sm">
+                                  <div className="flex items-center justify-between px-4 py-2.5 bg-gradient-to-r from-gray-50 to-gray-100/50 dark:from-gray-800/80 dark:to-gray-800/40 border-b border-gray-200/60 dark:border-gray-700/60 backdrop-blur-sm">
+                                    <button
+                                      onClick={async () => {
+                                        if (!onFileOpen) return;
+
+                                        try {
+                                          // Fetch the current file (after the edit)
+                                          const response = await api.readFile(selectedProject?.name, input.file_path);
+                                          const data = await response.json();
+
+                                          if (!response.ok || data.error) {
+                                            console.error('Failed to fetch file:', data.error);
+                                            onFileOpen(input.file_path);
+                                            return;
+                                          }
+
+                                          const currentContent = data.content || '';
+                                          // Reverse apply the edit: replace new_string back to old_string
+                                          const oldContent = currentContent.replace(input.new_string, input.old_string);
+
+                                          // Pass the full file before and after the edit
+                                          onFileOpen(input.file_path, {
+                                            old_string: oldContent,
+                                            new_string: currentContent
+                                          });
+                                        } catch (error) {
+                                          console.error('Error preparing diff:', error);
+                                          onFileOpen(input.file_path);
+                                        }
+                                      }}
+                                      className="text-xs font-mono text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 truncate cursor-pointer font-medium transition-colors"
+                                    >
+                                      {input.file_path}
+                                    </button>
+                                    <span className="text-xs text-gray-500 dark:text-gray-400 font-medium px-2 py-0.5 bg-gray-100 dark:bg-gray-700/50 rounded">
+                                      Diff
                                     </span>
                                   </div>
-                                ))}
+                                  <div className="text-xs font-mono">
+                                    {createDiff(input.old_string, input.new_string).map((diffLine, i) => (
+                                      <div key={i} className="flex">
+                                        <span className={`w-8 text-center border-r ${diffLine.type === 'removed'
+                                          ? 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 border-red-200 dark:border-red-800'
+                                          : 'bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 border-green-200 dark:border-green-800'
+                                          }`}>
+                                          {diffLine.type === 'removed' ? '-' : '+'}
+                                        </span>
+                                        <span className={`px-2 py-0.5 flex-1 whitespace-pre-wrap ${diffLine.type === 'removed'
+                                          ? 'bg-red-50 dark:bg-red-900/20 text-red-800 dark:text-red-200'
+                                          : 'bg-green-50 dark:bg-green-900/20 text-green-800 dark:text-green-200'
+                                          }`}>
+                                          {diffLine.content}
+                                        </span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                                {showRawParameters && (
+                                  <details className="relative mt-3 pl-6 group/raw" open={autoExpandTools}>
+                                    <summary className="flex items-center gap-2 text-xs font-medium text-gray-600 dark:text-gray-400 cursor-pointer hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200 p-2 rounded-lg hover:bg-white/50 dark:hover:bg-gray-800/50">
+                                      <svg className="w-3 h-3 transition-transform duration-200 group-open/raw:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                      </svg>
+                                      View raw parameters
+                                    </summary>
+                                    <pre className="mt-2 text-xs bg-gray-50 dark:bg-gray-800/50 border border-gray-200/60 dark:border-gray-700/60 p-3 rounded-lg whitespace-pre-wrap break-words overflow-hidden text-gray-700 dark:text-gray-300 font-mono">
+                                      {message.toolInput}
+                                    </pre>
+                                  </details>
+                                )}
                               </div>
-                            </div>
-                            {showRawParameters && (
-                              <details className="relative mt-3 pl-6 group/raw" open={autoExpandTools}>
-                                <summary className="flex items-center gap-2 text-xs font-medium text-gray-600 dark:text-gray-400 cursor-pointer hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200 p-2 rounded-lg hover:bg-white/50 dark:hover:bg-gray-800/50">
-                                  <svg className="w-3 h-3 transition-transform duration-200 group-open/raw:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                                  </svg>
-                                  View raw parameters
-                                </summary>
-                                <pre className="mt-2 text-xs bg-gray-50 dark:bg-gray-800/50 border border-gray-200/60 dark:border-gray-700/60 p-3 rounded-lg whitespace-pre-wrap break-words overflow-hidden text-gray-700 dark:text-gray-300 font-mono">
-                                  {message.toolInput}
-                                </pre>
-                              </details>
-                            )}
-                          </div>
+                            </details>
+                          );
+                        }
+                      } catch (e) {
+                        // Fall back to raw display if parsing fails
+                      }
+                      return (
+                        <details className="relative mt-3 group/params" open={autoExpandTools}>
+                          <summary className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200 p-2.5 rounded-lg hover:bg-white/50 dark:hover:bg-gray-800/50">
+                            <svg className="w-4 h-4 transition-transform duration-200 group-open/params:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                            </svg>
+                            View input parameters
+                          </summary>
+                          <pre className="mt-3 text-xs bg-gray-50 dark:bg-gray-800/50 border border-gray-200/60 dark:border-gray-700/60 p-3 rounded-lg whitespace-pre-wrap break-words overflow-hidden text-gray-700 dark:text-gray-300 font-mono">
+                            {message.toolInput}
+                          </pre>
                         </details>
                       );
-                    }
-                  } catch (e) {
-                    // Fall back to raw display if parsing fails
-                  }
-                  return (
-                    <details className="relative mt-3 group/params" open={autoExpandTools}>
-                      <summary className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200 p-2.5 rounded-lg hover:bg-white/50 dark:hover:bg-gray-800/50">
-                        <svg className="w-4 h-4 transition-transform duration-200 group-open/params:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                        </svg>
-                        View input parameters
-                      </summary>
-                      <pre className="mt-3 text-xs bg-gray-50 dark:bg-gray-800/50 border border-gray-200/60 dark:border-gray-700/60 p-3 rounded-lg whitespace-pre-wrap break-words overflow-hidden text-gray-700 dark:text-gray-300 font-mono">
-                        {message.toolInput}
-                      </pre>
-                    </details>
-                  );
-                })()}
-                {message.toolInput && message.toolName !== 'Edit' && (() => {
-                  // Debug log to see what we're dealing with
-                  
-                  // Special handling for Write tool
-                  if (message.toolName === 'Write') {
-                    try {
-                      let input;
-                      // Handle both JSON string and already parsed object
-                      if (typeof message.toolInput === 'string') {
-                        input = JSON.parse(message.toolInput);
-                      } else {
-                        input = message.toolInput;
-                      }
-                      
-                      
-                      if (input.file_path && input.content !== undefined) {
-                        return (
-                          <details className="relative mt-3 group/details" open={autoExpandTools}>
-                            <summary className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200 p-2.5 rounded-lg hover:bg-white/50 dark:hover:bg-gray-800/50">
-                              <svg className="w-4 h-4 transition-transform duration-200 group-open/details:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                              </svg>
-                              <span className="flex items-center gap-2">
-                                <span className="text-lg leading-none">📄</span>
-                                <span>Creating new file:</span>
-                              </span>
-                              <button
-                                onClick={async (e) => {
-                                  e.preventDefault();
-                                  e.stopPropagation();
-                                  if (!onFileOpen) return;
+                    })()}
+                    {message.toolInput && message.toolName !== 'Edit' && (() => {
+                      // Debug log to see what we're dealing with
 
-                                  try {
-                                    // Fetch the written file from disk
-                                    const response = await api.readFile(selectedProject?.name, input.file_path);
-                                    const data = await response.json();
+                      // Special handling for Write tool
+                      if (message.toolName === 'Write') {
+                        try {
+                          let input;
+                          // Handle both JSON string and already parsed object
+                          if (typeof message.toolInput === 'string') {
+                            input = JSON.parse(message.toolInput);
+                          } else {
+                            input = message.toolInput;
+                          }
 
-                                    const newContent = (response.ok && !data.error) ? data.content || '' : input.content || '';
 
-                                    // New file: old_string is empty, new_string is the full file
-                                    onFileOpen(input.file_path, {
-                                      old_string: '',
-                                      new_string: newContent
-                                    });
-                                  } catch (error) {
-                                    console.error('Error preparing diff:', error);
-                                    // Fallback to tool input content
-                                    onFileOpen(input.file_path, {
-                                      old_string: '',
-                                      new_string: input.content || ''
-                                    });
-                                  }
-                                }}
-                                className="px-2.5 py-1 rounded-md bg-white/60 dark:bg-gray-800/60 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 font-mono text-xs font-medium transition-all duration-200 shadow-sm"
-                              >
-                                {input.file_path.split('/').pop()}
-                              </button>
-                            </summary>
-                            <div className="mt-3 pl-6">
-                              <div className="bg-white dark:bg-gray-900/50 border border-gray-200/60 dark:border-gray-700/60 rounded-lg overflow-hidden shadow-sm">
-                                <div className="flex items-center justify-between px-4 py-2.5 bg-gradient-to-r from-gray-50 to-gray-100/50 dark:from-gray-800/80 dark:to-gray-800/40 border-b border-gray-200/60 dark:border-gray-700/60 backdrop-blur-sm">
+                          if (input.file_path && input.content !== undefined) {
+                            return (
+                              <details className="relative mt-3 group/details" open={autoExpandTools}>
+                                <summary className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200 p-2.5 rounded-lg hover:bg-white/50 dark:hover:bg-gray-800/50">
+                                  <svg className="w-4 h-4 transition-transform duration-200 group-open/details:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                  </svg>
+                                  <span className="flex items-center gap-2">
+                                    <span className="text-lg leading-none">📄</span>
+                                    <span>Creating new file:</span>
+                                  </span>
                                   <button
-                                    onClick={async () => {
+                                    onClick={async (e) => {
+                                      e.preventDefault();
+                                      e.stopPropagation();
                                       if (!onFileOpen) return;
 
                                       try {
@@ -913,644 +867,666 @@ const MessageComponent = memo(({ message, index, prevMessage, createDiff, onFile
                                         });
                                       }
                                     }}
-                                    className="text-xs font-mono text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 truncate cursor-pointer font-medium transition-colors"
+                                    className="px-2.5 py-1 rounded-md bg-white/60 dark:bg-gray-800/60 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 font-mono text-xs font-medium transition-all duration-200 shadow-sm"
                                   >
-                                    {input.file_path}
+                                    {input.file_path.split('/').pop()}
                                   </button>
-                                  <span className="text-xs text-gray-500 dark:text-gray-400 font-medium px-2 py-0.5 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 rounded">
-                                    New File
-                                  </span>
-                                </div>
-                                <div className="text-xs font-mono">
-                                  {createDiff('', input.content).map((diffLine, i) => (
-                                    <div key={i} className="flex">
-                                      <span className={`w-8 text-center border-r ${
-                                        diffLine.type === 'removed' 
-                                          ? 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 border-red-200 dark:border-red-800'
-                                          : 'bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 border-green-200 dark:border-green-800'
-                                      }`}>
-                                        {diffLine.type === 'removed' ? '-' : '+'}
-                                      </span>
-                                      <span className={`px-2 py-0.5 flex-1 whitespace-pre-wrap ${
-                                        diffLine.type === 'removed'
-                                          ? 'bg-red-50 dark:bg-red-900/20 text-red-800 dark:text-red-200'
-                                          : 'bg-green-50 dark:bg-green-900/20 text-green-800 dark:text-green-200'
-                                      }`}>
-                                        {diffLine.content}
-                                      </span>
-                                    </div>
-                                  ))}
-                                </div>
-                              </div>
-                              {showRawParameters && (
-                                <details className="relative mt-3 pl-6 group/raw" open={autoExpandTools}>
-                                  <summary className="flex items-center gap-2 text-xs font-medium text-gray-600 dark:text-gray-400 cursor-pointer hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200 p-2 rounded-lg hover:bg-white/50 dark:hover:bg-gray-800/50">
-                                    <svg className="w-3 h-3 transition-transform duration-200 group-open/raw:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                                    </svg>
-                                    View raw parameters
-                                  </summary>
-                                  <pre className="mt-2 text-xs bg-gray-50 dark:bg-gray-800/50 border border-gray-200/60 dark:border-gray-700/60 p-3 rounded-lg whitespace-pre-wrap break-words overflow-hidden text-gray-700 dark:text-gray-300 font-mono">
-                                    {message.toolInput}
-                                  </pre>
-                                </details>
-                              )}
-                            </div>
-                          </details>
-                        );
-                      }
-                    } catch (e) {
-                      // Fall back to regular display
-                    }
-                  }
-                  
-                  // Special handling for TodoWrite tool
-                  if (message.toolName === 'TodoWrite') {
-                    try {
-                      const input = JSON.parse(message.toolInput);
-                      if (input.todos && Array.isArray(input.todos)) {
-                        return (
-                          <details className="relative mt-3 group/todo" open={autoExpandTools}>
-                            <summary className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200 p-2.5 rounded-lg hover:bg-white/50 dark:hover:bg-gray-800/50">
-                              <svg className="w-4 h-4 transition-transform duration-200 group-open/todo:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                              </svg>
-                              <span className="flex items-center gap-2">
-                                <span className="text-lg leading-none">✓</span>
-                                <span>Updating Todo List</span>
-                              </span>
-                            </summary>
-                            <div className="mt-3">
-                              <TodoList todos={input.todos} />
-                              {showRawParameters && (
-                                <details className="relative mt-3 group/raw" open={autoExpandTools}>
-                                  <summary className="flex items-center gap-2 text-xs font-medium text-gray-600 dark:text-gray-400 cursor-pointer hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200 p-2 rounded-lg hover:bg-white/50 dark:hover:bg-gray-800/50">
-                                    <svg className="w-3 h-3 transition-transform duration-200 group-open/raw:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                                    </svg>
-                                    View raw parameters
-                                  </summary>
-                                  <pre className="mt-2 text-xs bg-gray-50 dark:bg-gray-800/50 border border-gray-200/60 dark:border-gray-700/60 p-3 rounded-lg overflow-x-auto text-gray-700 dark:text-gray-300 font-mono">
-                                    {message.toolInput}
-                                  </pre>
-                                </details>
-                              )}
-                            </div>
-                          </details>
-                        );
-                      }
-                    } catch (e) {
-                      // Fall back to regular display
-                    }
-                  }
-                  
-                  // Special handling for Bash tool
-                  if (message.toolName === 'Bash') {
-                    try {
-                      const input = JSON.parse(message.toolInput);
-                      return (
-                        <div className="my-2">
-                          <div className="bg-gray-900 dark:bg-gray-950 rounded-md px-3 py-2 font-mono text-sm">
-                            <span className="text-green-400">$</span>
-                            <span className="text-gray-100 ml-2">{input.command}</span>
-                          </div>
-                          {input.description && (
-                            <div className="mt-1 text-xs text-gray-500 dark:text-gray-400 italic ml-1">
-                              {input.description}
-                            </div>
-                          )}
-                        </div>
-                      );
-                    } catch (e) {
-                      // Fall back to regular display
-                    }
-                  }
-                  
-                  // Special handling for Read tool
-                  if (message.toolName === 'Read') {
-                    try {
-                      const input = JSON.parse(message.toolInput);
-                      if (input.file_path) {
-                        const filename = input.file_path.split('/').pop();
-                        
-                        return (
-                          <div className="mt-2 text-sm text-blue-700 dark:text-blue-300">
-                            Read{' '}
-                            <button
-                              onClick={() => onFileOpen && onFileOpen(input.file_path)}
-                              className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 underline font-mono"
-                            >
-                              {filename}
-                            </button>
-                          </div>
-                        );
-                      }
-                    } catch (e) {
-                      // Fall back to regular display
-                    }
-                  }
-                  
-                  // Special handling for exit_plan_mode tool
-                  if (message.toolName === 'exit_plan_mode') {
-                    try {
-                      const input = JSON.parse(message.toolInput);
-                      if (input.plan) {
-                        // Replace escaped newlines with actual newlines
-                        const planContent = input.plan.replace(/\\n/g, '\n');
-                        return (
-                          <details className="mt-2" open={autoExpandTools}>
-                            <summary className="text-sm text-blue-700 dark:text-blue-300 cursor-pointer hover:text-blue-800 dark:hover:text-blue-200 flex items-center gap-2">
-                              <svg className="w-4 h-4 transition-transform details-chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                              </svg>
-                              📋 View implementation plan
-                            </summary>
-                            <Markdown className="mt-3 prose prose-sm max-w-none dark:prose-invert">
-                              {planContent}
-                            </Markdown>
-                          </details>
-                        );
-                      }
-                    } catch (e) {
-                      // Fall back to regular display
-                    }
-                  }
-                  
-                  // Regular tool input display for other tools
-                  return (
-                    <details className="relative mt-3 group/params" open={autoExpandTools}>
-                      <summary className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200 p-2.5 rounded-lg hover:bg-white/50 dark:hover:bg-gray-800/50">
-                        <svg className="w-4 h-4 transition-transform duration-200 group-open/params:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                        </svg>
-                        View input parameters
-                      </summary>
-                      <pre className="mt-3 text-xs bg-gray-50 dark:bg-gray-800/50 border border-gray-200/60 dark:border-gray-700/60 p-3 rounded-lg whitespace-pre-wrap break-words overflow-hidden text-gray-700 dark:text-gray-300 font-mono">
-                        {message.toolInput}
-                      </pre>
-                    </details>
-                  );
-                })()}
-                
-                {/* Tool Result Section */}
-                {message.toolResult && (() => {
-                  // Hide tool results for Edit/Write/Bash unless there's an error
-                  const shouldHideResult = !message.toolResult.isError &&
-                    (message.toolName === 'Edit' || message.toolName === 'Write' || message.toolName === 'ApplyPatch' || message.toolName === 'Bash');
+                                </summary>
+                                <div className="mt-3 pl-6">
+                                  <div className="bg-white dark:bg-gray-900/50 border border-gray-200/60 dark:border-gray-700/60 rounded-lg overflow-hidden shadow-sm">
+                                    <div className="flex items-center justify-between px-4 py-2.5 bg-gradient-to-r from-gray-50 to-gray-100/50 dark:from-gray-800/80 dark:to-gray-800/40 border-b border-gray-200/60 dark:border-gray-700/60 backdrop-blur-sm">
+                                      <button
+                                        onClick={async () => {
+                                          if (!onFileOpen) return;
 
-                  if (shouldHideResult) {
-                    return null;
-                  }
+                                          try {
+                                            // Fetch the written file from disk
+                                            const response = await api.readFile(selectedProject?.name, input.file_path);
+                                            const data = await response.json();
 
-                  return (
-                  <div
-                    id={`tool-result-${message.toolId}`}
-                    className={`relative mt-4 p-4 rounded-lg border backdrop-blur-sm scroll-mt-4 ${
-                    message.toolResult.isError
-                      ? 'bg-gradient-to-br from-red-50 to-rose-50 dark:from-red-950/20 dark:to-rose-950/20 border-red-200/60 dark:border-red-800/60'
-                      : 'bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950/20 dark:to-emerald-950/20 border-green-200/60 dark:border-green-800/60'
-                  }`}>
-                    {/* Decorative gradient overlay */}
-                    <div className={`absolute inset-0 rounded-lg opacity-50 ${
-                      message.toolResult.isError
-                        ? 'bg-gradient-to-br from-red-500/5 to-rose-500/5 dark:from-red-400/5 dark:to-rose-400/5'
-                        : 'bg-gradient-to-br from-green-500/5 to-emerald-500/5 dark:from-green-400/5 dark:to-emerald-400/5'
-                    }`}></div>
+                                            const newContent = (response.ok && !data.error) ? data.content || '' : input.content || '';
 
-                    <div className="relative flex items-center gap-2.5 mb-3">
-                      <div className={`w-6 h-6 rounded-lg flex items-center justify-center shadow-md ${
-                        message.toolResult.isError
-                          ? 'bg-gradient-to-br from-red-500 to-rose-600 dark:from-red-400 dark:to-rose-500 shadow-red-500/20'
-                          : 'bg-gradient-to-br from-green-500 to-emerald-600 dark:from-green-400 dark:to-emerald-500 shadow-green-500/20'
-                      }`}>
-                        <svg className="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          {message.toolResult.isError ? (
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
-                          ) : (
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
-                          )}
-                        </svg>
-                      </div>
-                      <span className={`text-sm font-semibold ${
-                        message.toolResult.isError
-                          ? 'text-red-800 dark:text-red-200'
-                          : 'text-green-800 dark:text-green-200'
-                      }`}>
-                        {message.toolResult.isError ? 'Tool Error' : 'Tool Result'}
-                      </span>
-                    </div>
-
-                    <div className={`relative text-sm ${
-                      message.toolResult.isError
-                        ? 'text-red-900 dark:text-red-100'
-                        : 'text-green-900 dark:text-green-100'
-                    }`}>
-                      {(() => {
-                        const content = String(message.toolResult.content || '');
-                        
-                        // Special handling for TodoWrite/TodoRead results
-                        if ((message.toolName === 'TodoWrite' || message.toolName === 'TodoRead') &&
-                            (content.includes('Todos have been modified successfully') || 
-                             content.includes('Todo list') || 
-                             (content.startsWith('[') && content.includes('"content"') && content.includes('"status"')))) {
-                          try {
-                            // Try to parse if it looks like todo JSON data
-                            let todos = null;
-                            if (content.startsWith('[')) {
-                              todos = JSON.parse(content);
-                            } else if (content.includes('Todos have been modified successfully')) {
-                              // For TodoWrite success messages, we don't have the data in the result
-                              return (
-                                <div>
-                                  <div className="flex items-center gap-2 mb-2">
-                                    <span className="font-medium">Todo list has been updated successfully</span>
-                                  </div>
-                                </div>
-                              );
-                            }
-                            
-                            if (todos && Array.isArray(todos)) {
-                              return (
-                                <div>
-                                  <div className="flex items-center gap-2 mb-3">
-                                    <span className="font-medium">Current Todo List</span>
-                                  </div>
-                                  <TodoList todos={todos} isResult={true} />
-                                </div>
-                              );
-                            }
-                          } catch (e) {
-                            // Fall through to regular handling
-                          }
-                        }
-
-                        // Special handling for exit_plan_mode tool results
-                        if (message.toolName === 'exit_plan_mode') {
-                          try {
-                            // The content should be JSON with a "plan" field
-                            const parsed = JSON.parse(content);
-                            if (parsed.plan) {
-                              // Replace escaped newlines with actual newlines
-                              const planContent = parsed.plan.replace(/\\n/g, '\n');
-                              return (
-                                <div>
-                                  <div className="flex items-center gap-2 mb-3">
-                                    <span className="font-medium">Implementation Plan</span>
-                                  </div>
-                                  <Markdown className="prose prose-sm max-w-none dark:prose-invert">
-                                    {planContent}
-                                  </Markdown>
-                                </div>
-                              );
-                            }
-                          } catch (e) {
-                            // Fall through to regular handling
-                          }
-                        }
-
-                        // Special handling for Grep/Glob results with structured data
-                        if ((message.toolName === 'Grep' || message.toolName === 'Glob') && message.toolResult?.toolUseResult) {
-                          const toolData = message.toolResult.toolUseResult;
-
-                          // Handle files_with_matches mode or any tool result with filenames array
-                          if (toolData.filenames && Array.isArray(toolData.filenames) && toolData.filenames.length > 0) {
-                            return (
-                              <div>
-                                <div className="flex items-center gap-2 mb-3">
-                                  <span className="font-medium">
-                                    Found {toolData.numFiles || toolData.filenames.length} {(toolData.numFiles === 1 || toolData.filenames.length === 1) ? 'file' : 'files'}
-                                  </span>
-                                </div>
-                                <div className="space-y-1 max-h-96 overflow-y-auto">
-                                  {toolData.filenames.map((filePath, index) => {
-                                    const fileName = filePath.split('/').pop();
-                                    const dirPath = filePath.substring(0, filePath.lastIndexOf('/'));
-
-                                    return (
-                                      <div
-                                        key={index}
-                                        onClick={() => {
-                                          if (onFileOpen) {
-                                            onFileOpen(filePath);
+                                            // New file: old_string is empty, new_string is the full file
+                                            onFileOpen(input.file_path, {
+                                              old_string: '',
+                                              new_string: newContent
+                                            });
+                                          } catch (error) {
+                                            console.error('Error preparing diff:', error);
+                                            // Fallback to tool input content
+                                            onFileOpen(input.file_path, {
+                                              old_string: '',
+                                              new_string: input.content || ''
+                                            });
                                           }
                                         }}
-                                        className="group flex items-center gap-2 px-2 py-1.5 rounded hover:bg-green-100/50 dark:hover:bg-green-800/20 cursor-pointer transition-colors"
+                                        className="text-xs font-mono text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 truncate cursor-pointer font-medium transition-colors"
                                       >
-                                        <svg className="w-4 h-4 text-green-600 dark:text-green-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                        </svg>
-                                        <div className="flex-1 min-w-0">
-                                          <div className="font-mono text-sm font-medium text-green-800 dark:text-green-200 truncate group-hover:text-green-900 dark:group-hover:text-green-100">
-                                            {fileName}
-                                          </div>
-                                          <div className="font-mono text-xs text-green-600/70 dark:text-green-400/70 truncate">
-                                            {dirPath}
-                                          </div>
+                                        {input.file_path}
+                                      </button>
+                                      <span className="text-xs text-gray-500 dark:text-gray-400 font-medium px-2 py-0.5 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 rounded">
+                                        New File
+                                      </span>
+                                    </div>
+                                    <div className="text-xs font-mono">
+                                      {createDiff('', input.content).map((diffLine, i) => (
+                                        <div key={i} className="flex">
+                                          <span className={`w-8 text-center border-r ${diffLine.type === 'removed'
+                                            ? 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 border-red-200 dark:border-red-800'
+                                            : 'bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 border-green-200 dark:border-green-800'
+                                            }`}>
+                                            {diffLine.type === 'removed' ? '-' : '+'}
+                                          </span>
+                                          <span className={`px-2 py-0.5 flex-1 whitespace-pre-wrap ${diffLine.type === 'removed'
+                                            ? 'bg-red-50 dark:bg-red-900/20 text-red-800 dark:text-red-200'
+                                            : 'bg-green-50 dark:bg-green-900/20 text-green-800 dark:text-green-200'
+                                            }`}>
+                                            {diffLine.content}
+                                          </span>
                                         </div>
-                                        <svg className="w-4 h-4 text-green-600 dark:text-green-400 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                                      ))}
+                                    </div>
+                                  </div>
+                                  {showRawParameters && (
+                                    <details className="relative mt-3 pl-6 group/raw" open={autoExpandTools}>
+                                      <summary className="flex items-center gap-2 text-xs font-medium text-gray-600 dark:text-gray-400 cursor-pointer hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200 p-2 rounded-lg hover:bg-white/50 dark:hover:bg-gray-800/50">
+                                        <svg className="w-3 h-3 transition-transform duration-200 group-open/raw:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                                         </svg>
-                                      </div>
-                                    );
-                                  })}
+                                        View raw parameters
+                                      </summary>
+                                      <pre className="mt-2 text-xs bg-gray-50 dark:bg-gray-800/50 border border-gray-200/60 dark:border-gray-700/60 p-3 rounded-lg whitespace-pre-wrap break-words overflow-hidden text-gray-700 dark:text-gray-300 font-mono">
+                                        {message.toolInput}
+                                      </pre>
+                                    </details>
+                                  )}
                                 </div>
+                              </details>
+                            );
+                          }
+                        } catch (e) {
+                          // Fall back to regular display
+                        }
+                      }
+
+                      // Special handling for TodoWrite tool
+                      if (message.toolName === 'TodoWrite') {
+                        try {
+                          const input = JSON.parse(message.toolInput);
+                          if (input.todos && Array.isArray(input.todos)) {
+                            return (
+                              <details className="relative mt-3 group/todo" open={autoExpandTools}>
+                                <summary className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200 p-2.5 rounded-lg hover:bg-white/50 dark:hover:bg-gray-800/50">
+                                  <svg className="w-4 h-4 transition-transform duration-200 group-open/todo:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                  </svg>
+                                  <span className="flex items-center gap-2">
+                                    <span className="text-lg leading-none">✓</span>
+                                    <span>Updating Todo List</span>
+                                  </span>
+                                </summary>
+                                <div className="mt-3">
+                                  <TodoList todos={input.todos} />
+                                  {showRawParameters && (
+                                    <details className="relative mt-3 group/raw" open={autoExpandTools}>
+                                      <summary className="flex items-center gap-2 text-xs font-medium text-gray-600 dark:text-gray-400 cursor-pointer hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200 p-2 rounded-lg hover:bg-white/50 dark:hover:bg-gray-800/50">
+                                        <svg className="w-3 h-3 transition-transform duration-200 group-open/raw:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                        </svg>
+                                        View raw parameters
+                                      </summary>
+                                      <pre className="mt-2 text-xs bg-gray-50 dark:bg-gray-800/50 border border-gray-200/60 dark:border-gray-700/60 p-3 rounded-lg overflow-x-auto text-gray-700 dark:text-gray-300 font-mono">
+                                        {message.toolInput}
+                                      </pre>
+                                    </details>
+                                  )}
+                                </div>
+                              </details>
+                            );
+                          }
+                        } catch (e) {
+                          // Fall back to regular display
+                        }
+                      }
+
+                      // Special handling for Bash tool
+                      if (message.toolName === 'Bash') {
+                        try {
+                          const input = JSON.parse(message.toolInput);
+                          return (
+                            <div className="my-2">
+                              <div className="bg-gray-900 dark:bg-gray-950 rounded-md px-3 py-2 font-mono text-sm">
+                                <span className="text-green-400">$</span>
+                                <span className="text-gray-100 ml-2">{input.command}</span>
+                              </div>
+                              {input.description && (
+                                <div className="mt-1 text-xs text-gray-500 dark:text-gray-400 italic ml-1">
+                                  {input.description}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        } catch (e) {
+                          // Fall back to regular display
+                        }
+                      }
+
+                      // Special handling for Read tool
+                      if (message.toolName === 'Read') {
+                        try {
+                          const input = JSON.parse(message.toolInput);
+                          if (input.file_path) {
+                            const filename = input.file_path.split('/').pop();
+
+                            return (
+                              <div className="mt-2 text-sm text-blue-700 dark:text-blue-300">
+                                Read{' '}
+                                <button
+                                  onClick={() => onFileOpen && onFileOpen(input.file_path)}
+                                  className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 underline font-mono"
+                                >
+                                  {filename}
+                                </button>
                               </div>
                             );
                           }
+                        } catch (e) {
+                          // Fall back to regular display
                         }
+                      }
 
-                        // Special handling for interactive prompts
-                        if (content.includes('Do you want to proceed?') && message.toolName === 'Bash') {
-                          const lines = content.split('\n');
-                          const promptIndex = lines.findIndex(line => line.includes('Do you want to proceed?'));
-                          const beforePrompt = lines.slice(0, promptIndex).join('\n');
-                          const promptLines = lines.slice(promptIndex);
-                          
-                          // Extract the question and options
-                          const questionLine = promptLines.find(line => line.includes('Do you want to proceed?')) || '';
-                          const options = [];
-                          
-                          // Parse numbered options (1. Yes, 2. No, etc.)
-                          promptLines.forEach(line => {
-                            const optionMatch = line.match(/^\s*(\d+)\.\s+(.+)$/);
-                            if (optionMatch) {
-                              options.push({
-                                number: optionMatch[1],
-                                text: optionMatch[2].trim()
-                              });
-                            }
-                          });
-                          
-                          // Find which option was selected (usually indicated by "> 1" or similar)
-                          const selectedMatch = content.match(/>\s*(\d+)/);
-                          const selectedOption = selectedMatch ? selectedMatch[1] : null;
-                          
-                          return (
-                            <div className="space-y-3">
-                              {beforePrompt && (
-                                <div className="bg-gray-900 dark:bg-gray-950 text-gray-100 rounded-lg p-3 font-mono text-xs overflow-x-auto">
-                                  <pre className="whitespace-pre-wrap break-words">{beforePrompt}</pre>
-                                </div>
-                              )}
-                              <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
-                                <div className="flex items-start gap-3">
-                                  <div className="w-8 h-8 bg-amber-500 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-                                    <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                    </svg>
-                                  </div>
-                                  <div className="flex-1">
-                                    <h4 className="font-semibold text-amber-900 dark:text-amber-100 text-base mb-2">
-                                      Interactive Prompt
-                                    </h4>
-                                    <p className="text-sm text-amber-800 dark:text-amber-200 mb-4">
-                                      {questionLine}
-                                    </p>
-                                    
-                                    {/* Option buttons */}
-                                    <div className="space-y-2 mb-4">
-                                      {options.map((option) => (
-                                        <button
-                                          key={option.number}
-                                          className={`w-full text-left px-4 py-3 rounded-lg border-2 transition-all ${
-                                            selectedOption === option.number
-                                              ? 'bg-amber-600 dark:bg-amber-700 text-white border-amber-600 dark:border-amber-700 shadow-md'
-                                              : 'bg-white dark:bg-gray-800 text-amber-900 dark:text-amber-100 border-amber-300 dark:border-amber-700 hover:border-amber-400 dark:hover:border-amber-600 hover:shadow-sm'
-                                          } ${
-                                            selectedOption ? 'cursor-default' : 'cursor-not-allowed opacity-75'
-                                          }`}
-                                          disabled
-                                        >
-                                          <div className="flex items-center gap-3">
-                                            <span className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
-                                              selectedOption === option.number
-                                                ? 'bg-white/20'
-                                                : 'bg-amber-100 dark:bg-amber-800/50'
-                                            }`}>
-                                              {option.number}
-                                            </span>
-                                            <span className="text-sm sm:text-base font-medium flex-1">
-                                              {option.text}
-                                            </span>
-                                            {selectedOption === option.number && (
-                                              <svg className="w-5 h-5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                                                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                      // Special handling for exit_plan_mode tool
+                      if (message.toolName === 'exit_plan_mode') {
+                        try {
+                          const input = JSON.parse(message.toolInput);
+                          if (input.plan) {
+                            // Replace escaped newlines with actual newlines
+                            const planContent = input.plan.replace(/\\n/g, '\n');
+                            return (
+                              <details className="mt-2" open={autoExpandTools}>
+                                <summary className="text-sm text-blue-700 dark:text-blue-300 cursor-pointer hover:text-blue-800 dark:hover:text-blue-200 flex items-center gap-2">
+                                  <svg className="w-4 h-4 transition-transform details-chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                  </svg>
+                                  📋 View implementation plan
+                                </summary>
+                                <Markdown className="mt-3 prose prose-sm max-w-none dark:prose-invert">
+                                  {planContent}
+                                </Markdown>
+                              </details>
+                            );
+                          }
+                        } catch (e) {
+                          // Fall back to regular display
+                        }
+                      }
+
+                      // Regular tool input display for other tools
+                      return (
+                        <details className="relative mt-3 group/params" open={autoExpandTools}>
+                          <summary className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200 p-2.5 rounded-lg hover:bg-white/50 dark:hover:bg-gray-800/50">
+                            <svg className="w-4 h-4 transition-transform duration-200 group-open/params:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                            </svg>
+                            View input parameters
+                          </summary>
+                          <pre className="mt-3 text-xs bg-gray-50 dark:bg-gray-800/50 border border-gray-200/60 dark:border-gray-700/60 p-3 rounded-lg whitespace-pre-wrap break-words overflow-hidden text-gray-700 dark:text-gray-300 font-mono">
+                            {message.toolInput}
+                          </pre>
+                        </details>
+                      );
+                    })()}
+
+                    {/* Tool Result Section */}
+                    {message.toolResult && (() => {
+                      // Hide tool results for Edit/Write/Bash unless there's an error
+                      const shouldHideResult = !message.toolResult.isError &&
+                        (message.toolName === 'Edit' || message.toolName === 'Write' || message.toolName === 'ApplyPatch' || message.toolName === 'Bash');
+
+                      if (shouldHideResult) {
+                        return null;
+                      }
+
+                      return (
+                        <div
+                          id={`tool-result-${message.toolId}`}
+                          className={`relative mt-4 p-4 rounded-lg border backdrop-blur-sm scroll-mt-4 ${message.toolResult.isError
+                            ? 'bg-gradient-to-br from-red-50 to-rose-50 dark:from-red-950/20 dark:to-rose-950/20 border-red-200/60 dark:border-red-800/60'
+                            : 'bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950/20 dark:to-emerald-950/20 border-green-200/60 dark:border-green-800/60'
+                            }`}>
+                          {/* Decorative gradient overlay */}
+                          <div className={`absolute inset-0 rounded-lg opacity-50 ${message.toolResult.isError
+                            ? 'bg-gradient-to-br from-red-500/5 to-rose-500/5 dark:from-red-400/5 dark:to-rose-400/5'
+                            : 'bg-gradient-to-br from-green-500/5 to-emerald-500/5 dark:from-green-400/5 dark:to-emerald-400/5'
+                            }`}></div>
+
+                          <div className="relative flex items-center gap-2.5 mb-3">
+                            <div className={`w-6 h-6 rounded-lg flex items-center justify-center shadow-md ${message.toolResult.isError
+                              ? 'bg-gradient-to-br from-red-500 to-rose-600 dark:from-red-400 dark:to-rose-500 shadow-red-500/20'
+                              : 'bg-gradient-to-br from-green-500 to-emerald-600 dark:from-green-400 dark:to-emerald-500 shadow-green-500/20'
+                              }`}>
+                              <svg className="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                {message.toolResult.isError ? (
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
+                                ) : (
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                                )}
+                              </svg>
+                            </div>
+                            <span className={`text-sm font-semibold ${message.toolResult.isError
+                              ? 'text-red-800 dark:text-red-200'
+                              : 'text-green-800 dark:text-green-200'
+                              }`}>
+                              {message.toolResult.isError ? 'Tool Error' : 'Tool Result'}
+                            </span>
+                          </div>
+
+                          <div className={`relative text-sm ${message.toolResult.isError
+                            ? 'text-red-900 dark:text-red-100'
+                            : 'text-green-900 dark:text-green-100'
+                            }`}>
+                            {(() => {
+                              const content = String(message.toolResult.content || '');
+
+                              // Special handling for TodoWrite/TodoRead results
+                              if ((message.toolName === 'TodoWrite' || message.toolName === 'TodoRead') &&
+                                (content.includes('Todos have been modified successfully') ||
+                                  content.includes('Todo list') ||
+                                  (content.startsWith('[') && content.includes('"content"') && content.includes('"status"')))) {
+                                try {
+                                  // Try to parse if it looks like todo JSON data
+                                  let todos = null;
+                                  if (content.startsWith('[')) {
+                                    todos = JSON.parse(content);
+                                  } else if (content.includes('Todos have been modified successfully')) {
+                                    // For TodoWrite success messages, we don't have the data in the result
+                                    return (
+                                      <div>
+                                        <div className="flex items-center gap-2 mb-2">
+                                          <span className="font-medium">Todo list has been updated successfully</span>
+                                        </div>
+                                      </div>
+                                    );
+                                  }
+
+                                  if (todos && Array.isArray(todos)) {
+                                    return (
+                                      <div>
+                                        <div className="flex items-center gap-2 mb-3">
+                                          <span className="font-medium">Current Todo List</span>
+                                        </div>
+                                        <TodoList todos={todos} isResult={true} />
+                                      </div>
+                                    );
+                                  }
+                                } catch (e) {
+                                  // Fall through to regular handling
+                                }
+                              }
+
+                              // Special handling for exit_plan_mode tool results
+                              if (message.toolName === 'exit_plan_mode') {
+                                try {
+                                  // The content should be JSON with a "plan" field
+                                  const parsed = JSON.parse(content);
+                                  if (parsed.plan) {
+                                    // Replace escaped newlines with actual newlines
+                                    const planContent = parsed.plan.replace(/\\n/g, '\n');
+                                    return (
+                                      <div>
+                                        <div className="flex items-center gap-2 mb-3">
+                                          <span className="font-medium">Implementation Plan</span>
+                                        </div>
+                                        <Markdown className="prose prose-sm max-w-none dark:prose-invert">
+                                          {planContent}
+                                        </Markdown>
+                                      </div>
+                                    );
+                                  }
+                                } catch (e) {
+                                  // Fall through to regular handling
+                                }
+                              }
+
+                              // Special handling for Grep/Glob results with structured data
+                              if ((message.toolName === 'Grep' || message.toolName === 'Glob') && message.toolResult?.toolUseResult) {
+                                const toolData = message.toolResult.toolUseResult;
+
+                                // Handle files_with_matches mode or any tool result with filenames array
+                                if (toolData.filenames && Array.isArray(toolData.filenames) && toolData.filenames.length > 0) {
+                                  return (
+                                    <div>
+                                      <div className="flex items-center gap-2 mb-3">
+                                        <span className="font-medium">
+                                          Found {toolData.numFiles || toolData.filenames.length} {(toolData.numFiles === 1 || toolData.filenames.length === 1) ? 'file' : 'files'}
+                                        </span>
+                                      </div>
+                                      <div className="space-y-1 max-h-96 overflow-y-auto">
+                                        {toolData.filenames.map((filePath, index) => {
+                                          const fileName = filePath.split('/').pop();
+                                          const dirPath = filePath.substring(0, filePath.lastIndexOf('/'));
+
+                                          return (
+                                            <div
+                                              key={index}
+                                              onClick={() => {
+                                                if (onFileOpen) {
+                                                  onFileOpen(filePath);
+                                                }
+                                              }}
+                                              className="group flex items-center gap-2 px-2 py-1.5 rounded hover:bg-green-100/50 dark:hover:bg-green-800/20 cursor-pointer transition-colors"
+                                            >
+                                              <svg className="w-4 h-4 text-green-600 dark:text-green-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                                               </svg>
-                                            )}
-                                          </div>
-                                        </button>
-                                      ))}
+                                              <div className="flex-1 min-w-0">
+                                                <div className="font-mono text-sm font-medium text-green-800 dark:text-green-200 truncate group-hover:text-green-900 dark:group-hover:text-green-100">
+                                                  {fileName}
+                                                </div>
+                                                <div className="font-mono text-xs text-green-600/70 dark:text-green-400/70 truncate">
+                                                  {dirPath}
+                                                </div>
+                                              </div>
+                                              <svg className="w-4 h-4 text-green-600 dark:text-green-400 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                                              </svg>
+                                            </div>
+                                          );
+                                        })}
+                                      </div>
                                     </div>
-                                    
-                                    {selectedOption && (
-                                      <div className="bg-amber-100 dark:bg-amber-800/30 rounded-lg p-3">
-                                        <p className="text-amber-900 dark:text-amber-100 text-sm font-medium mb-1">
-                                          ✓ Claude selected option {selectedOption}
-                                        </p>
-                                        <p className="text-amber-800 dark:text-amber-200 text-xs">
-                                          In the CLI, you would select this option interactively using arrow keys or by typing the number.
-                                        </p>
+                                  );
+                                }
+                              }
+
+                              // Special handling for interactive prompts
+                              if (content.includes('Do you want to proceed?') && message.toolName === 'Bash') {
+                                const lines = content.split('\n');
+                                const promptIndex = lines.findIndex(line => line.includes('Do you want to proceed?'));
+                                const beforePrompt = lines.slice(0, promptIndex).join('\n');
+                                const promptLines = lines.slice(promptIndex);
+
+                                // Extract the question and options
+                                const questionLine = promptLines.find(line => line.includes('Do you want to proceed?')) || '';
+                                const options = [];
+
+                                // Parse numbered options (1. Yes, 2. No, etc.)
+                                promptLines.forEach(line => {
+                                  const optionMatch = line.match(/^\s*(\d+)\.\s+(.+)$/);
+                                  if (optionMatch) {
+                                    options.push({
+                                      number: optionMatch[1],
+                                      text: optionMatch[2].trim()
+                                    });
+                                  }
+                                });
+
+                                // Find which option was selected (usually indicated by "> 1" or similar)
+                                const selectedMatch = content.match(/>\s*(\d+)/);
+                                const selectedOption = selectedMatch ? selectedMatch[1] : null;
+
+                                return (
+                                  <div className="space-y-3">
+                                    {beforePrompt && (
+                                      <div className="bg-gray-900 dark:bg-gray-950 text-gray-100 rounded-lg p-3 font-mono text-xs overflow-x-auto">
+                                        <pre className="whitespace-pre-wrap break-words">{beforePrompt}</pre>
                                       </div>
                                     )}
+                                    <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
+                                      <div className="flex items-start gap-3">
+                                        <div className="w-8 h-8 bg-amber-500 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                                          <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                          </svg>
+                                        </div>
+                                        <div className="flex-1">
+                                          <h4 className="font-semibold text-amber-900 dark:text-amber-100 text-base mb-2">
+                                            Interactive Prompt
+                                          </h4>
+                                          <p className="text-sm text-amber-800 dark:text-amber-200 mb-4">
+                                            {questionLine}
+                                          </p>
+
+                                          {/* Option buttons */}
+                                          <div className="space-y-2 mb-4">
+                                            {options.map((option) => (
+                                              <button
+                                                key={option.number}
+                                                className={`w-full text-left px-4 py-3 rounded-lg border-2 transition-all ${selectedOption === option.number
+                                                  ? 'bg-amber-600 dark:bg-amber-700 text-white border-amber-600 dark:border-amber-700 shadow-md'
+                                                  : 'bg-white dark:bg-gray-800 text-amber-900 dark:text-amber-100 border-amber-300 dark:border-amber-700 hover:border-amber-400 dark:hover:border-amber-600 hover:shadow-sm'
+                                                  } ${selectedOption ? 'cursor-default' : 'cursor-not-allowed opacity-75'
+                                                  }`}
+                                                disabled
+                                              >
+                                                <div className="flex items-center gap-3">
+                                                  <span className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${selectedOption === option.number
+                                                    ? 'bg-white/20'
+                                                    : 'bg-amber-100 dark:bg-amber-800/50'
+                                                    }`}>
+                                                    {option.number}
+                                                  </span>
+                                                  <span className="text-sm sm:text-base font-medium flex-1">
+                                                    {option.text}
+                                                  </span>
+                                                  {selectedOption === option.number && (
+                                                    <svg className="w-5 h-5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                                                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                                    </svg>
+                                                  )}
+                                                </div>
+                                              </button>
+                                            ))}
+                                          </div>
+
+                                          {selectedOption && (
+                                            <div className="bg-amber-100 dark:bg-amber-800/30 rounded-lg p-3">
+                                              <p className="text-amber-900 dark:text-amber-100 text-sm font-medium mb-1">
+                                                ✓ Claude selected option {selectedOption}
+                                              </p>
+                                              <p className="text-amber-800 dark:text-amber-200 text-xs">
+                                                In the CLI, you would select this option interactively using arrow keys or by typing the number.
+                                              </p>
+                                            </div>
+                                          )}
+                                        </div>
+                                      </div>
+                                    </div>
                                   </div>
-                                </div>
-                              </div>
-                            </div>
-                          );
-                        }
-                        
-                        const fileEditMatch = content.match(/The file (.+?) has been updated\./);
-                        if (fileEditMatch) {
-                          return (
-                            <div>
-                              <div className="flex items-center gap-2 mb-2">
-                                <span className="font-medium">File updated successfully</span>
-                              </div>
-                              <button
-                                onClick={async () => {
-                                  if (!onFileOpen) return;
+                                );
+                              }
 
-                                  // Fetch FULL file content with diff from git
-                                  try {
-                                    const response = await authenticatedFetch(`/api/git/file-with-diff?project=${encodeURIComponent(selectedProject?.name)}&file=${encodeURIComponent(fileEditMatch[1])}`);
-                                    const data = await response.json();
+                              const fileEditMatch = content.match(/The file (.+?) has been updated\./);
+                              if (fileEditMatch) {
+                                return (
+                                  <div>
+                                    <div className="flex items-center gap-2 mb-2">
+                                      <span className="font-medium">File updated successfully</span>
+                                    </div>
+                                    <button
+                                      onClick={async () => {
+                                        if (!onFileOpen) return;
 
-                                    if (!data.error && data.oldContent !== undefined && data.currentContent !== undefined) {
-                                      onFileOpen(fileEditMatch[1], {
-                                        old_string: data.oldContent || '',
-                                        new_string: data.currentContent || ''
-                                      });
-                                    } else {
-                                      onFileOpen(fileEditMatch[1]);
-                                    }
-                                  } catch (error) {
-                                    console.error('Error fetching file diff:', error);
-                                    onFileOpen(fileEditMatch[1]);
-                                  }
-                                }}
-                                className="text-xs font-mono bg-green-100 dark:bg-green-800/30 px-2 py-1 rounded text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 underline cursor-pointer"
-                              >
-                                {fileEditMatch[1]}
-                              </button>
-                            </div>
-                          );
-                        }
-                        
-                        // Handle Write tool output for file creation
-                        const fileCreateMatch = content.match(/(?:The file|File) (.+?) has been (?:created|written)(?: successfully)?\.?/);
-                        if (fileCreateMatch) {
-                          return (
-                            <div>
-                              <div className="flex items-center gap-2 mb-2">
-                                <span className="font-medium">File created successfully</span>
-                              </div>
-                              <button
-                                onClick={async () => {
-                                  if (!onFileOpen) return;
+                                        // Fetch FULL file content with diff from git
+                                        try {
+                                          const response = await authenticatedFetch(`/api/git/file-with-diff?project=${encodeURIComponent(selectedProject?.name)}&file=${encodeURIComponent(fileEditMatch[1])}`);
+                                          const data = await response.json();
 
-                                  // Fetch FULL file content with diff from git
-                                  try {
-                                    const response = await authenticatedFetch(`/api/git/file-with-diff?project=${encodeURIComponent(selectedProject?.name)}&file=${encodeURIComponent(fileCreateMatch[1])}`);
-                                    const data = await response.json();
+                                          if (!data.error && data.oldContent !== undefined && data.currentContent !== undefined) {
+                                            onFileOpen(fileEditMatch[1], {
+                                              old_string: data.oldContent || '',
+                                              new_string: data.currentContent || ''
+                                            });
+                                          } else {
+                                            onFileOpen(fileEditMatch[1]);
+                                          }
+                                        } catch (error) {
+                                          console.error('Error fetching file diff:', error);
+                                          onFileOpen(fileEditMatch[1]);
+                                        }
+                                      }}
+                                      className="text-xs font-mono bg-green-100 dark:bg-green-800/30 px-2 py-1 rounded text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 underline cursor-pointer"
+                                    >
+                                      {fileEditMatch[1]}
+                                    </button>
+                                  </div>
+                                );
+                              }
 
-                                    if (!data.error && data.oldContent !== undefined && data.currentContent !== undefined) {
-                                      onFileOpen(fileCreateMatch[1], {
-                                        old_string: data.oldContent || '',
-                                        new_string: data.currentContent || ''
-                                      });
-                                    } else {
-                                      onFileOpen(fileCreateMatch[1]);
-                                    }
-                                  } catch (error) {
-                                    console.error('Error fetching file diff:', error);
-                                    onFileOpen(fileCreateMatch[1]);
-                                  }
-                                }}
-                                className="text-xs font-mono bg-green-100 dark:bg-green-800/30 px-2 py-1 rounded text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 underline cursor-pointer"
-                              >
-                                {fileCreateMatch[1]}
-                              </button>
-                            </div>
-                          );
-                        }
-                        
-                        // Special handling for Write tool - hide content if it's just the file content
-                        if (message.toolName === 'Write' && !message.toolResult.isError) {
-                          // For Write tool, the diff is already shown in the tool input section
-                          // So we just show a success message here
-                          return (
-                            <div className="text-green-700 dark:text-green-300">
-                              <div className="flex items-center gap-2">
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                </svg>
-                                <span className="font-medium">File written successfully</span>
-                              </div>
-                              <p className="text-xs mt-1 text-green-600 dark:text-green-400">
-                                The file content is displayed in the diff view above
-                              </p>
-                            </div>
-                          );
-                        }
-                        
-                        if (content.includes('cat -n') && content.includes('→')) {
-                          return (
-                            <details open={autoExpandTools}>
-                              <summary className="text-sm text-green-700 dark:text-green-300 cursor-pointer hover:text-green-800 dark:hover:text-green-200 mb-2 flex items-center gap-2">
-                                <svg className="w-4 h-4 transition-transform details-chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                                </svg>
-                                View file content
-                              </summary>
-                              <div className="mt-2 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
-                                <div className="text-xs font-mono p-3 whitespace-pre-wrap break-words overflow-hidden">
+                              // Handle Write tool output for file creation
+                              const fileCreateMatch = content.match(/(?:The file|File) (.+?) has been (?:created|written)(?: successfully)?\.?/);
+                              if (fileCreateMatch) {
+                                return (
+                                  <div>
+                                    <div className="flex items-center gap-2 mb-2">
+                                      <span className="font-medium">File created successfully</span>
+                                    </div>
+                                    <button
+                                      onClick={async () => {
+                                        if (!onFileOpen) return;
+
+                                        // Fetch FULL file content with diff from git
+                                        try {
+                                          const response = await authenticatedFetch(`/api/git/file-with-diff?project=${encodeURIComponent(selectedProject?.name)}&file=${encodeURIComponent(fileCreateMatch[1])}`);
+                                          const data = await response.json();
+
+                                          if (!data.error && data.oldContent !== undefined && data.currentContent !== undefined) {
+                                            onFileOpen(fileCreateMatch[1], {
+                                              old_string: data.oldContent || '',
+                                              new_string: data.currentContent || ''
+                                            });
+                                          } else {
+                                            onFileOpen(fileCreateMatch[1]);
+                                          }
+                                        } catch (error) {
+                                          console.error('Error fetching file diff:', error);
+                                          onFileOpen(fileCreateMatch[1]);
+                                        }
+                                      }}
+                                      className="text-xs font-mono bg-green-100 dark:bg-green-800/30 px-2 py-1 rounded text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 underline cursor-pointer"
+                                    >
+                                      {fileCreateMatch[1]}
+                                    </button>
+                                  </div>
+                                );
+                              }
+
+                              // Special handling for Write tool - hide content if it's just the file content
+                              if (message.toolName === 'Write' && !message.toolResult.isError) {
+                                // For Write tool, the diff is already shown in the tool input section
+                                // So we just show a success message here
+                                return (
+                                  <div className="text-green-700 dark:text-green-300">
+                                    <div className="flex items-center gap-2">
+                                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                      </svg>
+                                      <span className="font-medium">File written successfully</span>
+                                    </div>
+                                    <p className="text-xs mt-1 text-green-600 dark:text-green-400">
+                                      The file content is displayed in the diff view above
+                                    </p>
+                                  </div>
+                                );
+                              }
+
+                              if (content.includes('cat -n') && content.includes('→')) {
+                                return (
+                                  <details open={autoExpandTools}>
+                                    <summary className="text-sm text-green-700 dark:text-green-300 cursor-pointer hover:text-green-800 dark:hover:text-green-200 mb-2 flex items-center gap-2">
+                                      <svg className="w-4 h-4 transition-transform details-chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                      </svg>
+                                      View file content
+                                    </summary>
+                                    <div className="mt-2 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+                                      <div className="text-xs font-mono p-3 whitespace-pre-wrap break-words overflow-hidden">
+                                        {content}
+                                      </div>
+                                    </div>
+                                  </details>
+                                );
+                              }
+
+                              if (content.length > 300) {
+                                return (
+                                  <details open={autoExpandTools}>
+                                    <summary className="text-sm text-green-700 dark:text-green-300 cursor-pointer hover:text-green-800 dark:hover:text-green-200 mb-2 flex items-center gap-2">
+                                      <svg className="w-4 h-4 transition-transform details-chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                      </svg>
+                                      View full output ({content.length} chars)
+                                    </summary>
+                                    <Markdown className="mt-2 prose prose-sm max-w-none prose-green dark:prose-invert">
+                                      {content}
+                                    </Markdown>
+                                  </details>
+                                );
+                              }
+
+                              return (
+                                <Markdown className="prose prose-sm max-w-none prose-green dark:prose-invert">
                                   {content}
+                                </Markdown>
+                              );
+                            })()}
+                            {permissionSuggestion && (
+                              <div className="mt-4 border-t border-red-200/60 dark:border-red-800/60 pt-3">
+                                <div className="flex flex-wrap items-center gap-2">
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      if (!onGrantToolPermission) return;
+                                      const result = onGrantToolPermission(permissionSuggestion);
+                                      if (result?.success) {
+                                        setPermissionGrantState('granted');
+                                      } else {
+                                        setPermissionGrantState('error');
+                                      }
+                                    }}
+                                    disabled={permissionSuggestion.isAllowed || permissionGrantState === 'granted'}
+                                    className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-medium border transition-colors ${permissionSuggestion.isAllowed || permissionGrantState === 'granted'
+                                      ? 'bg-green-100 dark:bg-green-900/30 border-green-300/70 dark:border-green-800/60 text-green-800 dark:text-green-200 cursor-default'
+                                      : 'bg-white/80 dark:bg-gray-900/40 border-red-300/70 dark:border-red-800/60 text-red-700 dark:text-red-200 hover:bg-white dark:hover:bg-gray-900/70'
+                                      }`}
+                                  >
+                                    {permissionSuggestion.isAllowed || permissionGrantState === 'granted'
+                                      ? 'Permission added'
+                                      : `Grant permission for ${permissionSuggestion.toolName}`}
+                                  </button>
+                                  {onShowSettings && (
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        onShowSettings();
+                                      }}
+                                      className="text-xs text-red-700 dark:text-red-200 underline hover:text-red-800 dark:hover:text-red-100"
+                                    >
+                                      Open settings
+                                    </button>
+                                  )}
                                 </div>
+                                <div className="mt-2 text-xs text-red-700/90 dark:text-red-200/80">
+                                  Adds <span className="font-mono">{permissionSuggestion.entry}</span> to Allowed Tools.
+                                </div>
+                                {permissionGrantState === 'error' && (
+                                  <div className="mt-2 text-xs text-red-700 dark:text-red-200">
+                                    Unable to update permissions. Please try again.
+                                  </div>
+                                )}
+                                {(permissionSuggestion.isAllowed || permissionGrantState === 'granted') && (
+                                  <div className="mt-2 text-xs text-green-700 dark:text-green-200">
+                                    Permission saved. Retry the request to use the tool.
+                                  </div>
+                                )}
                               </div>
-                            </details>
-                          );
-                        }
-                        
-                        if (content.length > 300) {
-                          return (
-                            <details open={autoExpandTools}>
-                              <summary className="text-sm text-green-700 dark:text-green-300 cursor-pointer hover:text-green-800 dark:hover:text-green-200 mb-2 flex items-center gap-2">
-                                <svg className="w-4 h-4 transition-transform details-chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                                </svg>
-                                View full output ({content.length} chars)
-                              </summary>
-                              <Markdown className="mt-2 prose prose-sm max-w-none prose-green dark:prose-invert">
-                                {content}
-                              </Markdown>
-                            </details>
-                          );
-                        }
-                        
-                        return (
-                          <Markdown className="prose prose-sm max-w-none prose-green dark:prose-invert">
-                            {content}
-                          </Markdown>
-                        );
-                      })()}
-                      {permissionSuggestion && (
-                        <div className="mt-4 border-t border-red-200/60 dark:border-red-800/60 pt-3">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <button
-                              type="button"
-                              onClick={() => {
-                                if (!onGrantToolPermission) return;
-                                const result = onGrantToolPermission(permissionSuggestion);
-                                if (result?.success) {
-                                  setPermissionGrantState('granted');
-                                } else {
-                                  setPermissionGrantState('error');
-                                }
-                              }}
-                              disabled={permissionSuggestion.isAllowed || permissionGrantState === 'granted'}
-                              className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-medium border transition-colors ${
-                                permissionSuggestion.isAllowed || permissionGrantState === 'granted'
-                                  ? 'bg-green-100 dark:bg-green-900/30 border-green-300/70 dark:border-green-800/60 text-green-800 dark:text-green-200 cursor-default'
-                                  : 'bg-white/80 dark:bg-gray-900/40 border-red-300/70 dark:border-red-800/60 text-red-700 dark:text-red-200 hover:bg-white dark:hover:bg-gray-900/70'
-                              }`}
-                            >
-                              {permissionSuggestion.isAllowed || permissionGrantState === 'granted'
-                                ? 'Permission added'
-                                : `Grant permission for ${permissionSuggestion.toolName}`}
-                            </button>
-                            {onShowSettings && (
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  onShowSettings();
-                                }}
-                                className="text-xs text-red-700 dark:text-red-200 underline hover:text-red-800 dark:hover:text-red-100"
-                              >
-                                Open settings
-                              </button>
                             )}
                           </div>
-                          <div className="mt-2 text-xs text-red-700/90 dark:text-red-200/80">
-                            Adds <span className="font-mono">{permissionSuggestion.entry}</span> to Allowed Tools.
-                          </div>
-                          {permissionGrantState === 'error' && (
-                            <div className="mt-2 text-xs text-red-700 dark:text-red-200">
-                              Unable to update permissions. Please try again.
-                            </div>
-                          )}
-                          {(permissionSuggestion.isAllowed || permissionGrantState === 'granted') && (
-                            <div className="mt-2 text-xs text-green-700 dark:text-green-200">
-                              Permission saved. Retry the request to use the tool.
-                            </div>
-                          )}
                         </div>
-                      )}
-                    </div>
+                      );
+                    })()}
                   </div>
-                  );
-                })()}
-              </div>
                 );
               })()
             ) : message.isInteractivePrompt ? (
@@ -1570,7 +1546,7 @@ const MessageComponent = memo(({ message, index, prevMessage, createDiff, onFile
                       const lines = message.content.split('\n').filter(line => line.trim());
                       const questionLine = lines.find(line => line.includes('?')) || lines[0] || '';
                       const options = [];
-                      
+
                       // Parse the menu options
                       lines.forEach(line => {
                         // Match lines like "❯ 1. Yes" or "  2. No"
@@ -1584,31 +1560,29 @@ const MessageComponent = memo(({ message, index, prevMessage, createDiff, onFile
                           });
                         }
                       });
-                      
+
                       return (
                         <>
                           <p className="text-sm text-amber-800 dark:text-amber-200 mb-4">
                             {questionLine}
                           </p>
-                          
+
                           {/* Option buttons */}
                           <div className="space-y-2 mb-4">
                             {options.map((option) => (
                               <button
                                 key={option.number}
-                                className={`w-full text-left px-4 py-3 rounded-lg border-2 transition-all ${
-                                  option.isSelected
-                                    ? 'bg-amber-600 dark:bg-amber-700 text-white border-amber-600 dark:border-amber-700 shadow-md'
-                                    : 'bg-white dark:bg-gray-800 text-amber-900 dark:text-amber-100 border-amber-300 dark:border-amber-700'
-                                } cursor-not-allowed opacity-75`}
+                                className={`w-full text-left px-4 py-3 rounded-lg border-2 transition-all ${option.isSelected
+                                  ? 'bg-amber-600 dark:bg-amber-700 text-white border-amber-600 dark:border-amber-700 shadow-md'
+                                  : 'bg-white dark:bg-gray-800 text-amber-900 dark:text-amber-100 border-amber-300 dark:border-amber-700'
+                                  } cursor-not-allowed opacity-75`}
                                 disabled
                               >
                                 <div className="flex items-center gap-3">
-                                  <span className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
-                                    option.isSelected
-                                      ? 'bg-white/20'
-                                      : 'bg-amber-100 dark:bg-amber-800/50'
-                                  }`}>
+                                  <span className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${option.isSelected
+                                    ? 'bg-white/20'
+                                    : 'bg-amber-100 dark:bg-amber-800/50'
+                                    }`}>
                                     {option.number}
                                   </span>
                                   <span className="text-sm sm:text-base font-medium flex-1">
@@ -1621,7 +1595,7 @@ const MessageComponent = memo(({ message, index, prevMessage, createDiff, onFile
                               </button>
                             ))}
                           </div>
-                          
+
                           <div className="bg-amber-100 dark:bg-amber-800/30 rounded-lg p-3">
                             <p className="text-amber-900 dark:text-amber-100 text-sm font-medium mb-1">
                               ⏳ Waiting for your response in the CLI
@@ -1753,7 +1727,7 @@ const MessageComponent = memo(({ message, index, prevMessage, createDiff, onFile
                   // Detect if content is pure JSON (starts with { or [)
                   const trimmedContent = content.trim();
                   if ((trimmedContent.startsWith('{') || trimmedContent.startsWith('[')) &&
-                      (trimmedContent.endsWith('}') || trimmedContent.endsWith(']'))) {
+                    (trimmedContent.endsWith('}') || trimmedContent.endsWith(']'))) {
                     try {
                       const parsed = JSON.parse(trimmedContent);
                       const formatted = JSON.stringify(parsed, null, 2);
@@ -1793,7 +1767,7 @@ const MessageComponent = memo(({ message, index, prevMessage, createDiff, onFile
                 })()}
               </div>
             )}
-            
+
             <div className={`text-xs text-gray-500 dark:text-gray-400 mt-1 ${isGrouped ? 'opacity-0 group-hover:opacity-100' : ''}`}>
               {new Date(message.timestamp).toLocaleTimeString()}
             </div>
@@ -1807,13 +1781,13 @@ const MessageComponent = memo(({ message, index, prevMessage, createDiff, onFile
 // ImageAttachment component for displaying image previews
 const ImageAttachment = ({ file, onRemove, uploadProgress, error }) => {
   const [preview, setPreview] = useState(null);
-  
+
   useEffect(() => {
     const url = URL.createObjectURL(file);
     setPreview(url);
     return () => URL.revokeObjectURL(url);
   }, [file]);
-  
+
   return (
     <div className="relative group">
       <img src={preview} alt={file.name} className="w-20 h-20 object-cover rounded" />
@@ -1849,8 +1823,7 @@ const ImageAttachment = ({ file, onRemove, uploadProgress, error }) => {
 // - onReplaceTemporarySession: Called to replace temporary session ID with real WebSocket session ID
 //
 // This ensures uninterrupted chat experience by pausing sidebar refreshes during conversations.
-function ChatInterface({ selectedProject, selectedSession, ws, sendMessage, messages, onFileOpen, onInputFocusChange, onSessionActive, onSessionInactive, onSessionProcessing, onSessionNotProcessing, processingSessions, onReplaceTemporarySession, onNavigateToSession, onShowSettings, autoExpandTools, showRawParameters, showThinking, autoScrollToBottom, sendByCtrlEnter, externalMessageUpdate, onTaskClick, onShowAllTasks }) {
-  const { tasksEnabled, isTaskMasterInstalled } = useTasksSettings();
+function ChatInterface({ selectedProject, selectedSession, ws, sendMessage, messages, onFileOpen, onInputFocusChange, onSessionActive, onSessionInactive, onSessionProcessing, onSessionNotProcessing, processingSessions, onReplaceTemporarySession, onNavigateToSession, onShowSettings, autoExpandTools, showRawParameters, showThinking, autoScrollToBottom, sendByCtrlEnter, externalMessageUpdate, onTaskClick }) {
   const [input, setInput] = useState(() => {
     if (typeof window !== 'undefined' && selectedProject) {
       return safeLocalStorage.getItem(`draft_input_${selectedProject.name}`) || '';
@@ -1915,21 +1888,11 @@ function ChatInterface({ selectedProject, selectedSession, ws, sendMessage, mess
   const [slashPosition, setSlashPosition] = useState(-1);
   const [visibleMessageCount, setVisibleMessageCount] = useState(100);
   const [claudeStatus, setClaudeStatus] = useState(null);
-  const [provider, setProvider] = useState(() => {
-    return localStorage.getItem('selected-provider') || 'claude';
-  });
-  const [cursorModel, setCursorModel] = useState(() => {
-    return localStorage.getItem('cursor-model') || CURSOR_MODELS.DEFAULT;
-  });
   const [claudeModel, setClaudeModel] = useState(() => {
     return localStorage.getItem('claude-model') || CLAUDE_MODELS.DEFAULT;
   });
-  const [codexModel, setCodexModel] = useState(() => {
-    return localStorage.getItem('codex-model') || CODEX_MODELS.DEFAULT;
-  });
-  // Track provider transitions so we only clear approvals when provider truly changes.
-  // This does not sync with the backend; it just prevents UI prompts from disappearing.
-  const lastProviderRef = useRef(provider);
+  // Provider is always 'claude' now
+  const provider = 'claude';
   // Load permission mode for the current session
   useEffect(() => {
     if (selectedSession?.id) {
@@ -1942,48 +1905,12 @@ function ChatInterface({ selectedProject, selectedSession, ws, sendMessage, mess
     }
   }, [selectedSession?.id]);
 
-  // When selecting a session from Sidebar, auto-switch provider to match session's origin
-  useEffect(() => {
-    if (selectedSession && selectedSession.__provider && selectedSession.__provider !== provider) {
-      setProvider(selectedSession.__provider);
-      localStorage.setItem('selected-provider', selectedSession.__provider);
-    }
-  }, [selectedSession]);
-
-  // Clear pending permission prompts when switching providers; filter when switching sessions.
-  // This does not preserve prompts across provider changes; it exists to keep the
-  // Claude approval flow intact while preventing prompts from a different provider.
-  useEffect(() => {
-    if (lastProviderRef.current !== provider) {
-      setPendingPermissionRequests([]);
-      lastProviderRef.current = provider;
-    }
-  }, [provider]);
-
   // When the selected session changes, drop prompts that belong to other sessions.
   // This does not attempt to migrate prompts across sessions; it only filters,
   // introduced so the UI does not show approvals for a session the user is no longer viewing.
   useEffect(() => {
     setPendingPermissionRequests(prev => prev.filter(req => !req.sessionId || req.sessionId === selectedSession?.id));
   }, [selectedSession?.id]);
-  
-  // Load Cursor default model from config
-  useEffect(() => {
-    if (provider === 'cursor') {
-      authenticatedFetch('/api/cursor/config')
-      .then(res => res.json())
-      .then(data => {
-        if (data.success && data.config?.model?.modelId) {
-          // Use the model from config directly
-          const modelId = data.config.model.modelId;
-          if (!localStorage.getItem('cursor-model')) {
-            setCursorModel(modelId);
-          }
-        }
-      })
-      .catch(err => console.error('Error loading Cursor config:', err));
-    }
-  }, [provider]);
 
   // Fetch slash commands on mount and when project changes
   useEffect(() => {
@@ -2153,7 +2080,7 @@ function ChatInterface({ selectedProject, selectedSession, ws, sendMessage, mess
         // Show model information
         setChatMessages(prev => [...prev, {
           role: 'assistant',
-          content: `**Current Model**: ${data.current.model}\n\n**Available Models**:\n\nClaude: ${data.available.claude.join(', ')}\n\nCursor: ${data.available.cursor.join(', ')}`,
+          content: `**Current Model**: ${data.current.model}\n\n**Available Models**: ${data.available.claude.join(', ')}`,
           timestamp: Date.now()
         }]);
         break;
@@ -2250,7 +2177,7 @@ function ChatInterface({ selectedProject, selectedSession, ws, sendMessage, mess
     setTimeout(() => {
       if (handleSubmitRef.current) {
         // Create a fake event to pass to handleSubmit
-        const fakeEvent = { preventDefault: () => {} };
+        const fakeEvent = { preventDefault: () => { } };
         handleSubmitRef.current(fakeEvent);
       }
     }, 50);
@@ -2271,7 +2198,7 @@ function ChatInterface({ selectedProject, selectedSession, ws, sendMessage, mess
         projectName: selectedProject.name,
         sessionId: currentSessionId,
         provider,
-        model: provider === 'cursor' ? cursorModel : claudeModel,
+        model: claudeModel,
         tokenUsage: tokenBudget
       };
 
@@ -2319,7 +2246,7 @@ function ChatInterface({ selectedProject, selectedSession, ws, sendMessage, mess
         timestamp: Date.now()
       }]);
     }
-  }, [input, selectedProject, currentSessionId, provider, cursorModel, tokenBudget]);
+  }, [input, selectedProject, currentSessionId, provider, claudeModel, tokenBudget]);
 
   // Handle built-in command actions
 
@@ -2332,7 +2259,7 @@ function ChatInterface({ selectedProject, selectedSession, ws, sendMessage, mess
       if (cache.has(key)) {
         return cache.get(key);
       }
-      
+
       const result = calculateDiff(oldStr, newStr);
       cache.set(key, result);
       if (cache.size > 100) {
@@ -2362,7 +2289,7 @@ function ChatInterface({ selectedProject, selectedSession, ws, sendMessage, mess
       }
       const data = await response.json();
 
-      // Extract token usage if present (Codex includes it in messages response)
+      // Extract token usage if present
       if (isInitialLoad && data.tokenUsage) {
         setTokenBudget(data.tokenUsage);
       }
@@ -2392,331 +2319,20 @@ function ChatInterface({ selectedProject, selectedSession, ws, sendMessage, mess
     }
   }, [messagesOffset]);
 
-  // Load Cursor session messages from SQLite via backend
-  const loadCursorSessionMessages = useCallback(async (projectPath, sessionId) => {
-    if (!projectPath || !sessionId) return [];
-    setIsLoadingSessionMessages(true);
-    try {
-      const url = `/api/cursor/sessions/${encodeURIComponent(sessionId)}?projectPath=${encodeURIComponent(projectPath)}`;
-      const res = await authenticatedFetch(url);
-      if (!res.ok) return [];
-      const data = await res.json();
-      const blobs = data?.session?.messages || [];
-      const converted = [];
-      const toolUseMap = {}; // Map to store tool uses by ID for linking results
-      
-      // First pass: process all messages maintaining order
-      for (let blobIdx = 0; blobIdx < blobs.length; blobIdx++) {
-        const blob = blobs[blobIdx];
-        const content = blob.content;
-        let text = '';
-        let role = 'assistant';
-        let reasoningText = null; // Move to outer scope
-        try {
-          // Handle different Cursor message formats
-          if (content?.role && content?.content) {
-            // Direct format: {"role":"user","content":[{"type":"text","text":"..."}]}
-            // Skip system messages
-            if (content.role === 'system') {
-              continue;
-            }
-            
-            // Handle tool messages
-            if (content.role === 'tool') {
-              // Tool result format - find the matching tool use message and update it
-              if (Array.isArray(content.content)) {
-                for (const item of content.content) {
-                  if (item?.type === 'tool-result') {
-                    // Map ApplyPatch to Edit for consistency
-                    let toolName = item.toolName || 'Unknown Tool';
-                    if (toolName === 'ApplyPatch') {
-                      toolName = 'Edit';
-                    }
-                    const toolCallId = item.toolCallId || content.id;
-                    const result = item.result || '';
-                    
-                    // Store the tool result to be linked later
-                    if (toolUseMap[toolCallId]) {
-                      toolUseMap[toolCallId].toolResult = {
-                        content: result,
-                        isError: false
-                      };
-                    } else {
-                      // No matching tool use found, create a standalone result message
-                      converted.push({
-                        type: 'assistant',
-                        content: '',
-                        timestamp: new Date(Date.now() + blobIdx * 1000),
-                        blobId: blob.id,
-                        sequence: blob.sequence,
-                        rowid: blob.rowid,
-                        isToolUse: true,
-                        toolName: toolName,
-                        toolId: toolCallId,
-                        toolInput: null,
-                        toolResult: {
-                          content: result,
-                          isError: false
-                        }
-                      });
-                    }
-                  }
-                }
-              }
-              continue; // Don't add tool messages as regular messages
-            } else {
-              // User or assistant messages
-              role = content.role === 'user' ? 'user' : 'assistant';
-              
-              if (Array.isArray(content.content)) {
-                // Extract text, reasoning, and tool calls from content array
-                const textParts = [];
-                
-                for (const part of content.content) {
-                  if (part?.type === 'text' && part?.text) {
-                    textParts.push(decodeHtmlEntities(part.text));
-                  } else if (part?.type === 'reasoning' && part?.text) {
-                    // Handle reasoning type - will be displayed in a collapsible section
-                    reasoningText = decodeHtmlEntities(part.text);
-                  } else if (part?.type === 'tool-call') {
-                    // First, add any text/reasoning we've collected so far as a message
-                    if (textParts.length > 0 || reasoningText) {
-                      converted.push({
-                        type: role,
-                        content: textParts.join('\n'),
-                        reasoning: reasoningText,
-                        timestamp: new Date(Date.now() + blobIdx * 1000),
-                        blobId: blob.id,
-                        sequence: blob.sequence,
-                        rowid: blob.rowid
-                      });
-                      textParts.length = 0;
-                      reasoningText = null;
-                    }
-                    
-                    // Tool call in assistant message - format like Claude Code
-                    // Map ApplyPatch to Edit for consistency with Claude Code
-                    let toolName = part.toolName || 'Unknown Tool';
-                    if (toolName === 'ApplyPatch') {
-                      toolName = 'Edit';
-                    }
-                    const toolId = part.toolCallId || `tool_${blobIdx}`;
-                    
-                    // Create a tool use message with Claude Code format
-                    // Map Cursor args format to Claude Code format
-                    let toolInput = part.args;
-                    
-                    if (toolName === 'Edit' && part.args) {
-                      // ApplyPatch uses 'patch' format, convert to Edit format
-                      if (part.args.patch) {
-                        // Parse the patch to extract old and new content
-                        const patchLines = part.args.patch.split('\n');
-                        let oldLines = [];
-                        let newLines = [];
-                        let inPatch = false;
-                        
-                        for (const line of patchLines) {
-                          if (line.startsWith('@@')) {
-                            inPatch = true;
-                          } else if (inPatch) {
-                            if (line.startsWith('-')) {
-                              oldLines.push(line.substring(1));
-                            } else if (line.startsWith('+')) {
-                              newLines.push(line.substring(1));
-                            } else if (line.startsWith(' ')) {
-                              // Context line - add to both
-                              oldLines.push(line.substring(1));
-                              newLines.push(line.substring(1));
-                            }
-                          }
-                        }
-                        
-                        const filePath = part.args.file_path;
-                        const absolutePath = filePath && !filePath.startsWith('/') 
-                          ? `${projectPath}/${filePath}` 
-                          : filePath;
-                        toolInput = {
-                          file_path: absolutePath,
-                          old_string: oldLines.join('\n') || part.args.patch,
-                          new_string: newLines.join('\n') || part.args.patch
-                        };
-                      } else {
-                        // Direct edit format
-                        toolInput = part.args;
-                      }
-                    } else if (toolName === 'Read' && part.args) {
-                      // Map 'path' to 'file_path'
-                      // Convert relative path to absolute if needed
-                      const filePath = part.args.path || part.args.file_path;
-                      const absolutePath = filePath && !filePath.startsWith('/') 
-                        ? `${projectPath}/${filePath}` 
-                        : filePath;
-                      toolInput = {
-                        file_path: absolutePath
-                      };
-                    } else if (toolName === 'Write' && part.args) {
-                      // Map fields for Write tool
-                      const filePath = part.args.path || part.args.file_path;
-                      const absolutePath = filePath && !filePath.startsWith('/') 
-                        ? `${projectPath}/${filePath}` 
-                        : filePath;
-                      toolInput = {
-                        file_path: absolutePath,
-                        content: part.args.contents || part.args.content
-                      };
-                    }
-                    
-                    const toolMessage = {
-                      type: 'assistant',
-                      content: '',
-                      timestamp: new Date(Date.now() + blobIdx * 1000),
-                      blobId: blob.id,
-                      sequence: blob.sequence,
-                      rowid: blob.rowid,
-                      isToolUse: true,
-                      toolName: toolName,
-                      toolId: toolId,
-                      toolInput: toolInput ? JSON.stringify(toolInput) : null,
-                      toolResult: null // Will be filled when we get the tool result
-                    };
-                    converted.push(toolMessage);
-                    toolUseMap[toolId] = toolMessage; // Store for linking results
-                  } else if (part?.type === 'tool_use') {
-                    // Old format support
-                    if (textParts.length > 0 || reasoningText) {
-                      converted.push({
-                        type: role,
-                        content: textParts.join('\n'),
-                        reasoning: reasoningText,
-                        timestamp: new Date(Date.now() + blobIdx * 1000),
-                        blobId: blob.id,
-                        sequence: blob.sequence,
-                        rowid: blob.rowid
-                      });
-                      textParts.length = 0;
-                      reasoningText = null;
-                    }
-                    
-                    const toolName = part.name || 'Unknown Tool';
-                    const toolId = part.id || `tool_${blobIdx}`;
-                    
-                    const toolMessage = {
-                      type: 'assistant',
-                      content: '',
-                      timestamp: new Date(Date.now() + blobIdx * 1000),
-                      blobId: blob.id,
-                      sequence: blob.sequence,
-                      rowid: blob.rowid,
-                      isToolUse: true,
-                      toolName: toolName,
-                      toolId: toolId,
-                      toolInput: part.input ? JSON.stringify(part.input) : null,
-                      toolResult: null
-                    };
-                    converted.push(toolMessage);
-                    toolUseMap[toolId] = toolMessage;
-                  } else if (typeof part === 'string') {
-                    textParts.push(part);
-                  }
-                }
-                
-                // Add any remaining text/reasoning
-                if (textParts.length > 0) {
-                  text = textParts.join('\n');
-                  if (reasoningText && !text) {
-                    // Just reasoning, no text
-                    converted.push({
-                      type: role,
-                      content: '',
-                      reasoning: reasoningText,
-                      timestamp: new Date(Date.now() + blobIdx * 1000),
-                      blobId: blob.id,
-                      sequence: blob.sequence,
-                      rowid: blob.rowid
-                    });
-                    text = ''; // Clear to avoid duplicate
-                  }
-                } else {
-                  text = '';
-                }
-              } else if (typeof content.content === 'string') {
-                text = content.content;
-              }
-            }
-          } else if (content?.message?.role && content?.message?.content) {
-            // Nested message format
-            if (content.message.role === 'system') {
-              continue;
-            }
-            role = content.message.role === 'user' ? 'user' : 'assistant';
-            if (Array.isArray(content.message.content)) {
-              text = content.message.content
-                .map(p => (typeof p === 'string' ? p : (p?.text || '')))
-                .filter(Boolean)
-                .join('\n');
-            } else if (typeof content.message.content === 'string') {
-              text = content.message.content;
-            }
-          }
-        } catch (e) {
-          console.log('Error parsing blob content:', e);
-        }
-        if (text && text.trim()) {
-          const message = {
-            type: role,
-            content: text,
-            timestamp: new Date(Date.now() + blobIdx * 1000),
-            blobId: blob.id,
-            sequence: blob.sequence,
-            rowid: blob.rowid
-          };
-          
-          // Add reasoning if we have it
-          if (reasoningText) {
-            message.reasoning = reasoningText;
-          }
-          
-          converted.push(message);
-        }
-      }
-      
-      // Sort messages by sequence/rowid to maintain chronological order
-      converted.sort((a, b) => {
-        // First sort by sequence if available (clean 1,2,3... numbering)
-        if (a.sequence !== undefined && b.sequence !== undefined) {
-          return a.sequence - b.sequence;
-        }
-        // Then try rowid (original SQLite row IDs)
-        if (a.rowid !== undefined && b.rowid !== undefined) {
-          return a.rowid - b.rowid;
-        }
-        // Fallback to timestamp
-        return new Date(a.timestamp) - new Date(b.timestamp);
-      });
-      
-      return converted;
-    } catch (e) {
-      console.error('Error loading Cursor session messages:', e);
-      return [];
-    } finally {
-      setIsLoadingSessionMessages(false);
-    }
-  }, []);
-
   // Actual diff calculation function
   const calculateDiff = (oldStr, newStr) => {
     const oldLines = oldStr.split('\n');
     const newLines = newStr.split('\n');
-    
+
     // Simple diff algorithm - find common lines and differences
     const diffLines = [];
     let oldIndex = 0;
     let newIndex = 0;
-    
+
     while (oldIndex < oldLines.length || newIndex < newLines.length) {
       const oldLine = oldLines[oldIndex];
       const newLine = newLines[newIndex];
-      
+
       if (oldIndex >= oldLines.length) {
         // Only new lines remaining
         diffLines.push({ type: 'added', content: newLine, lineNum: newIndex + 1 });
@@ -2737,14 +2353,14 @@ function ChatInterface({ selectedProject, selectedSession, ws, sendMessage, mess
         newIndex++;
       }
     }
-    
+
     return diffLines;
   };
 
   const convertSessionMessages = (rawMessages) => {
     const converted = [];
     const toolResults = new Map(); // Map tool_use_id to tool result
-    
+
     // First pass: collect all tool results
     for (const msg of rawMessages) {
       if (msg.message?.role === 'user' && Array.isArray(msg.message?.content)) {
@@ -2761,42 +2377,42 @@ function ChatInterface({ selectedProject, selectedSession, ws, sendMessage, mess
         }
       }
     }
-    
+
     // Second pass: process messages and attach tool results to tool uses
     for (const msg of rawMessages) {
       // Handle user messages
       if (msg.message?.role === 'user' && msg.message?.content) {
         let content = '';
         let messageType = 'user';
-        
+
         if (Array.isArray(msg.message.content)) {
           // Handle array content, but skip tool results (they're attached to tool uses)
           const textParts = [];
-          
+
           for (const part of msg.message.content) {
             if (part.type === 'text') {
               textParts.push(decodeHtmlEntities(part.text));
             }
             // Skip tool_result parts - they're handled in the first pass
           }
-          
+
           content = textParts.join('\n');
         } else if (typeof msg.message.content === 'string') {
           content = decodeHtmlEntities(msg.message.content);
         } else {
           content = decodeHtmlEntities(String(msg.message.content));
         }
-        
+
         // Skip command messages, system messages, and empty content
         const shouldSkip = !content ||
-                          content.startsWith('<command-name>') ||
-                          content.startsWith('<command-message>') ||
-                          content.startsWith('<command-args>') ||
-                          content.startsWith('<local-command-stdout>') ||
-                          content.startsWith('<system-reminder>') ||
-                          content.startsWith('Caveat:') ||
-                          content.startsWith('This session is being continued from a previous') ||
-                          content.startsWith('[Request interrupted');
+          content.startsWith('<command-name>') ||
+          content.startsWith('<command-message>') ||
+          content.startsWith('<command-args>') ||
+          content.startsWith('<local-command-stdout>') ||
+          content.startsWith('<system-reminder>') ||
+          content.startsWith('Caveat:') ||
+          content.startsWith('This session is being continued from a previous') ||
+          content.startsWith('[Request interrupted');
 
         if (!shouldSkip) {
           // Unescape with math formula protection
@@ -2808,8 +2424,8 @@ function ChatInterface({ selectedProject, selectedSession, ws, sendMessage, mess
           });
         }
       }
-      
-      // Handle thinking messages (Codex reasoning)
+
+      // Handle thinking messages (reasoning)
       else if (msg.type === 'thinking' && msg.message?.content) {
         converted.push({
           type: 'assistant',
@@ -2819,7 +2435,7 @@ function ChatInterface({ selectedProject, selectedSession, ws, sendMessage, mess
         });
       }
 
-      // Handle tool_use messages (Codex function calls)
+      // Handle tool_use messages (function calls)
       else if (msg.type === 'tool_use' && msg.toolName) {
         converted.push({
           type: 'assistant',
@@ -2832,7 +2448,7 @@ function ChatInterface({ selectedProject, selectedSession, ws, sendMessage, mess
         });
       }
 
-      // Handle tool_result messages (Codex function outputs)
+      // Handle tool_result messages (function outputs)
       else if (msg.type === 'tool_result') {
         // Find the matching tool_use by callId, or the last tool_use without a result
         for (let i = converted.length - 1; i >= 0; i--) {
@@ -2896,7 +2512,7 @@ function ChatInterface({ selectedProject, selectedSession, ws, sendMessage, mess
         }
       }
     }
-    
+
     return converted;
   };
 
@@ -2929,9 +2545,6 @@ function ChatInterface({ selectedProject, selectedSession, ws, sendMessage, mess
     if (!container || isLoadingMoreRef.current || isLoadingMoreMessages) return false;
     if (!hasMoreMessages || !selectedSession || !selectedProject) return false;
 
-    const sessionProvider = selectedSession.__provider || 'claude';
-    if (sessionProvider === 'cursor') return false;
-
     isLoadingMoreRef.current = true;
     const previousScrollHeight = container.scrollHeight;
     const previousScrollTop = container.scrollTop;
@@ -2941,7 +2554,7 @@ function ChatInterface({ selectedProject, selectedSession, ws, sendMessage, mess
         selectedProject.name,
         selectedSession.id,
         true,
-        sessionProvider
+        'claude'
       );
 
       if (moreMessages.length > 0) {
@@ -2964,7 +2577,7 @@ function ChatInterface({ selectedProject, selectedSession, ws, sendMessage, mess
       const container = scrollContainerRef.current;
       const nearBottom = isNearBottom();
       setIsUserScrolledUp(!nearBottom);
-      
+
       // Check if we should load more messages (scrolled near top)
       const scrolledNearTop = container.scrollTop < 100;
       if (!scrolledNearTop) {
@@ -3038,39 +2651,20 @@ function ChatInterface({ selectedProject, selectedSession, ws, sendMessage, mess
             });
           }
         }
-        
-        if (provider === 'cursor') {
-          // For Cursor, set the session ID for resuming
-          setCurrentSessionId(selectedSession.id);
-          sessionStorage.setItem('cursorSessionId', selectedSession.id);
-          
-          // Only load messages from SQLite if this is NOT a system-initiated session change
-          // For system-initiated changes, preserve existing messages
-          if (!isSystemSessionChange) {
-            // Load historical messages for Cursor session from SQLite
-            const projectPath = selectedProject.fullPath || selectedProject.path;
-            const converted = await loadCursorSessionMessages(projectPath, selectedSession.id);
-            setSessionMessages([]);
-            setChatMessages(converted);
-          } else {
-            // Reset the flag after handling system session change
-            setIsSystemSessionChange(false);
-          }
+
+        // Load messages with pagination
+        setCurrentSessionId(selectedSession.id);
+
+        // Only load messages from API if this is a user-initiated session change
+        // For system-initiated changes, preserve existing messages and rely on WebSocket
+        if (!isSystemSessionChange) {
+          const messages = await loadSessionMessages(selectedProject.name, selectedSession.id, false, 'claude');
+          setSessionMessages(messages);
+          // convertedMessages will be automatically updated via useMemo
+          // Scroll will be handled by the main scroll useEffect after messages are rendered
         } else {
-          // For Claude, load messages normally with pagination
-          setCurrentSessionId(selectedSession.id);
-          
-          // Only load messages from API if this is a user-initiated session change
-          // For system-initiated changes, preserve existing messages and rely on WebSocket
-          if (!isSystemSessionChange) {
-            const messages = await loadSessionMessages(selectedProject.name, selectedSession.id, false, selectedSession.__provider || 'claude');
-            setSessionMessages(messages);
-            // convertedMessages will be automatically updated via useMemo
-            // Scroll will be handled by the main scroll useEffect after messages are rendered
-          } else {
-            // Reset the flag after handling system session change
-            setIsSystemSessionChange(false);
-          }
+          // Reset the flag after handling system session change
+          setIsSystemSessionChange(false);
         }
       } else {
         // Only clear messages if this is NOT a system-initiated session change AND we're not loading
@@ -3080,7 +2674,6 @@ function ChatInterface({ selectedProject, selectedSession, ws, sendMessage, mess
           setSessionMessages([]);
         }
         setCurrentSessionId(null);
-        sessionStorage.removeItem('cursorSessionId');
         setMessagesOffset(0);
         setHasMoreMessages(false);
         setTotalMessages(0);
@@ -3094,7 +2687,7 @@ function ChatInterface({ selectedProject, selectedSession, ws, sendMessage, mess
     };
 
     loadMessages();
-  }, [selectedSession, selectedProject, loadCursorSessionMessages, scrollToBottom, isSystemSessionChange]);
+  }, [selectedSession, selectedProject, scrollToBottom, isSystemSessionChange]);
 
   // External Message Update Handler: Reload messages when external CLI modifies current session
   // This triggers when App.jsx detects a JSONL file change for the currently-viewed session
@@ -3103,27 +2696,17 @@ function ChatInterface({ selectedProject, selectedSession, ws, sendMessage, mess
     if (externalMessageUpdate > 0 && selectedSession && selectedProject) {
       const reloadExternalMessages = async () => {
         try {
-          const provider = localStorage.getItem('selected-provider') || 'claude';
+          // Reload Claude messages from API/JSONL
+          const messages = await loadSessionMessages(selectedProject.name, selectedSession.id, false, 'claude');
+          setSessionMessages(messages);
+          // convertedMessages will be automatically updated via useMemo
 
-          if (provider === 'cursor') {
-            // Reload Cursor messages from SQLite
-            const projectPath = selectedProject.fullPath || selectedProject.path;
-            const converted = await loadCursorSessionMessages(projectPath, selectedSession.id);
-            setSessionMessages([]);
-            setChatMessages(converted);
-          } else {
-            // Reload Claude/Codex messages from API/JSONL
-            const messages = await loadSessionMessages(selectedProject.name, selectedSession.id, false, selectedSession.__provider || 'claude');
-            setSessionMessages(messages);
-            // convertedMessages will be automatically updated via useMemo
-
-            // Smart scroll behavior: only auto-scroll if user is near bottom
-            const shouldAutoScroll = autoScrollToBottom && isNearBottom();
-            if (shouldAutoScroll) {
-              setTimeout(() => scrollToBottom(), 200);
-            }
-            // If user scrolled up, preserve their position (they're reading history)
+          // Smart scroll behavior: only auto-scroll if user is near bottom
+          const shouldAutoScroll = autoScrollToBottom && isNearBottom();
+          if (shouldAutoScroll) {
+            setTimeout(() => scrollToBottom(), 200);
           }
+          // If user scrolled up, preserve their position (they're reading history)
         } catch (error) {
           console.error('Error reloading messages from external update:', error);
         }
@@ -3131,7 +2714,7 @@ function ChatInterface({ selectedProject, selectedSession, ws, sendMessage, mess
 
       reloadExternalMessages();
     }
-  }, [externalMessageUpdate, selectedSession, selectedProject, loadCursorSessionMessages, loadSessionMessages, isNearBottom, autoScrollToBottom, scrollToBottom]);
+  }, [externalMessageUpdate, selectedSession, selectedProject, loadSessionMessages, isNearBottom, autoScrollToBottom, scrollToBottom]);
 
   // Update chatMessages when convertedMessages changes
   useEffect(() => {
@@ -3200,7 +2783,7 @@ function ChatInterface({ selectedProject, selectedSession, ws, sendMessage, mess
 
       // Filter messages by session ID to prevent cross-session interference
       // Skip filtering for global messages that apply to all sessions
-      const globalMessageTypes = ['projects_updated', 'taskmaster-project-updated', 'session-created', 'claude-complete', 'codex-complete'];
+      const globalMessageTypes = ['projects_updated', 'session-created', 'claude-complete'];
       const isGlobalMessage = globalMessageTypes.includes(latestMessage.type);
 
       // For new sessions (currentSessionId is null), allow messages through
@@ -3216,10 +2799,10 @@ function ChatInterface({ selectedProject, selectedSession, ws, sendMessage, mess
           // Store it temporarily until conversation completes (prevents premature session association)
           if (latestMessage.sessionId && !currentSessionId) {
             sessionStorage.setItem('pendingSessionId', latestMessage.sessionId);
-            
+
             // Mark as system change to prevent clearing messages when session ID updates
             setIsSystemSessionChange(true);
-            
+
             // Session Protection: Replace temporary "new-session-*" identifier with real session ID
             // This maintains protection continuity - no gap between temp ID and real ID
             // The temporary session is removed and real session is marked as active
@@ -3245,8 +2828,8 @@ function ChatInterface({ selectedProject, selectedSession, ws, sendMessage, mess
 
         case 'claude-response':
           const messageData = latestMessage.data.message || latestMessage.data;
-          
-          // Handle Cursor streaming format (content_block_delta / content_block_stop)
+
+          // Handle streaming format (content_block_delta / content_block_stop)
           if (messageData && typeof messageData === 'object' && messageData.type) {
             if (messageData.type === 'content_block_delta' && messageData.delta?.text) {
               // Decode HTML entities and buffer deltas
@@ -3309,21 +2892,21 @@ function ChatInterface({ selectedProject, selectedSession, ws, sendMessage, mess
           // We detect this by checking for system/init messages with session_id that differs
           // from our current session. When found, we need to switch the user to the new session.
           // This works exactly like new session detection - preserve messages during navigation.
-          if (latestMessage.data.type === 'system' && 
-              latestMessage.data.subtype === 'init' && 
-              latestMessage.data.session_id && 
-              currentSessionId && 
-              latestMessage.data.session_id !== currentSessionId) {
-            
+          if (latestMessage.data.type === 'system' &&
+            latestMessage.data.subtype === 'init' &&
+            latestMessage.data.session_id &&
+            currentSessionId &&
+            latestMessage.data.session_id !== currentSessionId) {
+
             console.log('🔄 Claude CLI session duplication detected:', {
               originalSession: currentSessionId,
               newSession: latestMessage.data.session_id
             });
-            
+
             // Mark this as a system-initiated session change to preserve messages
             // This works exactly like new session init - messages stay visible during navigation
             setIsSystemSessionChange(true);
-            
+
             // Switch to the new session using React Router navigation
             // This triggers the session loading logic in App.jsx without a page reload
             if (onNavigateToSession) {
@@ -3331,37 +2914,37 @@ function ChatInterface({ selectedProject, selectedSession, ws, sendMessage, mess
             }
             return; // Don't process the message further, let the navigation handle it
           }
-          
+
           // Handle system/init for new sessions (when currentSessionId is null)
-          if (latestMessage.data.type === 'system' && 
-              latestMessage.data.subtype === 'init' && 
-              latestMessage.data.session_id && 
-              !currentSessionId) {
-            
+          if (latestMessage.data.type === 'system' &&
+            latestMessage.data.subtype === 'init' &&
+            latestMessage.data.session_id &&
+            !currentSessionId) {
+
             console.log('🔄 New session init detected:', {
               newSession: latestMessage.data.session_id
             });
-            
+
             // Mark this as a system-initiated session change to preserve messages
             setIsSystemSessionChange(true);
-            
+
             // Switch to the new session
             if (onNavigateToSession) {
               onNavigateToSession(latestMessage.data.session_id);
             }
             return; // Don't process the message further, let the navigation handle it
           }
-          
+
           // For system/init messages that match current session, just ignore them
-          if (latestMessage.data.type === 'system' && 
-              latestMessage.data.subtype === 'init' && 
-              latestMessage.data.session_id && 
-              currentSessionId && 
-              latestMessage.data.session_id === currentSessionId) {
+          if (latestMessage.data.type === 'system' &&
+            latestMessage.data.subtype === 'init' &&
+            latestMessage.data.session_id &&
+            currentSessionId &&
+            latestMessage.data.session_id === currentSessionId) {
             console.log('🔄 System init message for current session, ignoring');
             return; // Don't process the message further
           }
-          
+
           // Handle different types of content in the response
           if (Array.isArray(messageData.content)) {
             for (const part of messageData.content) {
@@ -3403,7 +2986,7 @@ function ChatInterface({ selectedProject, selectedSession, ws, sendMessage, mess
               timestamp: new Date()
             }]);
           }
-          
+
           // Handle tool results from user messages (these come separately)
           if (messageData.role === 'user' && Array.isArray(messageData.content)) {
             for (const part of messageData.content) {
@@ -3426,7 +3009,7 @@ function ChatInterface({ selectedProject, selectedSession, ws, sendMessage, mess
             }
           }
           break;
-          
+
         case 'claude-output':
           {
             const cleaned = String(latestMessage.data || '');
@@ -3519,160 +3102,7 @@ function ChatInterface({ selectedProject, selectedSession, ws, sendMessage, mess
             timestamp: new Date()
           }]);
           break;
-          
-        case 'cursor-system':
-          // Handle Cursor system/init messages similar to Claude
-          try {
-            const cdata = latestMessage.data;
-            if (cdata && cdata.type === 'system' && cdata.subtype === 'init' && cdata.session_id) {
-              // If we already have a session and this differs, switch (duplication/redirect)
-              if (currentSessionId && cdata.session_id !== currentSessionId) {
-                console.log('🔄 Cursor session switch detected:', { originalSession: currentSessionId, newSession: cdata.session_id });
-                setIsSystemSessionChange(true);
-                if (onNavigateToSession) {
-                  onNavigateToSession(cdata.session_id);
-                }
-                return;
-              }
-              // If we don't yet have a session, adopt this one
-              if (!currentSessionId) {
-                console.log('🔄 Cursor new session init detected:', { newSession: cdata.session_id });
-                setIsSystemSessionChange(true);
-                if (onNavigateToSession) {
-                  onNavigateToSession(cdata.session_id);
-                }
-                return;
-              }
-            }
-            // For other cursor-system messages, avoid dumping raw objects to chat
-          } catch (e) {
-            console.warn('Error handling cursor-system message:', e);
-          }
-          break;
-          
-        case 'cursor-user':
-          // Handle Cursor user messages (usually echoes)
-          // Don't add user messages as they're already shown from input
-          break;
-          
-        case 'cursor-tool-use':
-          // Handle Cursor tool use messages
-          setChatMessages(prev => [...prev, {
-            type: 'assistant',
-            content: `Using tool: ${latestMessage.tool} ${latestMessage.input ? `with ${latestMessage.input}` : ''}`,
-            timestamp: new Date(),
-            isToolUse: true,
-            toolName: latestMessage.tool,
-            toolInput: latestMessage.input
-          }]);
-          break;
-        
-        case 'cursor-error':
-          // Show Cursor errors as error messages in chat
-          setChatMessages(prev => [...prev, {
-            type: 'error',
-            content: `Cursor error: ${latestMessage.error || 'Unknown error'}`,
-            timestamp: new Date()
-          }]);
-          break;
-          
-        case 'cursor-result':
-          // Get session ID from message or fall back to current session
-          const cursorCompletedSessionId = latestMessage.sessionId || currentSessionId;
 
-          // Only update UI state if this is the current session
-          if (cursorCompletedSessionId === currentSessionId) {
-            setIsLoading(false);
-            setCanAbortSession(false);
-            setClaudeStatus(null);
-          }
-
-          // Always mark the completed session as inactive and not processing
-          if (cursorCompletedSessionId) {
-            if (onSessionInactive) {
-              onSessionInactive(cursorCompletedSessionId);
-            }
-            if (onSessionNotProcessing) {
-              onSessionNotProcessing(cursorCompletedSessionId);
-            }
-          }
-
-          // Only process result for current session
-          if (cursorCompletedSessionId === currentSessionId) {
-            try {
-              const r = latestMessage.data || {};
-              const textResult = typeof r.result === 'string' ? r.result : '';
-              // Flush buffered deltas before finalizing
-              if (streamTimerRef.current) {
-                clearTimeout(streamTimerRef.current);
-                streamTimerRef.current = null;
-              }
-              const pendingChunk = streamBufferRef.current;
-              streamBufferRef.current = '';
-
-              setChatMessages(prev => {
-                const updated = [...prev];
-                // Try to consolidate into the last streaming assistant message
-                const last = updated[updated.length - 1];
-                if (last && last.type === 'assistant' && !last.isToolUse && last.isStreaming) {
-                  // Replace streaming content with the final content so deltas don't remain
-                  const finalContent = textResult && textResult.trim() ? textResult : (last.content || '') + (pendingChunk || '');
-                  last.content = finalContent;
-                  last.isStreaming = false;
-                } else if (textResult && textResult.trim()) {
-                  updated.push({ type: r.is_error ? 'error' : 'assistant', content: textResult, timestamp: new Date(), isStreaming: false });
-                }
-                return updated;
-              });
-            } catch (e) {
-              console.warn('Error handling cursor-result message:', e);
-            }
-          }
-
-          // Store session ID for future use and trigger refresh (for new sessions)
-          const pendingCursorSessionId = sessionStorage.getItem('pendingSessionId');
-          if (cursorCompletedSessionId && !currentSessionId && cursorCompletedSessionId === pendingCursorSessionId) {
-            setCurrentSessionId(cursorCompletedSessionId);
-            sessionStorage.removeItem('pendingSessionId');
-
-            // Trigger a project refresh to update the sidebar with the new session
-            if (window.refreshProjects) {
-              setTimeout(() => window.refreshProjects(), 500);
-            }
-          }
-          break;
-
-        case 'cursor-output':
-          // Handle Cursor raw terminal output; strip ANSI and ignore empty control-only payloads
-          try {
-            const raw = String(latestMessage.data ?? '');
-            const cleaned = raw.replace(/\x1b\[[0-9;?]*[A-Za-z]/g, '').replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, '').trim();
-            if (cleaned) {
-              streamBufferRef.current += (streamBufferRef.current ? `\n${cleaned}` : cleaned);
-              if (!streamTimerRef.current) {
-                streamTimerRef.current = setTimeout(() => {
-                  const chunk = streamBufferRef.current;
-                  streamBufferRef.current = '';
-                  streamTimerRef.current = null;
-                  if (!chunk) return;
-                  setChatMessages(prev => {
-                    const updated = [...prev];
-                    const last = updated[updated.length - 1];
-                    if (last && last.type === 'assistant' && !last.isToolUse && last.isStreaming) {
-                      last.content = last.content ? `${last.content}\n${chunk}` : chunk;
-                    } else {
-                      updated.push({ type: 'assistant', content: chunk, timestamp: new Date(), isStreaming: true });
-                    }
-                    return updated;
-                  });
-                }, 100);
-              }
-            }
-          } catch (e) {
-            console.warn('Error handling cursor-output message:', e);
-          }
-          break;
-          
         case 'claude-complete':
           // Get session ID from message or fall back to current session
           const completedSessionId = latestMessage.sessionId || currentSessionId || sessionStorage.getItem('pendingSessionId');
@@ -3693,17 +3123,17 @@ function ChatInterface({ selectedProject, selectedSession, ws, sendMessage, mess
               onSessionNotProcessing(completedSessionId);
             }
           }
-          
+
           // If we have a pending session ID and the conversation completed successfully, use it
           const pendingSessionId = sessionStorage.getItem('pendingSessionId');
           if (pendingSessionId && !currentSessionId && latestMessage.exitCode === 0) {
-                setCurrentSessionId(pendingSessionId);
+            setCurrentSessionId(pendingSessionId);
             sessionStorage.removeItem('pendingSessionId');
 
             // No need to manually refresh - projects_updated WebSocket message will handle it
             console.log('✅ New session complete, ID set to:', pendingSessionId);
           }
-          
+
           // Clear persisted chat messages after successful completion
           if (selectedProject && latestMessage.exitCode === 0) {
             safeLocalStorage.removeItem(`chat_messages_${selectedProject.name}`);
@@ -3711,158 +3141,6 @@ function ChatInterface({ selectedProject, selectedSession, ws, sendMessage, mess
           // Conversation finished; clear any stale permission prompts.
           // This does not remove saved permissions; it only resets transient UI state.
           setPendingPermissionRequests([]);
-          break;
-
-        case 'codex-response':
-          // Handle Codex SDK responses
-          const codexData = latestMessage.data;
-          if (codexData) {
-            // Handle item events
-            if (codexData.type === 'item') {
-              switch (codexData.itemType) {
-                case 'agent_message':
-                  if (codexData.message?.content?.trim()) {
-                    const content = decodeHtmlEntities(codexData.message.content);
-                    setChatMessages(prev => [...prev, {
-                      type: 'assistant',
-                      content: content,
-                      timestamp: new Date()
-                    }]);
-                  }
-                  break;
-
-                case 'reasoning':
-                  if (codexData.message?.content?.trim()) {
-                    const content = decodeHtmlEntities(codexData.message.content);
-                    setChatMessages(prev => [...prev, {
-                      type: 'assistant',
-                      content: content,
-                      timestamp: new Date(),
-                      isThinking: true
-                    }]);
-                  }
-                  break;
-
-                case 'command_execution':
-                  if (codexData.command) {
-                    setChatMessages(prev => [...prev, {
-                      type: 'assistant',
-                      content: '',
-                      timestamp: new Date(),
-                      isToolUse: true,
-                      toolName: 'Bash',
-                      toolInput: codexData.command,
-                      toolResult: codexData.output || null,
-                      exitCode: codexData.exitCode
-                    }]);
-                  }
-                  break;
-
-                case 'file_change':
-                  if (codexData.changes?.length > 0) {
-                    const changesList = codexData.changes.map(c => `${c.kind}: ${c.path}`).join('\n');
-                    setChatMessages(prev => [...prev, {
-                      type: 'assistant',
-                      content: '',
-                      timestamp: new Date(),
-                      isToolUse: true,
-                      toolName: 'FileChanges',
-                      toolInput: changesList,
-                      toolResult: `Status: ${codexData.status}`
-                    }]);
-                  }
-                  break;
-
-                case 'mcp_tool_call':
-                  setChatMessages(prev => [...prev, {
-                    type: 'assistant',
-                    content: '',
-                    timestamp: new Date(),
-                    isToolUse: true,
-                    toolName: `${codexData.server}:${codexData.tool}`,
-                    toolInput: JSON.stringify(codexData.arguments, null, 2),
-                    toolResult: codexData.result ? JSON.stringify(codexData.result, null, 2) : (codexData.error?.message || null)
-                  }]);
-                  break;
-
-                case 'error':
-                  if (codexData.message?.content) {
-                    setChatMessages(prev => [...prev, {
-                      type: 'error',
-                      content: codexData.message.content,
-                      timestamp: new Date()
-                    }]);
-                  }
-                  break;
-
-                default:
-                  console.log('[Codex] Unhandled item type:', codexData.itemType, codexData);
-              }
-            }
-
-            // Handle turn complete
-            if (codexData.type === 'turn_complete') {
-              // Turn completed, message stream done
-              setIsLoading(false);
-            }
-
-            // Handle turn failed
-            if (codexData.type === 'turn_failed') {
-              setIsLoading(false);
-              setChatMessages(prev => [...prev, {
-                type: 'error',
-                content: codexData.error?.message || 'Turn failed',
-                timestamp: new Date()
-              }]);
-            }
-          }
-          break;
-
-        case 'codex-complete':
-          // Handle Codex session completion
-          const codexCompletedSessionId = latestMessage.sessionId || currentSessionId || sessionStorage.getItem('pendingSessionId');
-
-          if (codexCompletedSessionId === currentSessionId || !currentSessionId) {
-            setIsLoading(false);
-            setCanAbortSession(false);
-            setClaudeStatus(null);
-          }
-
-          if (codexCompletedSessionId) {
-            if (onSessionInactive) {
-              onSessionInactive(codexCompletedSessionId);
-            }
-            if (onSessionNotProcessing) {
-              onSessionNotProcessing(codexCompletedSessionId);
-            }
-          }
-
-          const codexPendingSessionId = sessionStorage.getItem('pendingSessionId');
-          const codexActualSessionId = latestMessage.actualSessionId || codexPendingSessionId;
-          if (codexPendingSessionId && !currentSessionId) {
-            setCurrentSessionId(codexActualSessionId);
-            setIsSystemSessionChange(true);
-            if (onNavigateToSession) {
-              onNavigateToSession(codexActualSessionId);
-            }
-            sessionStorage.removeItem('pendingSessionId');
-            console.log('Codex session complete, ID set to:', codexPendingSessionId);
-          }
-
-          if (selectedProject) {
-            safeLocalStorage.removeItem(`chat_messages_${selectedProject.name}`);
-          }
-          break;
-
-        case 'codex-error':
-          // Handle Codex errors
-          setIsLoading(false);
-          setCanAbortSession(false);
-          setChatMessages(prev => [...prev, {
-            type: 'error',
-            content: latestMessage.error || 'An error occurred with Codex',
-            timestamp: new Date()
-          }]);
           break;
 
         case 'session-aborted': {
@@ -3901,7 +3179,7 @@ function ChatInterface({ selectedProject, selectedSession, ws, sendMessage, mess
         case 'session-status': {
           const statusSessionId = latestMessage.sessionId;
           const isCurrentSession = statusSessionId === currentSessionId ||
-                                   (selectedSession && statusSessionId === selectedSession.id);
+            (selectedSession && statusSessionId === selectedSession.id);
           if (isCurrentSession && latestMessage.isProcessing) {
             // Session is currently processing, restore UI state
             setIsLoading(true);
@@ -3923,7 +3201,7 @@ function ChatInterface({ selectedProject, selectedSession, ws, sendMessage, mess
               tokens: 0,
               can_interrupt: true
             };
-            
+
             // Check for different status message formats
             if (statusData.message) {
               statusInfo.text = statusData.message;
@@ -3932,25 +3210,25 @@ function ChatInterface({ selectedProject, selectedSession, ws, sendMessage, mess
             } else if (typeof statusData === 'string') {
               statusInfo.text = statusData;
             }
-            
+
             // Extract token count
             if (statusData.tokens) {
               statusInfo.tokens = statusData.tokens;
             } else if (statusData.token_count) {
               statusInfo.tokens = statusData.token_count;
             }
-            
+
             // Check if can interrupt
             if (statusData.can_interrupt !== undefined) {
               statusInfo.can_interrupt = statusData.can_interrupt;
             }
-            
+
             setClaudeStatus(statusInfo);
             setIsLoading(true);
             setCanAbortSession(statusInfo.can_interrupt);
           }
           break;
-  
+
       }
     }
   }, [messages]);
@@ -3997,20 +3275,20 @@ function ChatInterface({ selectedProject, selectedSession, ws, sendMessage, mess
   useEffect(() => {
     const textBeforeCursor = input.slice(0, cursorPosition);
     const lastAtIndex = textBeforeCursor.lastIndexOf('@');
-    
+
     if (lastAtIndex !== -1) {
       const textAfterAt = textBeforeCursor.slice(lastAtIndex + 1);
       // Check if there's a space after the @ symbol (which would end the file reference)
       if (!textAfterAt.includes(' ')) {
         setAtSymbolPosition(lastAtIndex);
         setShowFileDropdown(true);
-        
+
         // Filter files based on the text after @
-        const filtered = fileList.filter(file => 
+        const filtered = fileList.filter(file =>
           file.name.toLowerCase().includes(textAfterAt.toLowerCase()) ||
           file.path.toLowerCase().includes(textAfterAt.toLowerCase())
         ).slice(0, 10); // Limit to 10 results
-        
+
         setFilteredFiles(filtered);
         setSelectedFileIndex(-1);
       } else {
@@ -4028,7 +3306,7 @@ function ChatInterface({ selectedProject, selectedSession, ws, sendMessage, mess
     const timer = setTimeout(() => {
       setDebouncedInput(input);
     }, 150); // 150ms debounce
-    
+
     return () => clearTimeout(timer);
   }, [input]);
 
@@ -4119,18 +3397,10 @@ function ChatInterface({ selectedProject, selectedSession, ws, sendMessage, mess
     }
   }, [input]);
 
-  // Load token usage when session changes for Claude sessions only
-  // (Codex token usage is included in messages response, Cursor doesn't support it)
+  // Load token usage when session changes
   useEffect(() => {
     if (!selectedProject || !selectedSession?.id || selectedSession.id.startsWith('new-session-')) {
       setTokenBudget(null);
-      return;
-    }
-
-    const sessionProvider = selectedSession.__provider || 'claude';
-
-    // Skip for Codex (included in messages) and Cursor (not supported)
-    if (sessionProvider !== 'claude') {
       return;
     }
 
@@ -4221,7 +3491,7 @@ function ChatInterface({ selectedProject, selectedSession, ws, sendMessage, mess
   // Handle clipboard paste for images
   const handlePaste = useCallback(async (e) => {
     const items = Array.from(e.clipboardData.items);
-    
+
     for (const item of items) {
       if (item.type.startsWith('image/')) {
         const file = item.getAsFile();
@@ -4230,7 +3500,7 @@ function ChatInterface({ selectedProject, selectedSession, ws, sendMessage, mess
         }
       }
     }
-    
+
     // Fallback for some browsers/platforms
     if (items.length === 0 && e.clipboardData.files.length > 0) {
       const files = Array.from(e.clipboardData.files);
@@ -4264,18 +3534,18 @@ function ChatInterface({ selectedProject, selectedSession, ws, sendMessage, mess
       attachedImages.forEach(file => {
         formData.append('images', file);
       });
-      
+
       try {
         const response = await authenticatedFetch(`/api/projects/${selectedProject.name}/upload-images`, {
           method: 'POST',
           headers: {}, // Let browser set Content-Type for FormData
           body: formData
         });
-        
+
         if (!response.ok) {
           throw new Error('Failed to upload images');
         }
-        
+
         const result = await response.json();
         uploadedImages = result.images;
       } catch (error) {
@@ -4305,13 +3575,13 @@ function ChatInterface({ selectedProject, selectedSession, ws, sendMessage, mess
       tokens: 0,
       can_interrupt: true
     });
-    
+
     // Always scroll to bottom when user sends a message and reset scroll state
     setIsUserScrolledUp(false); // Reset scroll state so auto-scroll works for Claude's response
     setTimeout(() => scrollToBottom(), 100); // Longer delay to ensure message is rendered
 
     // Determine effective session id for replies to avoid race on state updates
-    const effectiveSessionId = currentSessionId || selectedSession?.id || sessionStorage.getItem('cursorSessionId');
+    const effectiveSessionId = currentSessionId || selectedSession?.id;
 
     // Session Protection: Mark session as active to prevent automatic project updates during conversation
     // Use existing session if available; otherwise a temporary placeholder until backend provides real ID
@@ -4320,11 +3590,10 @@ function ChatInterface({ selectedProject, selectedSession, ws, sendMessage, mess
       onSessionActive(sessionToActivate);
     }
 
-    // Get tools settings from localStorage based on provider
+    // Get tools settings from localStorage
     const getToolsSettings = () => {
       try {
-        const settingsKey = provider === 'cursor' ? 'cursor-tools-settings' : provider === 'codex' ? 'codex-settings' : 'claude-settings';
-        const savedSettings = safeLocalStorage.getItem(settingsKey);
+        const savedSettings = safeLocalStorage.getItem('claude-settings');
         if (savedSettings) {
           return JSON.parse(savedSettings);
         }
@@ -4340,56 +3609,21 @@ function ChatInterface({ selectedProject, selectedSession, ws, sendMessage, mess
 
     const toolsSettings = getToolsSettings();
 
-    // Send command based on provider
-    if (provider === 'cursor') {
-      // Send Cursor command (always use cursor-command; include resume/sessionId when replying)
-      sendMessage({
-        type: 'cursor-command',
-        command: input,
-        sessionId: effectiveSessionId,
-        options: {
-          // Prefer fullPath (actual cwd for project), fallback to path
-          cwd: selectedProject.fullPath || selectedProject.path,
-          projectPath: selectedProject.fullPath || selectedProject.path,
-          sessionId: effectiveSessionId,
-          resume: !!effectiveSessionId,
-          model: cursorModel,
-          skipPermissions: toolsSettings?.skipPermissions || false,
-          toolsSettings: toolsSettings
-        }
-      });
-    } else if (provider === 'codex') {
-      // Send Codex command
-      sendMessage({
-        type: 'codex-command',
-        command: input,
-        sessionId: effectiveSessionId,
-        options: {
-          cwd: selectedProject.fullPath || selectedProject.path,
-          projectPath: selectedProject.fullPath || selectedProject.path,
-          sessionId: effectiveSessionId,
-          resume: !!effectiveSessionId,
-          model: codexModel,
-          permissionMode: permissionMode === 'plan' ? 'default' : permissionMode
-        }
-      });
-    } else {
-      // Send Claude command (existing code)
-      sendMessage({
-        type: 'claude-command',
-        command: input,
-        options: {
-          projectPath: selectedProject.path,
-          cwd: selectedProject.fullPath,
-          sessionId: currentSessionId,
-          resume: !!currentSessionId,
-          toolsSettings: toolsSettings,
-          permissionMode: permissionMode,
-          model: claudeModel,
-          images: uploadedImages // Pass images to backend
-        }
-      });
-    }
+    // Send Claude command
+    sendMessage({
+      type: 'claude-command',
+      command: input,
+      options: {
+        projectPath: selectedProject.path,
+        cwd: selectedProject.fullPath,
+        sessionId: currentSessionId,
+        resume: !!currentSessionId,
+        toolsSettings: toolsSettings,
+        permissionMode: permissionMode,
+        model: claudeModel,
+        images: uploadedImages // Pass images to backend
+      }
+    });
 
     setInput('');
     setAttachedImages([]);
@@ -4406,7 +3640,7 @@ function ChatInterface({ selectedProject, selectedSession, ws, sendMessage, mess
     if (selectedProject) {
       safeLocalStorage.removeItem(`draft_input_${selectedProject.name}`);
     }
-  }, [input, isLoading, selectedProject, attachedImages, currentSessionId, selectedSession, provider, permissionMode, onSessionActive, cursorModel, claudeModel, codexModel, sendMessage, setInput, setAttachedImages, setUploadingImages, setImageErrors, setIsTextareaExpanded, textareaRef, setChatMessages, setIsLoading, setCanAbortSession, setClaudeStatus, setIsUserScrolledUp, scrollToBottom]);
+  }, [input, isLoading, selectedProject, attachedImages, currentSessionId, selectedSession, provider, permissionMode, onSessionActive, claudeModel, sendMessage, setInput, setAttachedImages, setUploadingImages, setImageErrors, setIsTextareaExpanded, textareaRef, setChatMessages, setIsLoading, setCanAbortSession, setClaudeStatus, setIsUserScrolledUp, scrollToBottom]);
 
   const handleGrantToolPermission = useCallback((suggestion) => {
     if (!suggestion || provider !== 'claude') {
@@ -4457,7 +3691,7 @@ function ChatInterface({ selectedProject, selectedSession, ws, sendMessage, mess
     const textBeforeSlash = input.slice(0, slashPosition);
     const textAfterSlash = input.slice(slashPosition);
     const spaceIndex = textAfterSlash.indexOf(' ');
-    const textAfterQuery = spaceIndex !==-1 ? textAfterSlash.slice(spaceIndex) : '';
+    const textAfterQuery = spaceIndex !== -1 ? textAfterSlash.slice(spaceIndex) : '';
 
     const newInput = textBeforeSlash + command.name + ' ' + textAfterQuery;
 
@@ -4522,14 +3756,14 @@ function ChatInterface({ selectedProject, selectedSession, ws, sendMessage, mess
     if (showFileDropdown && filteredFiles.length > 0) {
       if (e.key === 'ArrowDown') {
         e.preventDefault();
-        setSelectedFileIndex(prev => 
+        setSelectedFileIndex(prev =>
           prev < filteredFiles.length - 1 ? prev + 1 : 0
         );
         return;
       }
       if (e.key === 'ArrowUp') {
         e.preventDefault();
-        setSelectedFileIndex(prev => 
+        setSelectedFileIndex(prev =>
           prev > 0 ? prev - 1 : filteredFiles.length - 1
         );
         return;
@@ -4549,14 +3783,11 @@ function ChatInterface({ selectedProject, selectedSession, ws, sendMessage, mess
         return;
       }
     }
-    
+
     // Handle Tab key for mode switching (only when dropdowns are not showing)
     if (e.key === 'Tab' && !showFileDropdown && !showCommandMenu) {
       e.preventDefault();
-      // Codex doesn't support plan mode
-      const modes = provider === 'codex'
-        ? ['default', 'acceptEdits', 'bypassPermissions']
-        : ['default', 'acceptEdits', 'bypassPermissions', 'plan'];
+      const modes = ['default', 'acceptEdits', 'bypassPermissions', 'plan'];
       const currentIndex = modes.indexOf(permissionMode);
       const nextIndex = (currentIndex + 1) % modes.length;
       const newMode = modes[nextIndex];
@@ -4568,14 +3799,14 @@ function ChatInterface({ selectedProject, selectedSession, ws, sendMessage, mess
       }
       return;
     }
-    
+
     // Handle Enter key: Ctrl+Enter (Cmd+Enter on Mac) sends, Shift+Enter creates new line
     if (e.key === 'Enter') {
       // If we're in composition, don't send message
       if (e.nativeEvent.isComposing) {
         return; // Let IME handle the Enter key
       }
-      
+
       if ((e.ctrlKey || e.metaKey) && !e.shiftKey) {
         // Ctrl+Enter or Cmd+Enter: Send message
         e.preventDefault();
@@ -4596,23 +3827,23 @@ function ChatInterface({ selectedProject, selectedSession, ws, sendMessage, mess
     const textAfterAtQuery = input.slice(atSymbolPosition);
     const spaceIndex = textAfterAtQuery.indexOf(' ');
     const textAfterQuery = spaceIndex !== -1 ? textAfterAtQuery.slice(spaceIndex) : '';
-    
+
     const newInput = textBeforeAt + '@' + file.path + ' ' + textAfterQuery;
     const newCursorPos = textBeforeAt.length + 1 + file.path.length + 1;
-    
+
     // Immediately ensure focus is maintained
     if (textareaRef.current && !textareaRef.current.matches(':focus')) {
       textareaRef.current.focus();
     }
-    
+
     // Update input and cursor position
     setInput(newInput);
     setCursorPosition(newCursorPos);
-    
+
     // Hide dropdown
     setShowFileDropdown(false);
     setAtSymbolPosition(-1);
-    
+
     // Set cursor position synchronously 
     if (textareaRef.current) {
       // Use requestAnimationFrame for smoother updates
@@ -4713,7 +3944,7 @@ function ChatInterface({ selectedProject, selectedSession, ws, sendMessage, mess
     setIsLoading(false);
     setCanAbortSession(false);
   };
-  
+
   const handleAbortSession = () => {
     if (currentSessionId && canAbortSession) {
       sendMessage({
@@ -4725,10 +3956,7 @@ function ChatInterface({ selectedProject, selectedSession, ws, sendMessage, mess
   };
 
   const handleModeSwitch = () => {
-    // Codex doesn't support plan mode
-    const modes = provider === 'codex'
-      ? ['default', 'acceptEdits', 'bypassPermissions']
-      : ['default', 'acceptEdits', 'bypassPermissions', 'plan'];
+    const modes = ['default', 'acceptEdits', 'bypassPermissions', 'plan'];
     const currentIndex = modes.indexOf(permissionMode);
     const nextIndex = (currentIndex + 1) % modes.length;
     const newMode = modes[nextIndex];
@@ -4762,132 +3990,43 @@ function ChatInterface({ selectedProject, selectedSession, ws, sendMessage, mess
       </style>
       <div className="h-full flex flex-col">
         {/* Messages Area - Scrollable Middle Section */}
-      <div 
-        ref={scrollContainerRef}
-        onWheel={handleScroll}
-        onTouchMove={handleScroll}
-        className="flex-1 overflow-y-auto overflow-x-hidden px-0 py-3 sm:p-4 space-y-3 sm:space-y-4 relative"
-      >
-        {isLoadingSessionMessages && chatMessages.length === 0 ? (
-          <div className="text-center text-gray-500 dark:text-gray-400 mt-8">
-            <div className="flex items-center justify-center space-x-2">
-              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-400"></div>
-              <p>Loading session messages...</p>
+        <div
+          ref={scrollContainerRef}
+          onWheel={handleScroll}
+          onTouchMove={handleScroll}
+          className="flex-1 overflow-y-auto overflow-x-hidden px-0 py-3 sm:p-4 space-y-3 sm:space-y-4 relative"
+        >
+          {isLoadingSessionMessages && chatMessages.length === 0 ? (
+            <div className="text-center text-gray-500 dark:text-gray-400 mt-8">
+              <div className="flex items-center justify-center space-x-2">
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-400"></div>
+                <p>Loading session messages...</p>
+              </div>
             </div>
-          </div>
-        ) : chatMessages.length === 0 ? (
-          <div className="flex items-center justify-center h-full">
-            {!selectedSession && !currentSessionId && (
-              <div className="text-center px-6 sm:px-4 py-8">
-                <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-3">Choose Your AI Assistant</h2>
-                <p className="text-gray-600 dark:text-gray-400 mb-8">
-                  Select a provider to start a new conversation
-                </p>
-                
-                <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-8">
-                  {/* Claude Button */}
-                  <button
-                    onClick={() => {
-                      setProvider('claude');
-                      localStorage.setItem('selected-provider', 'claude');
-                      // Focus input after selection
-                      setTimeout(() => textareaRef.current?.focus(), 100);
-                    }}
-                    className={`group relative w-64 h-32 bg-white dark:bg-gray-800 rounded-xl border-2 transition-all duration-200 hover:scale-105 hover:shadow-xl ${
-                      provider === 'claude' 
-                        ? 'border-blue-500 shadow-lg ring-2 ring-blue-500/20' 
-                        : 'border-gray-200 dark:border-gray-700 hover:border-blue-400'
-                    }`}
-                  >
-                    <div className="flex flex-col items-center justify-center h-full gap-3">
+          ) : chatMessages.length === 0 ? (
+            <div className="flex items-center justify-center h-full">
+              {!selectedSession && !currentSessionId && (
+                <div className="text-center px-6 sm:px-4 py-8">
+                  <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-3">Start a New Conversation</h2>
+                  <p className="text-gray-600 dark:text-gray-400 mb-8">
+                    Chat with Claude to help with your code
+                  </p>
+
+                  <div className="flex flex-col items-center justify-center mb-8">
+                    <div className="flex flex-col items-center gap-3">
                       <ClaudeLogo className="w-10 h-10" />
                       <div>
                         <p className="font-semibold text-gray-900 dark:text-white">Claude</p>
                         <p className="text-xs text-gray-500 dark:text-gray-400">by Anthropic</p>
                       </div>
                     </div>
-                    {provider === 'claude' && (
-                      <div className="absolute top-2 right-2">
-                        <div className="w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center">
-                          <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                          </svg>
-                        </div>
-                      </div>
-                    )}
-                  </button>
-                  
-                  {/* Cursor Button */}
-                  <button
-                    onClick={() => {
-                      setProvider('cursor');
-                      localStorage.setItem('selected-provider', 'cursor');
-                      // Focus input after selection
-                      setTimeout(() => textareaRef.current?.focus(), 100);
-                    }}
-                    className={`group relative w-64 h-32 bg-white dark:bg-gray-800 rounded-xl border-2 transition-all duration-200 hover:scale-105 hover:shadow-xl ${
-                      provider === 'cursor' 
-                        ? 'border-purple-500 shadow-lg ring-2 ring-purple-500/20' 
-                        : 'border-gray-200 dark:border-gray-700 hover:border-purple-400'
-                    }`}
-                  >
-                    <div className="flex flex-col items-center justify-center h-full gap-3">
-                      <CursorLogo className="w-10 h-10" />
-                      <div>
-                        <p className="font-semibold text-gray-900 dark:text-white">Cursor</p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400">AI Code Editor</p>
-                      </div>
-                    </div>
-                    {provider === 'cursor' && (
-                      <div className="absolute top-2 right-2">
-                        <div className="w-5 h-5 bg-purple-500 rounded-full flex items-center justify-center">
-                          <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                          </svg>
-                        </div>
-                      </div>
-                    )}
-                  </button>
+                  </div>
 
-                  {/* Codex Button */}
-                  <button
-                    onClick={() => {
-                      setProvider('codex');
-                      localStorage.setItem('selected-provider', 'codex');
-                      // Focus input after selection
-                      setTimeout(() => textareaRef.current?.focus(), 100);
-                    }}
-                    className={`group relative w-64 h-32 bg-white dark:bg-gray-800 rounded-xl border-2 transition-all duration-200 hover:scale-105 hover:shadow-xl ${
-                      provider === 'codex'
-                        ? 'border-gray-800 dark:border-gray-300 shadow-lg ring-2 ring-gray-800/20 dark:ring-gray-300/20'
-                        : 'border-gray-200 dark:border-gray-700 hover:border-gray-500 dark:hover:border-gray-400'
-                    }`}
-                  >
-                    <div className="flex flex-col items-center justify-center h-full gap-3">
-                      <CodexLogo className="w-10 h-10" />
-                      <div>
-                        <p className="font-semibold text-gray-900 dark:text-white">Codex</p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400">by OpenAI</p>
-                      </div>
-                    </div>
-                    {provider === 'codex' && (
-                      <div className="absolute top-2 right-2">
-                        <div className="w-5 h-5 bg-gray-800 dark:bg-gray-300 rounded-full flex items-center justify-center">
-                          <svg className="w-3 h-3 text-white dark:text-gray-800" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                          </svg>
-                        </div>
-                      </div>
-                    )}
-                  </button>
-                </div>
-
-                {/* Model Selection - Always reserve space to prevent jumping */}
-                <div className={`mb-6 transition-opacity duration-200 ${provider ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Select Model
-                  </label>
-                  {provider === 'claude' ? (
+                  {/* Model Selection */}
+                  <div className="mb-6">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Select Model
+                    </label>
                     <select
                       value={claudeModel}
                       onChange={(e) => {
@@ -4901,386 +4040,278 @@ function ChatInterface({ selectedProject, selectedSession, ws, sendMessage, mess
                         <option key={value} value={value}>{label}</option>
                       ))}
                     </select>
-                  ) : provider === 'codex' ? (
-                    <select
-                      value={codexModel}
-                      onChange={(e) => {
-                        const newModel = e.target.value;
-                        setCodexModel(newModel);
-                        localStorage.setItem('codex-model', newModel);
-                      }}
-                      className="pl-4 pr-10 py-2 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-gray-500 focus:border-gray-500 min-w-[140px]"
-                    >
-                      {CODEX_MODELS.OPTIONS.map(({ value, label }) => (
-                        <option key={value} value={value}>{label}</option>
-                      ))}
-                    </select>
-                  ) : (
-                    <select
-                      value={cursorModel}
-                      onChange={(e) => {
-                        const newModel = e.target.value;
-                        setCursorModel(newModel);
-                        localStorage.setItem('cursor-model', newModel);
-                      }}
-                      className="pl-4 pr-10 py-2 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 min-w-[140px]"
-                      disabled={provider !== 'cursor'}
-                    >
-                      {CURSOR_MODELS.OPTIONS.map(({ value, label }) => (
-                        <option key={value} value={value}>{label}</option>
-                      ))}
-                    </select>
-                  )}
-                </div>
-                
-                <p className="text-sm text-gray-500 dark:text-gray-400">
-                  {provider === 'claude'
-                    ? `Ready to use Claude with ${claudeModel}. Start typing your message below.`
-                    : provider === 'cursor'
-                    ? `Ready to use Cursor with ${cursorModel}. Start typing your message below.`
-                    : provider === 'codex'
-                    ? `Ready to use Codex with ${codexModel}. Start typing your message below.`
-                    : 'Select a provider above to begin'
-                  }
-                </p>
-                
-                {/* Show NextTaskBanner when provider is selected and ready, only if TaskMaster is installed */}
-                {provider && tasksEnabled && isTaskMasterInstalled && (
-                  <div className="mt-4 px-4 sm:px-0">
-                    <NextTaskBanner
-                      onStartTask={() => setInput('Start the next task')}
-                      onShowAllTasks={onShowAllTasks}
-                    />
                   </div>
-                )}
-              </div>
-            )}
-            {selectedSession && (
-              <div className="text-center text-gray-500 dark:text-gray-400 px-6 sm:px-4">
-                <p className="font-bold text-lg sm:text-xl mb-3">Continue your conversation</p>
-                <p className="text-sm sm:text-base leading-relaxed">
-                  Ask questions about your code, request changes, or get help with development tasks
-                </p>
-                
-                {/* Show NextTaskBanner for existing sessions too, only if TaskMaster is installed */}
-                {tasksEnabled && isTaskMasterInstalled && (
-                  <div className="mt-4 px-4 sm:px-0">
-                    <NextTaskBanner
-                      onStartTask={() => setInput('Start the next task')}
-                      onShowAllTasks={onShowAllTasks}
-                    />
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        ) : (
-          <>
-            {/* Loading indicator for older messages */}
-            {isLoadingMoreMessages && (
-              <div className="text-center text-gray-500 dark:text-gray-400 py-3">
-                <div className="flex items-center justify-center space-x-2">
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-400"></div>
-                  <p className="text-sm">Loading older messages...</p>
+
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    Ready to use Claude with {claudeModel}. Start typing your message below.
+                  </p>
                 </div>
-              </div>
-            )}
-            
-            {/* Indicator showing there are more messages to load */}
-            {hasMoreMessages && !isLoadingMoreMessages && (
-              <div className="text-center text-gray-500 dark:text-gray-400 text-sm py-2 border-b border-gray-200 dark:border-gray-700">
-                {totalMessages > 0 && (
-                  <span>
-                    Showing {sessionMessages.length} of {totalMessages} messages • 
-                    <span className="text-xs">Scroll up to load more</span>
-                  </span>
-                )}
-              </div>
-            )}
-            
-            {/* Legacy message count indicator (for non-paginated view) */}
-            {!hasMoreMessages && chatMessages.length > visibleMessageCount && (
-              <div className="text-center text-gray-500 dark:text-gray-400 text-sm py-2 border-b border-gray-200 dark:border-gray-700">
-                Showing last {visibleMessageCount} messages ({chatMessages.length} total) • 
-                <button 
-                  className="ml-1 text-blue-600 hover:text-blue-700 underline"
-                  onClick={loadEarlierMessages}
-                >
-                  Load earlier messages
-                </button>
-              </div>
-            )}
-            
-            {visibleMessages.map((message, index) => {
-              const prevMessage = index > 0 ? visibleMessages[index - 1] : null;
-              
-              return (
-                <MessageComponent
-                  key={index}
-                  message={message}
-                  index={index}
-                  prevMessage={prevMessage}
-                  createDiff={createDiff}
-                  onFileOpen={onFileOpen}
-                  onShowSettings={onShowSettings}
-                  onGrantToolPermission={handleGrantToolPermission}
-                  autoExpandTools={autoExpandTools}
-                  showRawParameters={showRawParameters}
-                  showThinking={showThinking}
-                  selectedProject={selectedProject}
-                  provider={provider}
-                />
-              );
-            })}
-          </>
-        )}
-        
-        {isLoading && (
-          <div className="chat-message assistant">
-            <div className="w-full">
-              <div className="flex items-center space-x-3 mb-2">
-                <div className="w-8 h-8 rounded-full flex items-center justify-center text-white text-sm flex-shrink-0 p-1 bg-transparent">
-                  {(localStorage.getItem('selected-provider') || 'claude') === 'cursor' ? (
-                    <CursorLogo className="w-full h-full" />
-                  ) : (localStorage.getItem('selected-provider') || 'claude') === 'codex' ? (
-                    <CodexLogo className="w-full h-full" />
-                  ) : (
-                    <ClaudeLogo className="w-full h-full" />
-                  )}
+              )}
+              {selectedSession && (
+                <div className="text-center text-gray-500 dark:text-gray-400 px-6 sm:px-4">
+                  <p className="font-bold text-lg sm:text-xl mb-3">Continue your conversation</p>
+                  <p className="text-sm sm:text-base leading-relaxed">
+                    Ask questions about your code, request changes, or get help with development tasks
+                  </p>
                 </div>
-                <div className="text-sm font-medium text-gray-900 dark:text-white">{(localStorage.getItem('selected-provider') || 'claude') === 'cursor' ? 'Cursor' : (localStorage.getItem('selected-provider') || 'claude') === 'codex' ? 'Codex' : 'Claude'}</div>
-                {/* Abort button removed - functionality not yet implemented at backend */}
-              </div>
-              <div className="w-full text-sm text-gray-500 dark:text-gray-400 pl-3 sm:pl-0">
-                <div className="flex items-center space-x-1">
-                  <div className="animate-pulse">●</div>
-                  <div className="animate-pulse" style={{ animationDelay: '0.2s' }}>●</div>
-                  <div className="animate-pulse" style={{ animationDelay: '0.4s' }}>●</div>
-                  <span className="ml-2">Thinking...</span>
-                </div>
-              </div>
+              )}
             </div>
-          </div>
-        )}
-        
-        <div ref={messagesEndRef} />
-      </div>
+          ) : (
+            <>
+              {/* Loading indicator for older messages */}
+              {isLoadingMoreMessages && (
+                <div className="text-center text-gray-500 dark:text-gray-400 py-3">
+                  <div className="flex items-center justify-center space-x-2">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-400"></div>
+                    <p className="text-sm">Loading older messages...</p>
+                  </div>
+                </div>
+              )}
 
+              {/* Indicator showing there are more messages to load */}
+              {hasMoreMessages && !isLoadingMoreMessages && (
+                <div className="text-center text-gray-500 dark:text-gray-400 text-sm py-2 border-b border-gray-200 dark:border-gray-700">
+                  {totalMessages > 0 && (
+                    <span>
+                      Showing {sessionMessages.length} of {totalMessages} messages •
+                      <span className="text-xs">Scroll up to load more</span>
+                    </span>
+                  )}
+                </div>
+              )}
 
-      {/* Input Area - Fixed Bottom */}
-      <div className={`p-2 sm:p-4 md:p-4 flex-shrink-0 ${
-        isInputFocused ? 'pb-2 sm:pb-4 md:pb-6' : 'pb-2 sm:pb-4 md:pb-6'
-      }`}>
-    
-        <div className="flex-1">
-              <ClaudeStatus
-                status={claudeStatus}
-                isLoading={isLoading}
-                onAbort={handleAbortSession}
-                provider={provider}
-                showThinking={showThinking}
-              />
-              </div>
-        {/* Permission Mode Selector with scroll to bottom button - Above input, clickable for mobile */}
-        <div ref={inputContainerRef} className="max-w-4xl mx-auto mb-3">
-          {pendingPermissionRequests.length > 0 && (
-            // Permission banner for tool approvals. This renders the input, allows
-            // "allow once" or "allow & remember", and supports batching similar requests.
-            // It does not persist permissions by itself; persistence is handled by
-            // the existing localStorage-based settings helpers, introduced to surface
-            // approvals before tool execution resumes.
-            <div className="mb-3 space-y-2">
-              {pendingPermissionRequests.map((request) => {
-                const rawInput = formatToolInputForDisplay(request.input);
-                const permissionEntry = buildClaudeToolPermissionEntry(request.toolName, rawInput);
-                const settings = getClaudeSettings();
-                const alreadyAllowed = permissionEntry
-                  ? settings.allowedTools.includes(permissionEntry)
-                  : false;
-                const rememberLabel = alreadyAllowed ? 'Allow (saved)' : 'Allow & remember';
-                // Group pending prompts that resolve to the same allow rule so
-                // a single "Allow & remember" can clear them in one click.
-                // This does not attempt fuzzy matching; it only batches identical rules.
-                const matchingRequestIds = permissionEntry
-                  ? pendingPermissionRequests
-                    .filter(item => buildClaudeToolPermissionEntry(item.toolName, formatToolInputForDisplay(item.input)) === permissionEntry)
-                    .map(item => item.requestId)
-                  : [request.requestId];
+              {/* Legacy message count indicator (for non-paginated view) */}
+              {!hasMoreMessages && chatMessages.length > visibleMessageCount && (
+                <div className="text-center text-gray-500 dark:text-gray-400 text-sm py-2 border-b border-gray-200 dark:border-gray-700">
+                  Showing last {visibleMessageCount} messages ({chatMessages.length} total) •
+                  <button
+                    className="ml-1 text-blue-600 hover:text-blue-700 underline"
+                    onClick={loadEarlierMessages}
+                  >
+                    Load earlier messages
+                  </button>
+                </div>
+              )}
+
+              {visibleMessages.map((message, index) => {
+                const prevMessage = index > 0 ? visibleMessages[index - 1] : null;
 
                 return (
-                  <div
-                    key={request.requestId}
-                    className="rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 p-3 shadow-sm"
-                  >
-                    <div className="flex flex-wrap items-start justify-between gap-3">
-                      <div>
-                        <div className="text-sm font-semibold text-amber-900 dark:text-amber-100">
-                          Permission required
-                        </div>
-                        <div className="text-xs text-amber-800 dark:text-amber-200">
-                          Tool: <span className="font-mono">{request.toolName}</span>
-                        </div>
-                      </div>
-                      {permissionEntry && (
-                        <div className="text-xs text-amber-700 dark:text-amber-300">
-                          Allow rule: <span className="font-mono">{permissionEntry}</span>
-                        </div>
-                      )}
-                    </div>
-
-                    {rawInput && (
-                      <details className="mt-2">
-                        <summary className="cursor-pointer text-xs text-amber-800 dark:text-amber-200 hover:text-amber-900 dark:hover:text-amber-100">
-                          View tool input
-                        </summary>
-                        <pre className="mt-2 max-h-40 overflow-auto rounded-md bg-white/80 dark:bg-gray-900/60 border border-amber-200/60 dark:border-amber-800/60 p-2 text-xs text-amber-900 dark:text-amber-100 whitespace-pre-wrap">
-                          {rawInput}
-                        </pre>
-                      </details>
-                    )}
-
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      <button
-                        type="button"
-                        onClick={() => handlePermissionDecision(request.requestId, { allow: true })}
-                        className="inline-flex items-center gap-2 rounded-md bg-amber-600 text-white text-xs font-medium px-3 py-1.5 hover:bg-amber-700 transition-colors"
-                      >
-                        Allow once
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (permissionEntry && !alreadyAllowed) {
-                            handleGrantToolPermission({ entry: permissionEntry, toolName: request.toolName });
-                          }
-                          handlePermissionDecision(matchingRequestIds, { allow: true, rememberEntry: permissionEntry });
-                        }}
-                        className={`inline-flex items-center gap-2 rounded-md text-xs font-medium px-3 py-1.5 border transition-colors ${
-                          permissionEntry
-                            ? 'border-amber-300 text-amber-800 hover:bg-amber-100 dark:border-amber-700 dark:text-amber-100 dark:hover:bg-amber-900/30'
-                            : 'border-gray-300 text-gray-400 cursor-not-allowed'
-                        }`}
-                        disabled={!permissionEntry}
-                      >
-                        {rememberLabel}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handlePermissionDecision(request.requestId, { allow: false, message: 'User denied tool use' })}
-                        className="inline-flex items-center gap-2 rounded-md text-xs font-medium px-3 py-1.5 border border-red-300 text-red-700 hover:bg-red-50 dark:border-red-800 dark:text-red-200 dark:hover:bg-red-900/30 transition-colors"
-                      >
-                        Deny
-                      </button>
-                    </div>
-                  </div>
+                  <MessageComponent
+                    key={index}
+                    message={message}
+                    index={index}
+                    prevMessage={prevMessage}
+                    createDiff={createDiff}
+                    onFileOpen={onFileOpen}
+                    onShowSettings={onShowSettings}
+                    onGrantToolPermission={handleGrantToolPermission}
+                    autoExpandTools={autoExpandTools}
+                    showRawParameters={showRawParameters}
+                    showThinking={showThinking}
+                    selectedProject={selectedProject}
+                    provider={provider}
+                  />
                 );
               })}
+            </>
+          )}
+
+          {isLoading && (
+            <div className="chat-message assistant">
+              <div className="w-full">
+                <div className="flex items-center space-x-3 mb-2">
+                  <div className="w-8 h-8 rounded-full flex items-center justify-center text-white text-sm flex-shrink-0 p-1 bg-transparent">
+                    <ClaudeLogo className="w-full h-full" />
+                  </div>
+                  <div className="text-sm font-medium text-gray-900 dark:text-white">Claude</div>
+                  {/* Abort button removed - functionality not yet implemented at backend */}
+                </div>
+                <div className="w-full text-sm text-gray-500 dark:text-gray-400 pl-3 sm:pl-0">
+                  <div className="flex items-center space-x-1">
+                    <div className="animate-pulse">●</div>
+                    <div className="animate-pulse" style={{ animationDelay: '0.2s' }}>●</div>
+                    <div className="animate-pulse" style={{ animationDelay: '0.4s' }}>●</div>
+                    <span className="ml-2">Thinking...</span>
+                  </div>
+                </div>
+              </div>
             </div>
           )}
 
-          <div className="flex items-center justify-center gap-3">
-            <button
-              type="button"
-              onClick={handleModeSwitch}
-              className={`px-3 py-1.5 rounded-lg text-sm font-medium border transition-all duration-200 ${
-                permissionMode === 'default' 
-                  ? 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:bg-gray-200 dark:hover:bg-gray-600'
-                  : permissionMode === 'acceptEdits'
-                  ? 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 border-green-300 dark:border-green-600 hover:bg-green-100 dark:hover:bg-green-900/30'
-                  : permissionMode === 'bypassPermissions'
-                  ? 'bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-300 border-orange-300 dark:border-orange-600 hover:bg-orange-100 dark:hover:bg-orange-900/30'
-                  : 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 border-blue-300 dark:border-blue-600 hover:bg-blue-100 dark:hover:bg-blue-900/30'
-              }`}
-              title="Click to change permission mode (or press Tab in input)"
-            >
-              <div className="flex items-center gap-2">
-                <div className={`w-2 h-2 rounded-full ${
-                  permissionMode === 'default' 
-                    ? 'bg-gray-500'
-                    : permissionMode === 'acceptEdits'
-                    ? 'bg-green-500'
-                    : permissionMode === 'bypassPermissions'
-                    ? 'bg-orange-500'
-                    : 'bg-blue-500'
-                }`} />
-                <span>
-                  {permissionMode === 'default' && 'Default Mode'}
-                  {permissionMode === 'acceptEdits' && 'Accept Edits'}
-                  {permissionMode === 'bypassPermissions' && 'Bypass Permissions'}
-                  {permissionMode === 'plan' && 'Plan Mode'}
-                </span>
-              </div>
-            </button>
-            {/* Token usage pie chart - positioned next to mode indicator */}
-            <TokenUsagePie
-              used={tokenBudget?.used || 0}
-              total={tokenBudget?.total || parseInt(import.meta.env.VITE_CONTEXT_WINDOW) || 160000}
+          <div ref={messagesEndRef} />
+        </div>
+
+
+        {/* Input Area - Fixed Bottom */}
+        <div className={`p-2 sm:p-4 md:p-4 flex-shrink-0 ${isInputFocused ? 'pb-2 sm:pb-4 md:pb-6' : 'pb-2 sm:pb-4 md:pb-6'
+          }`}>
+
+          <div className="flex-1">
+            <ClaudeStatus
+              status={claudeStatus}
+              isLoading={isLoading}
+              onAbort={handleAbortSession}
+              provider={provider}
+              showThinking={showThinking}
             />
+          </div>
+          {/* Permission Mode Selector with scroll to bottom button - Above input, clickable for mobile */}
+          <div ref={inputContainerRef} className="max-w-4xl mx-auto mb-3">
+            {pendingPermissionRequests.length > 0 && (
+              // Permission banner for tool approvals. This renders the input, allows
+              // "allow once" or "allow & remember", and supports batching similar requests.
+              // It does not persist permissions by itself; persistence is handled by
+              // the existing localStorage-based settings helpers, introduced to surface
+              // approvals before tool execution resumes.
+              <div className="mb-3 space-y-2">
+                {pendingPermissionRequests.map((request) => {
+                  const rawInput = formatToolInputForDisplay(request.input);
+                  const permissionEntry = buildClaudeToolPermissionEntry(request.toolName, rawInput);
+                  const settings = getClaudeSettings();
+                  const alreadyAllowed = permissionEntry
+                    ? settings.allowedTools.includes(permissionEntry)
+                    : false;
+                  const rememberLabel = alreadyAllowed ? 'Allow (saved)' : 'Allow & remember';
+                  // Group pending prompts that resolve to the same allow rule so
+                  // a single "Allow & remember" can clear them in one click.
+                  // This does not attempt fuzzy matching; it only batches identical rules.
+                  const matchingRequestIds = permissionEntry
+                    ? pendingPermissionRequests
+                      .filter(item => buildClaudeToolPermissionEntry(item.toolName, formatToolInputForDisplay(item.input)) === permissionEntry)
+                      .map(item => item.requestId)
+                    : [request.requestId];
 
-            {/* Slash commands button */}
-            <button
-              type="button"
-              onClick={() => {
-                const isOpening = !showCommandMenu;
-                setShowCommandMenu(isOpening);
-                setCommandQuery('');
-                setSelectedCommandIndex(-1);
+                  return (
+                    <div
+                      key={request.requestId}
+                      className="rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 p-3 shadow-sm"
+                    >
+                      <div className="flex flex-wrap items-start justify-between gap-3">
+                        <div>
+                          <div className="text-sm font-semibold text-amber-900 dark:text-amber-100">
+                            Permission required
+                          </div>
+                          <div className="text-xs text-amber-800 dark:text-amber-200">
+                            Tool: <span className="font-mono">{request.toolName}</span>
+                          </div>
+                        </div>
+                        {permissionEntry && (
+                          <div className="text-xs text-amber-700 dark:text-amber-300">
+                            Allow rule: <span className="font-mono">{permissionEntry}</span>
+                          </div>
+                        )}
+                      </div>
 
-                // When opening, ensure all commands are shown
-                if (isOpening) {
-                  setFilteredCommands(slashCommands);
-                }
+                      {rawInput && (
+                        <details className="mt-2">
+                          <summary className="cursor-pointer text-xs text-amber-800 dark:text-amber-200 hover:text-amber-900 dark:hover:text-amber-100">
+                            View tool input
+                          </summary>
+                          <pre className="mt-2 max-h-40 overflow-auto rounded-md bg-white/80 dark:bg-gray-900/60 border border-amber-200/60 dark:border-amber-800/60 p-2 text-xs text-amber-900 dark:text-amber-100 whitespace-pre-wrap">
+                            {rawInput}
+                          </pre>
+                        </details>
+                      )}
 
-                if (textareaRef.current) {
-                  textareaRef.current.focus();
-                }
-              }}
-              className="relative w-8 h-8 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 rounded-full flex items-center justify-center transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:ring-offset-gray-800"
-              title="Show all commands"
-            >
-              <svg
-                className="w-5 h-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"
-                />
-              </svg>
-              {/* Command count badge */}
-              {slashCommands.length > 0 && (
-                <span
-                  className="absolute -top-1 -right-1 bg-blue-600 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center"
-                  style={{ fontSize: '10px' }}
-                >
-                  {slashCommands.length}
-                </span>
-              )}
-            </button>
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        <button
+                          type="button"
+                          onClick={() => handlePermissionDecision(request.requestId, { allow: true })}
+                          className="inline-flex items-center gap-2 rounded-md bg-amber-600 text-white text-xs font-medium px-3 py-1.5 hover:bg-amber-700 transition-colors"
+                        >
+                          Allow once
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (permissionEntry && !alreadyAllowed) {
+                              handleGrantToolPermission({ entry: permissionEntry, toolName: request.toolName });
+                            }
+                            handlePermissionDecision(matchingRequestIds, { allow: true, rememberEntry: permissionEntry });
+                          }}
+                          className={`inline-flex items-center gap-2 rounded-md text-xs font-medium px-3 py-1.5 border transition-colors ${permissionEntry
+                            ? 'border-amber-300 text-amber-800 hover:bg-amber-100 dark:border-amber-700 dark:text-amber-100 dark:hover:bg-amber-900/30'
+                            : 'border-gray-300 text-gray-400 cursor-not-allowed'
+                            }`}
+                          disabled={!permissionEntry}
+                        >
+                          {rememberLabel}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handlePermissionDecision(request.requestId, { allow: false, message: 'User denied tool use' })}
+                          className="inline-flex items-center gap-2 rounded-md text-xs font-medium px-3 py-1.5 border border-red-300 text-red-700 hover:bg-red-50 dark:border-red-800 dark:text-red-200 dark:hover:bg-red-900/30 transition-colors"
+                        >
+                          Deny
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
 
-            {/* Clear input button - positioned to the right of token pie, only shows when there's input */}
-            {input.trim() && (
+            <div className="flex items-center justify-center gap-3">
               <button
                 type="button"
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  setInput('');
+                onClick={handleModeSwitch}
+                className={`px-3 py-1.5 rounded-lg text-sm font-medium border transition-all duration-200 ${permissionMode === 'default'
+                  ? 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:bg-gray-200 dark:hover:bg-gray-600'
+                  : permissionMode === 'acceptEdits'
+                    ? 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 border-green-300 dark:border-green-600 hover:bg-green-100 dark:hover:bg-green-900/30'
+                    : permissionMode === 'bypassPermissions'
+                      ? 'bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-300 border-orange-300 dark:border-orange-600 hover:bg-orange-100 dark:hover:bg-orange-900/30'
+                      : 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 border-blue-300 dark:border-blue-600 hover:bg-blue-100 dark:hover:bg-blue-900/30'
+                  }`}
+                title="Click to change permission mode (or press Tab in input)"
+              >
+                <div className="flex items-center gap-2">
+                  <div className={`w-2 h-2 rounded-full ${permissionMode === 'default'
+                    ? 'bg-gray-500'
+                    : permissionMode === 'acceptEdits'
+                      ? 'bg-green-500'
+                      : permissionMode === 'bypassPermissions'
+                        ? 'bg-orange-500'
+                        : 'bg-blue-500'
+                    }`} />
+                  <span>
+                    {permissionMode === 'default' && 'Default Mode'}
+                    {permissionMode === 'acceptEdits' && 'Accept Edits'}
+                    {permissionMode === 'bypassPermissions' && 'Bypass Permissions'}
+                    {permissionMode === 'plan' && 'Plan Mode'}
+                  </span>
+                </div>
+              </button>
+              {/* Token usage pie chart - positioned next to mode indicator */}
+              <TokenUsagePie
+                used={tokenBudget?.used || 0}
+                total={tokenBudget?.total || parseInt(import.meta.env.VITE_CONTEXT_WINDOW) || 160000}
+              />
+
+              {/* Slash commands button */}
+              <button
+                type="button"
+                onClick={() => {
+                  const isOpening = !showCommandMenu;
+                  setShowCommandMenu(isOpening);
+                  setCommandQuery('');
+                  setSelectedCommandIndex(-1);
+
+                  // When opening, ensure all commands are shown
+                  if (isOpening) {
+                    setFilteredCommands(slashCommands);
+                  }
+
                   if (textareaRef.current) {
-                    textareaRef.current.style.height = 'auto';
                     textareaRef.current.focus();
                   }
-                  setIsTextareaExpanded(false);
                 }}
-                className="w-8 h-8 bg-white dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-full flex items-center justify-center transition-all duration-200 group shadow-sm"
-                title="Clear input"
+                className="relative w-8 h-8 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 rounded-full flex items-center justify-center transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:ring-offset-gray-800"
+                title="Show all commands"
               >
                 <svg
-                  className="w-4 h-4 text-gray-600 dark:text-gray-300 group-hover:text-gray-800 dark:group-hover:text-gray-100 transition-colors"
+                  className="w-5 h-5"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -5289,204 +4320,243 @@ function ChatInterface({ selectedProject, selectedSession, ws, sendMessage, mess
                     strokeLinecap="round"
                     strokeLinejoin="round"
                     strokeWidth={2}
-                    d="M6 18L18 6M6 6l12 12"
+                    d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"
                   />
                 </svg>
+                {/* Command count badge */}
+                {slashCommands.length > 0 && (
+                  <span
+                    className="absolute -top-1 -right-1 bg-blue-600 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center"
+                    style={{ fontSize: '10px' }}
+                  >
+                    {slashCommands.length}
+                  </span>
+                )}
               </button>
-            )}
 
-            {/* Scroll to bottom button - positioned next to mode indicator */}
-            {isUserScrolledUp && chatMessages.length > 0 && (
-              <button
-                onClick={scrollToBottom}
-                className="w-8 h-8 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-lg flex items-center justify-center transition-all duration-200 hover:scale-105 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:ring-offset-gray-800"
-                title="Scroll to bottom"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
-                </svg>
-              </button>
-            )}
-          </div>
-        </div>
-        
-        <form onSubmit={handleSubmit} className="relative max-w-4xl mx-auto">
-          {/* Drag overlay */}
-          {isDragActive && (
-            <div className="absolute inset-0 bg-blue-500/20 border-2 border-dashed border-blue-500 rounded-lg flex items-center justify-center z-50">
-              <div className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-lg">
-                <svg className="w-8 h-8 text-blue-500 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                </svg>
-                <p className="text-sm font-medium">Drop images here</p>
-              </div>
-            </div>
-          )}
-          
-          {/* Image attachments preview */}
-          {attachedImages.length > 0 && (
-            <div className="mb-2 p-2 bg-gray-50 dark:bg-gray-800 rounded-lg">
-              <div className="flex flex-wrap gap-2">
-                {attachedImages.map((file, index) => (
-                  <ImageAttachment
-                    key={index}
-                    file={file}
-                    onRemove={() => {
-                      setAttachedImages(prev => prev.filter((_, i) => i !== index));
-                    }}
-                    uploadProgress={uploadingImages.get(file.name)}
-                    error={imageErrors.get(file.name)}
-                  />
-                ))}
-              </div>
-            </div>
-          )}
-          
-          {/* File dropdown - positioned outside dropzone to avoid conflicts */}
-          {showFileDropdown && filteredFiles.length > 0 && (
-            <div className="absolute bottom-full left-0 right-0 mb-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg shadow-lg max-h-48 overflow-y-auto z-50 backdrop-blur-sm">
-              {filteredFiles.map((file, index) => (
-                <div
-                  key={file.path}
-                  className={`px-4 py-3 cursor-pointer border-b border-gray-100 dark:border-gray-700 last:border-b-0 touch-manipulation ${
-                    index === selectedFileIndex
-                      ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300'
-                      : 'hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300'
-                  }`}
-                  onMouseDown={(e) => {
-                    // Prevent textarea from losing focus on mobile
-                    e.preventDefault();
-                    e.stopPropagation();
-                  }}
+              {/* Clear input button - positioned to the right of token pie, only shows when there's input */}
+              {input.trim() && (
+                <button
+                  type="button"
                   onClick={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
-                    selectFile(file);
+                    setInput('');
+                    if (textareaRef.current) {
+                      textareaRef.current.style.height = 'auto';
+                      textareaRef.current.focus();
+                    }
+                    setIsTextareaExpanded(false);
                   }}
+                  className="w-8 h-8 bg-white dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-full flex items-center justify-center transition-all duration-200 group shadow-sm"
+                  title="Clear input"
                 >
-                  <div className="font-medium text-sm">{file.name}</div>
-                  <div className="text-xs text-gray-500 dark:text-gray-400 font-mono">
-                    {file.path}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
+                  <svg
+                    className="w-4 h-4 text-gray-600 dark:text-gray-300 group-hover:text-gray-800 dark:group-hover:text-gray-100 transition-colors"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M6 18L18 6M6 6l12 12"
+                    />
+                  </svg>
+                </button>
+              )}
 
-          {/* Command Menu */}
-          <CommandMenu
-            commands={filteredCommands}
-            selectedIndex={selectedCommandIndex}
-            onSelect={handleCommandSelect}
-            onClose={() => {
-              setShowCommandMenu(false);
-              setSlashPosition(-1);
-              setCommandQuery('');
-              setSelectedCommandIndex(-1);
-            }}
-            position={{
-              top: textareaRef.current
-                ? Math.max(16, textareaRef.current.getBoundingClientRect().top - 316)
-                : 0,
-              left: textareaRef.current
-                ? textareaRef.current.getBoundingClientRect().left
-                : 16,
-              bottom: textareaRef.current
-                ? window.innerHeight - textareaRef.current.getBoundingClientRect().top + 8
-                : 90
-            }}
-            isOpen={showCommandMenu}
-            frequentCommands={commandQuery ? [] : frequentCommands}
-          />
-
-          <div {...getRootProps()} className={`relative bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-600 focus-within:ring-2 focus-within:ring-blue-500 dark:focus-within:ring-blue-500 focus-within:border-blue-500 transition-all duration-200 overflow-hidden ${isTextareaExpanded ? 'chat-input-expanded' : ''}`}>
-            <input {...getInputProps()} />
-            <textarea
-              ref={textareaRef}
-              value={input}
-              onChange={handleInputChange}
-              onClick={handleTextareaClick}
-              onKeyDown={handleKeyDown}
-              onPaste={handlePaste}
-              onFocus={() => setIsInputFocused(true)}
-              onBlur={() => setIsInputFocused(false)}
-              onInput={(e) => {
-                // Immediate resize on input for better UX
-                e.target.style.height = 'auto';
-                e.target.style.height = e.target.scrollHeight + 'px';
-                setCursorPosition(e.target.selectionStart);
-
-                // Check if textarea is expanded (more than 2 lines worth of height)
-                const lineHeight = parseInt(window.getComputedStyle(e.target).lineHeight);
-                const isExpanded = e.target.scrollHeight > lineHeight * 2;
-                setIsTextareaExpanded(isExpanded);
-              }}
-              placeholder={`Type / for commands, @ for files, or ask ${provider === 'cursor' ? 'Cursor' : 'Claude'} anything...`}
-              disabled={isLoading}
-              className="chat-input-placeholder block w-full pl-12 pr-20 sm:pr-40 py-1.5 sm:py-4 bg-transparent rounded-2xl focus:outline-none text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 disabled:opacity-50 resize-none min-h-[50px] sm:min-h-[80px] max-h-[40vh] sm:max-h-[300px] overflow-y-auto text-sm sm:text-base leading-[21px] sm:leading-6 transition-all duration-200"
-              style={{ height: '50px' }}
-            />
-            {/* Image upload button */}
-            <button
-              type="button"
-              onClick={open}
-              className="absolute left-2 top-1/2 transform -translate-y-1/2 p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-              title="Attach images"
-            >
-              <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-              </svg>
-            </button>
-            
-            {/* Mic button - HIDDEN */}
-            <div className="absolute right-16 sm:right-16 top-1/2 transform -translate-y-1/2" style={{ display: 'none' }}>
-              <MicButton
-                onTranscript={handleTranscript}
-                className="w-10 h-10 sm:w-10 sm:h-10"
-              />
-            </div>
-
-            {/* Send button */}
-            <button
-              type="submit"
-              disabled={!input.trim() || isLoading}
-              onMouseDown={(e) => {
-                e.preventDefault();
-                handleSubmit(e);
-              }}
-              onTouchStart={(e) => {
-                e.preventDefault();
-                handleSubmit(e);
-              }}
-              className="absolute right-2 top-1/2 transform -translate-y-1/2 w-12 h-12 sm:w-12 sm:h-12 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed rounded-full flex items-center justify-center transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:ring-offset-gray-800"
-            >
-              <svg 
-                className="w-4 h-4 sm:w-5 sm:h-5 text-white transform rotate-90" 
-                fill="none" 
-                stroke="currentColor" 
-                viewBox="0 0 24 24"
-              >
-                <path 
-                  strokeLinecap="round" 
-                  strokeLinejoin="round" 
-                  strokeWidth={2} 
-                  d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" 
-                />
-              </svg>
-            </button>
-
-            {/* Hint text inside input box at bottom - Desktop only */}
-            <div className={`absolute bottom-1 left-12 right-14 sm:right-40 text-xs text-gray-400 dark:text-gray-500 pointer-events-none hidden sm:block transition-opacity duration-200 ${
-              input.trim() ? 'opacity-0' : 'opacity-100'
-            }`}>
-              {sendByCtrlEnter
-                ? "Ctrl+Enter to send • Shift+Enter for new line • Tab to change modes • / for slash commands"
-                : "Enter to send • Shift+Enter for new line • Tab to change modes • / for slash commands"}
+              {/* Scroll to bottom button - positioned next to mode indicator */}
+              {isUserScrolledUp && chatMessages.length > 0 && (
+                <button
+                  onClick={scrollToBottom}
+                  className="w-8 h-8 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-lg flex items-center justify-center transition-all duration-200 hover:scale-105 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:ring-offset-gray-800"
+                  title="Scroll to bottom"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+                  </svg>
+                </button>
+              )}
             </div>
           </div>
-        </form>
+
+          <form onSubmit={handleSubmit} className="relative max-w-4xl mx-auto">
+            {/* Drag overlay */}
+            {isDragActive && (
+              <div className="absolute inset-0 bg-blue-500/20 border-2 border-dashed border-blue-500 rounded-lg flex items-center justify-center z-50">
+                <div className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-lg">
+                  <svg className="w-8 h-8 text-blue-500 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                  </svg>
+                  <p className="text-sm font-medium">Drop images here</p>
+                </div>
+              </div>
+            )}
+
+            {/* Image attachments preview */}
+            {attachedImages.length > 0 && (
+              <div className="mb-2 p-2 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                <div className="flex flex-wrap gap-2">
+                  {attachedImages.map((file, index) => (
+                    <ImageAttachment
+                      key={index}
+                      file={file}
+                      onRemove={() => {
+                        setAttachedImages(prev => prev.filter((_, i) => i !== index));
+                      }}
+                      uploadProgress={uploadingImages.get(file.name)}
+                      error={imageErrors.get(file.name)}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* File dropdown - positioned outside dropzone to avoid conflicts */}
+            {showFileDropdown && filteredFiles.length > 0 && (
+              <div className="absolute bottom-full left-0 right-0 mb-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg shadow-lg max-h-48 overflow-y-auto z-50 backdrop-blur-sm">
+                {filteredFiles.map((file, index) => (
+                  <div
+                    key={file.path}
+                    className={`px-4 py-3 cursor-pointer border-b border-gray-100 dark:border-gray-700 last:border-b-0 touch-manipulation ${index === selectedFileIndex
+                      ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300'
+                      : 'hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300'
+                      }`}
+                    onMouseDown={(e) => {
+                      // Prevent textarea from losing focus on mobile
+                      e.preventDefault();
+                      e.stopPropagation();
+                    }}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      selectFile(file);
+                    }}
+                  >
+                    <div className="font-medium text-sm">{file.name}</div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400 font-mono">
+                      {file.path}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Command Menu */}
+            <CommandMenu
+              commands={filteredCommands}
+              selectedIndex={selectedCommandIndex}
+              onSelect={handleCommandSelect}
+              onClose={() => {
+                setShowCommandMenu(false);
+                setSlashPosition(-1);
+                setCommandQuery('');
+                setSelectedCommandIndex(-1);
+              }}
+              position={{
+                top: textareaRef.current
+                  ? Math.max(16, textareaRef.current.getBoundingClientRect().top - 316)
+                  : 0,
+                left: textareaRef.current
+                  ? textareaRef.current.getBoundingClientRect().left
+                  : 16,
+                bottom: textareaRef.current
+                  ? window.innerHeight - textareaRef.current.getBoundingClientRect().top + 8
+                  : 90
+              }}
+              isOpen={showCommandMenu}
+              frequentCommands={commandQuery ? [] : frequentCommands}
+            />
+
+            <div {...getRootProps()} className={`relative bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-600 focus-within:ring-2 focus-within:ring-blue-500 dark:focus-within:ring-blue-500 focus-within:border-blue-500 transition-all duration-200 overflow-hidden ${isTextareaExpanded ? 'chat-input-expanded' : ''}`}>
+              <input {...getInputProps()} />
+              <textarea
+                ref={textareaRef}
+                value={input}
+                onChange={handleInputChange}
+                onClick={handleTextareaClick}
+                onKeyDown={handleKeyDown}
+                onPaste={handlePaste}
+                onFocus={() => setIsInputFocused(true)}
+                onBlur={() => setIsInputFocused(false)}
+                onInput={(e) => {
+                  // Immediate resize on input for better UX
+                  e.target.style.height = 'auto';
+                  e.target.style.height = e.target.scrollHeight + 'px';
+                  setCursorPosition(e.target.selectionStart);
+
+                  // Check if textarea is expanded (more than 2 lines worth of height)
+                  const lineHeight = parseInt(window.getComputedStyle(e.target).lineHeight);
+                  const isExpanded = e.target.scrollHeight > lineHeight * 2;
+                  setIsTextareaExpanded(isExpanded);
+                }}
+                placeholder="Type / for commands, @ for files, or ask Claude anything..."
+                disabled={isLoading}
+                className="chat-input-placeholder block w-full pl-12 pr-20 sm:pr-40 py-1.5 sm:py-4 bg-transparent rounded-2xl focus:outline-none text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 disabled:opacity-50 resize-none min-h-[50px] sm:min-h-[80px] max-h-[40vh] sm:max-h-[300px] overflow-y-auto text-sm sm:text-base leading-[21px] sm:leading-6 transition-all duration-200"
+                style={{ height: '50px' }}
+              />
+              {/* Image upload button */}
+              <button
+                type="button"
+                onClick={open}
+                className="absolute left-2 top-1/2 transform -translate-y-1/2 p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                title="Attach images"
+              >
+                <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+              </button>
+
+              {/* Mic button - HIDDEN */}
+              <div className="absolute right-16 sm:right-16 top-1/2 transform -translate-y-1/2" style={{ display: 'none' }}>
+                <MicButton
+                  onTranscript={handleTranscript}
+                  className="w-10 h-10 sm:w-10 sm:h-10"
+                />
+              </div>
+
+              {/* Send button */}
+              <button
+                type="submit"
+                disabled={!input.trim() || isLoading}
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  handleSubmit(e);
+                }}
+                onTouchStart={(e) => {
+                  e.preventDefault();
+                  handleSubmit(e);
+                }}
+                className="absolute right-2 top-1/2 transform -translate-y-1/2 w-12 h-12 sm:w-12 sm:h-12 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed rounded-full flex items-center justify-center transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:ring-offset-gray-800"
+              >
+                <svg
+                  className="w-4 h-4 sm:w-5 sm:h-5 text-white transform rotate-90"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"
+                  />
+                </svg>
+              </button>
+
+              {/* Hint text inside input box at bottom - Desktop only */}
+              <div className={`absolute bottom-1 left-12 right-14 sm:right-40 text-xs text-gray-400 dark:text-gray-500 pointer-events-none hidden sm:block transition-opacity duration-200 ${input.trim() ? 'opacity-0' : 'opacity-100'
+                }`}>
+                {sendByCtrlEnter
+                  ? "Ctrl+Enter to send • Shift+Enter for new line • Tab to change modes • / for slash commands"
+                  : "Enter to send • Shift+Enter for new line • Tab to change modes • / for slash commands"}
+              </div>
+            </div>
+          </form>
+        </div>
       </div>
-    </div>
     </>
   );
 }

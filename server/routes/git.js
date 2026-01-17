@@ -5,7 +5,6 @@ import path from 'path';
 import { promises as fs } from 'fs';
 import { extractProjectDirectory } from '../projects.js';
 import { queryClaudeSDK } from '../claude-sdk.js';
-import { spawnCursor } from '../cursor-cli.js';
 
 const router = express.Router();
 const execAsync = promisify(exec);
@@ -32,11 +31,11 @@ function stripDiffHeaders(diff) {
   for (const line of lines) {
     // Skip all header lines including diff --git, index, file mode, and --- / +++ file paths
     if (line.startsWith('diff --git') ||
-        line.startsWith('index ') ||
-        line.startsWith('new file mode') ||
-        line.startsWith('deleted file mode') ||
-        line.startsWith('---') ||
-        line.startsWith('+++')) {
+      line.startsWith('index ') ||
+      line.startsWith('new file mode') ||
+      line.startsWith('deleted file mode') ||
+      line.startsWith('---') ||
+      line.startsWith('+++')) {
       continue;
     }
 
@@ -64,7 +63,7 @@ async function validateGitRepository(projectPath) {
     const { stdout: gitRoot } = await execAsync('git rev-parse --show-toplevel', { cwd: projectPath });
     const normalizedGitRoot = path.resolve(gitRoot.trim());
     const normalizedProjectPath = path.resolve(projectPath);
-    
+
     // Ensure the git root matches our project path (prevent using parent git repos)
     if (normalizedGitRoot !== normalizedProjectPath) {
       throw new Error(`Project directory is not a git repository. This directory is inside a git repository at ${normalizedGitRoot}, but git operations should be run from the repository root.`);
@@ -156,17 +155,17 @@ router.get('/status', async (req, res) => {
 // Get diff for a specific file
 router.get('/diff', async (req, res) => {
   const { project, file } = req.query;
-  
+
   if (!project || !file) {
     return res.status(400).json({ error: 'Project name and file path are required' });
   }
 
   try {
     const projectPath = await getActualProjectPath(project);
-    
+
     // Validate git repository
     await validateGitRepository(projectPath);
-    
+
     // Check if file is untracked or deleted
     const { stdout: statusOutput } = await execAsync(`git status --porcelain "${file}"`, { cwd: projectPath });
     const isUntracked = statusOutput.startsWith('??');
@@ -185,14 +184,14 @@ router.get('/diff', async (req, res) => {
         const fileContent = await fs.readFile(filePath, 'utf-8');
         const lines = fileContent.split('\n');
         diff = `--- /dev/null\n+++ b/${file}\n@@ -0,0 +1,${lines.length} @@\n` +
-               lines.map(line => `+${line}`).join('\n');
+          lines.map(line => `+${line}`).join('\n');
       }
     } else if (isDeleted) {
       // For deleted files, show the entire file content from HEAD as deletions
       const { stdout: fileContent } = await execAsync(`git show HEAD:"${file}"`, { cwd: projectPath });
       const lines = fileContent.split('\n');
       diff = `--- a/${file}\n+++ /dev/null\n@@ -1,${lines.length} +0,0 @@\n` +
-             lines.map(line => `-${line}`).join('\n');
+        lines.map(line => `-${line}`).join('\n');
     } else {
       // Get diff for tracked files
       // First check for unstaged changes (working tree vs index)
@@ -325,25 +324,25 @@ router.post('/initial-commit', async (req, res) => {
 // Commit changes
 router.post('/commit', async (req, res) => {
   const { project, message, files } = req.body;
-  
+
   if (!project || !message || !files || files.length === 0) {
     return res.status(400).json({ error: 'Project name, commit message, and files are required' });
   }
 
   try {
     const projectPath = await getActualProjectPath(project);
-    
+
     // Validate git repository
     await validateGitRepository(projectPath);
-    
+
     // Stage selected files
     for (const file of files) {
       await execAsync(`git add "${file}"`, { cwd: projectPath });
     }
-    
+
     // Commit with message
     const { stdout } = await execAsync(`git commit -m "${message.replace(/"/g, '\\"')}"`, { cwd: projectPath });
-    
+
     res.json({ success: true, output: stdout });
   } catch (error) {
     console.error('Git commit error:', error);
@@ -354,20 +353,20 @@ router.post('/commit', async (req, res) => {
 // Get list of branches
 router.get('/branches', async (req, res) => {
   const { project } = req.query;
-  
+
   if (!project) {
     return res.status(400).json({ error: 'Project name is required' });
   }
 
   try {
     const projectPath = await getActualProjectPath(project);
-    
+
     // Validate git repository
     await validateGitRepository(projectPath);
-    
+
     // Get all branches
     const { stdout } = await execAsync('git branch -a', { cwd: projectPath });
-    
+
     // Parse branches
     const branches = stdout
       .split('\n')
@@ -385,7 +384,7 @@ router.get('/branches', async (req, res) => {
         return branch;
       })
       .filter((branch, index, self) => self.indexOf(branch) === index); // Remove duplicates
-    
+
     res.json({ branches });
   } catch (error) {
     console.error('Git branches error:', error);
@@ -396,17 +395,17 @@ router.get('/branches', async (req, res) => {
 // Checkout branch
 router.post('/checkout', async (req, res) => {
   const { project, branch } = req.body;
-  
+
   if (!project || !branch) {
     return res.status(400).json({ error: 'Project name and branch are required' });
   }
 
   try {
     const projectPath = await getActualProjectPath(project);
-    
+
     // Checkout the branch
     const { stdout } = await execAsync(`git checkout "${branch}"`, { cwd: projectPath });
-    
+
     res.json({ success: true, output: stdout });
   } catch (error) {
     console.error('Git checkout error:', error);
@@ -417,17 +416,17 @@ router.post('/checkout', async (req, res) => {
 // Create new branch
 router.post('/create-branch', async (req, res) => {
   const { project, branch } = req.body;
-  
+
   if (!project || !branch) {
     return res.status(400).json({ error: 'Project name and branch name are required' });
   }
 
   try {
     const projectPath = await getActualProjectPath(project);
-    
+
     // Create and checkout new branch
     const { stdout } = await execAsync(`git checkout -b "${branch}"`, { cwd: projectPath });
-    
+
     res.json({ success: true, output: stdout });
   } catch (error) {
     console.error('Git create branch error:', error);
@@ -438,20 +437,20 @@ router.post('/create-branch', async (req, res) => {
 // Get recent commits
 router.get('/commits', async (req, res) => {
   const { project, limit = 10 } = req.query;
-  
+
   if (!project) {
     return res.status(400).json({ error: 'Project name is required' });
   }
 
   try {
     const projectPath = await getActualProjectPath(project);
-    
+
     // Get commit log with stats
     const { stdout } = await execAsync(
       `git log --pretty=format:'%H|%an|%ae|%ad|%s' --date=relative -n ${limit}`,
       { cwd: projectPath }
     );
-    
+
     const commits = stdout
       .split('\n')
       .filter(line => line.trim())
@@ -465,7 +464,7 @@ router.get('/commits', async (req, res) => {
           message: messageParts.join('|')
         };
       });
-    
+
     // Get stats for each commit
     for (const commit of commits) {
       try {
@@ -478,7 +477,7 @@ router.get('/commits', async (req, res) => {
         commit.stats = '';
       }
     }
-    
+
     res.json({ commits });
   } catch (error) {
     console.error('Git commits error:', error);
@@ -489,20 +488,20 @@ router.get('/commits', async (req, res) => {
 // Get diff for a specific commit
 router.get('/commit-diff', async (req, res) => {
   const { project, commit } = req.query;
-  
+
   if (!project || !commit) {
     return res.status(400).json({ error: 'Project name and commit hash are required' });
   }
 
   try {
     const projectPath = await getActualProjectPath(project);
-    
+
     // Get diff for the commit
     const { stdout } = await execAsync(
       `git show ${commit}`,
       { cwd: projectPath }
     );
-    
+
     res.json({ diff: stdout });
   } catch (error) {
     console.error('Git commit diff error:', error);
@@ -519,8 +518,8 @@ router.post('/generate-commit-message', async (req, res) => {
   }
 
   // Validate provider
-  if (!['claude', 'cursor'].includes(provider)) {
-    return res.status(400).json({ error: 'provider must be "claude" or "cursor"' });
+  if (provider !== 'claude') {
+    return res.status(400).json({ error: 'provider must be "claude"' });
   }
 
   try {
@@ -573,11 +572,6 @@ router.post('/generate-commit-message', async (req, res) => {
 });
 
 /**
- * Generates a commit message using AI (Claude SDK or Cursor CLI)
- * @param {Array<string>} files - List of changed files
- * @param {string} diffContext - Git diff content
- * @param {string} provider - 'claude' or 'cursor'
- * @param {string} projectPath - Project directory path
  * @returns {Promise<string>} Generated commit message
  */
 async function generateCommitMessageWithAI(files, diffContext, provider, projectPath) {
@@ -625,11 +619,7 @@ Generate the commit message:`;
               }
             }
           }
-          // Cursor CLI sends: {type: 'cursor-output', output: '...'}
-          else if (parsed.type === 'cursor-output' && parsed.output) {
-            console.log('✅ Cursor output:', parsed.output.substring(0, 100));
-            responseText += parsed.output;
-          }
+
           // Also handle direct text messages
           else if (parsed.type === 'text' && parsed.text) {
             console.log('✅ Direct text:', parsed.text.substring(0, 100));
@@ -640,7 +630,7 @@ Generate the commit message:`;
           console.error('Error parsing writer data:', e);
         }
       },
-      setSessionId: () => {}, // No-op for this use case
+      setSessionId: () => { }, // No-op for this use case
     };
 
     console.log('🚀 Calling AI agent with provider:', provider);
@@ -652,11 +642,6 @@ Generate the commit message:`;
         cwd: projectPath,
         permissionMode: 'bypassPermissions',
         model: 'sonnet'
-      }, writer);
-    } else if (provider === 'cursor') {
-      await spawnCursor(prompt, {
-        cwd: projectPath,
-        skipPermissions: true
       }, writer);
     }
 
@@ -714,7 +699,7 @@ function cleanCommitMessage(text) {
 // Get remote status (ahead/behind commits with smart remote detection)
 router.get('/remote-status', async (req, res) => {
   const { project } = req.query;
-  
+
   if (!project) {
     return res.status(400).json({ error: 'Project name is required' });
   }
@@ -748,8 +733,8 @@ router.get('/remote-status', async (req, res) => {
       } catch (remoteError) {
         // No remotes configured
       }
-      
-      return res.json({ 
+
+      return res.json({
         hasRemote,
         hasUpstream: false,
         branch,
@@ -763,7 +748,7 @@ router.get('/remote-status', async (req, res) => {
       `git rev-list --count --left-right ${trackingBranch}...HEAD`,
       { cwd: projectPath }
     );
-    
+
     const [behind, ahead] = countOutput.trim().split('\t').map(Number);
 
     res.json({
@@ -785,7 +770,7 @@ router.get('/remote-status', async (req, res) => {
 // Fetch from remote (using smart remote detection)
 router.post('/fetch', async (req, res) => {
   const { project } = req.body;
-  
+
   if (!project) {
     return res.status(400).json({ error: 'Project name is required' });
   }
@@ -808,17 +793,17 @@ router.post('/fetch', async (req, res) => {
     }
 
     const { stdout } = await execAsync(`git fetch ${remoteName}`, { cwd: projectPath });
-    
+
     res.json({ success: true, output: stdout || 'Fetch completed successfully', remoteName });
   } catch (error) {
     console.error('Git fetch error:', error);
-    res.status(500).json({ 
-      error: 'Fetch failed', 
-      details: error.message.includes('Could not resolve hostname') 
+    res.status(500).json({
+      error: 'Fetch failed',
+      details: error.message.includes('Could not resolve hostname')
         ? 'Unable to connect to remote repository. Check your internet connection.'
         : error.message.includes('fatal: \'origin\' does not appear to be a git repository')
-        ? 'No remote repository configured. Add a remote with: git remote add origin <url>'
-        : error.message
+          ? 'No remote repository configured. Add a remote with: git remote add origin <url>'
+          : error.message
     });
   }
 });
@@ -826,7 +811,7 @@ router.post('/fetch', async (req, res) => {
 // Pull from remote (fetch + merge using smart remote detection)
 router.post('/pull', async (req, res) => {
   const { project } = req.body;
-  
+
   if (!project) {
     return res.status(400).json({ error: 'Project name is required' });
   }
@@ -852,25 +837,25 @@ router.post('/pull', async (req, res) => {
     }
 
     const { stdout } = await execAsync(`git pull ${remoteName} ${remoteBranch}`, { cwd: projectPath });
-    
-    res.json({ 
-      success: true, 
-      output: stdout || 'Pull completed successfully', 
+
+    res.json({
+      success: true,
+      output: stdout || 'Pull completed successfully',
       remoteName,
       remoteBranch
     });
   } catch (error) {
     console.error('Git pull error:', error);
-    
+
     // Enhanced error handling for common pull scenarios
     let errorMessage = 'Pull failed';
     let details = error.message;
-    
+
     if (error.message.includes('CONFLICT')) {
       errorMessage = 'Merge conflicts detected';
       details = 'Pull created merge conflicts. Please resolve conflicts manually in the editor, then commit the changes.';
     } else if (error.message.includes('Please commit your changes or stash them')) {
-      errorMessage = 'Uncommitted changes detected';  
+      errorMessage = 'Uncommitted changes detected';
       details = 'Please commit or stash your local changes before pulling.';
     } else if (error.message.includes('Could not resolve hostname')) {
       errorMessage = 'Network error';
@@ -882,9 +867,9 @@ router.post('/pull', async (req, res) => {
       errorMessage = 'Branches have diverged';
       details = 'Your local branch and remote branch have diverged. Consider fetching first to review changes.';
     }
-    
-    res.status(500).json({ 
-      error: errorMessage, 
+
+    res.status(500).json({
+      error: errorMessage,
       details: details
     });
   }
@@ -893,7 +878,7 @@ router.post('/pull', async (req, res) => {
 // Push commits to remote repository
 router.post('/push', async (req, res) => {
   const { project } = req.body;
-  
+
   if (!project) {
     return res.status(400).json({ error: 'Project name is required' });
   }
@@ -919,20 +904,20 @@ router.post('/push', async (req, res) => {
     }
 
     const { stdout } = await execAsync(`git push ${remoteName} ${remoteBranch}`, { cwd: projectPath });
-    
-    res.json({ 
-      success: true, 
-      output: stdout || 'Push completed successfully', 
+
+    res.json({
+      success: true,
+      output: stdout || 'Push completed successfully',
       remoteName,
       remoteBranch
     });
   } catch (error) {
     console.error('Git push error:', error);
-    
+
     // Enhanced error handling for common push scenarios
     let errorMessage = 'Push failed';
     let details = error.message;
-    
+
     if (error.message.includes('rejected')) {
       errorMessage = 'Push rejected';
       details = 'The remote has newer commits. Pull first to merge changes before pushing.';
@@ -952,9 +937,9 @@ router.post('/push', async (req, res) => {
       errorMessage = 'No upstream branch';
       details = 'No upstream branch configured. Use: git push --set-upstream origin <branch>';
     }
-    
-    res.status(500).json({ 
-      error: errorMessage, 
+
+    res.status(500).json({
+      error: errorMessage,
       details: details
     });
   }
@@ -963,7 +948,7 @@ router.post('/push', async (req, res) => {
 // Publish branch to remote (set upstream and push)
 router.post('/publish', async (req, res) => {
   const { project, branch } = req.body;
-  
+
   if (!project || !branch) {
     return res.status(400).json({ error: 'Project name and branch are required' });
   }
@@ -975,10 +960,10 @@ router.post('/publish', async (req, res) => {
     // Get current branch to verify it matches the requested branch
     const { stdout: currentBranch } = await execAsync('git rev-parse --abbrev-ref HEAD', { cwd: projectPath });
     const currentBranchName = currentBranch.trim();
-    
+
     if (currentBranchName !== branch) {
-      return res.status(400).json({ 
-        error: `Branch mismatch. Current branch is ${currentBranchName}, but trying to publish ${branch}` 
+      return res.status(400).json({
+        error: `Branch mismatch. Current branch is ${currentBranchName}, but trying to publish ${branch}`
       });
     }
 
@@ -988,33 +973,33 @@ router.post('/publish', async (req, res) => {
       const { stdout } = await execAsync('git remote', { cwd: projectPath });
       const remotes = stdout.trim().split('\n').filter(r => r.trim());
       if (remotes.length === 0) {
-        return res.status(400).json({ 
-          error: 'No remote repository configured. Add a remote with: git remote add origin <url>' 
+        return res.status(400).json({
+          error: 'No remote repository configured. Add a remote with: git remote add origin <url>'
         });
       }
       remoteName = remotes.includes('origin') ? 'origin' : remotes[0];
     } catch (error) {
-      return res.status(400).json({ 
-        error: 'No remote repository configured. Add a remote with: git remote add origin <url>' 
+      return res.status(400).json({
+        error: 'No remote repository configured. Add a remote with: git remote add origin <url>'
       });
     }
 
     // Publish the branch (set upstream and push)
     const { stdout } = await execAsync(`git push --set-upstream ${remoteName} ${branch}`, { cwd: projectPath });
-    
-    res.json({ 
-      success: true, 
-      output: stdout || 'Branch published successfully', 
+
+    res.json({
+      success: true,
+      output: stdout || 'Branch published successfully',
       remoteName,
       branch
     });
   } catch (error) {
     console.error('Git publish error:', error);
-    
+
     // Enhanced error handling for common publish scenarios
     let errorMessage = 'Publish failed';
     let details = error.message;
-    
+
     if (error.message.includes('rejected')) {
       errorMessage = 'Publish rejected';
       details = 'The remote branch already exists and has different commits. Use push instead.';
@@ -1028,9 +1013,9 @@ router.post('/publish', async (req, res) => {
       errorMessage = 'Remote not configured';
       details = 'Remote repository not properly configured. Check your remote URL.';
     }
-    
-    res.status(500).json({ 
-      error: errorMessage, 
+
+    res.status(500).json({
+      error: errorMessage,
       details: details
     });
   }
@@ -1039,7 +1024,7 @@ router.post('/publish', async (req, res) => {
 // Discard changes for a specific file
 router.post('/discard', async (req, res) => {
   const { project, file } = req.body;
-  
+
   if (!project || !file) {
     return res.status(400).json({ error: 'Project name and file path are required' });
   }
@@ -1050,7 +1035,7 @@ router.post('/discard', async (req, res) => {
 
     // Check file status to determine correct discard command
     const { stdout: statusOutput } = await execAsync(`git status --porcelain "${file}"`, { cwd: projectPath });
-    
+
     if (!statusOutput.trim()) {
       return res.status(400).json({ error: 'No changes to discard for this file' });
     }
@@ -1074,7 +1059,7 @@ router.post('/discard', async (req, res) => {
       // Added file - unstage it
       await execAsync(`git reset HEAD "${file}"`, { cwd: projectPath });
     }
-    
+
     res.json({ success: true, message: `Changes discarded for ${file}` });
   } catch (error) {
     console.error('Git discard error:', error);
@@ -1085,7 +1070,7 @@ router.post('/discard', async (req, res) => {
 // Delete untracked file
 router.post('/delete-untracked', async (req, res) => {
   const { project, file } = req.body;
-  
+
   if (!project || !file) {
     return res.status(400).json({ error: 'Project name and file path are required' });
   }
@@ -1096,13 +1081,13 @@ router.post('/delete-untracked', async (req, res) => {
 
     // Check if file is actually untracked
     const { stdout: statusOutput } = await execAsync(`git status --porcelain "${file}"`, { cwd: projectPath });
-    
+
     if (!statusOutput.trim()) {
       return res.status(400).json({ error: 'File is not untracked or does not exist' });
     }
 
     const status = statusOutput.substring(0, 2);
-    
+
     if (status !== '??') {
       return res.status(400).json({ error: 'File is not untracked. Use discard for tracked files.' });
     }
