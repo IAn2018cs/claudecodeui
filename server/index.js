@@ -1315,6 +1315,162 @@ app.post('/api/projects/:projectName/upload-images', authenticateToken, async (r
     }
 });
 
+// File upload endpoint for FileTree
+app.post('/api/projects/:projectName/upload-files', authenticateToken, async (req, res) => {
+    try {
+        const multer = (await import('multer')).default;
+
+        const { projectName } = req.params;
+
+        // Get project root directory
+        const projectRoot = await extractProjectDirectory(projectName).catch(() => null);
+        if (!projectRoot) {
+            return res.status(404).json({ error: 'Project not found' });
+        }
+
+        // Configure multer for file uploads
+        const storage = multer.diskStorage({
+            destination: async (req, file, cb) => {
+                try {
+                    // Get target directory from form data, default to project root
+                    const targetDir = req.body.targetDir || '';
+
+                    // Resolve and validate target path
+                    const resolvedTarget = path.resolve(projectRoot, targetDir);
+                    const normalizedRoot = path.resolve(projectRoot);
+
+                    // Security: ensure target is within project root
+                    if (!resolvedTarget.startsWith(normalizedRoot)) {
+                        return cb(new Error('Invalid target directory'));
+                    }
+
+                    // Ensure directory exists
+                    await fsPromises.mkdir(resolvedTarget, { recursive: true });
+                    cb(null, resolvedTarget);
+                } catch (err) {
+                    console.error('Failed to create target directory:', err);
+                    cb(new Error('Failed to create target directory'));
+                }
+            },
+            filename: (req, file, cb) => {
+                // Sanitize filename but preserve original name
+                const sanitizedName = file.originalname
+                    .replace(/[<>:"/\\|?*\x00-\x1f]/g, '_') // Remove invalid chars
+                    .replace(/^\.+/, '_'); // Don't allow leading dots (hidden files)
+                cb(null, sanitizedName);
+            }
+        });
+
+        // File filter - block dangerous file types
+        const fileFilter = (req, file, cb) => {
+            const dangerousExtensions = ['.exe', '.bat', '.cmd', '.sh', '.ps1', '.dll', '.so'];
+            const ext = path.extname(file.originalname).toLowerCase();
+
+            if (dangerousExtensions.includes(ext)) {
+                return cb(new Error(`File type ${ext} is not allowed`));
+            }
+
+            cb(null, true);
+        };
+
+        const upload = multer({
+            storage,
+            fileFilter,
+            limits: {
+                files: 20 // Max 20 files at once
+            }
+        });
+
+        // Handle multipart form data
+        upload.array('files', 20)(req, res, async (err) => {
+            if (err) {
+                if (err.code === 'LIMIT_FILE_COUNT') {
+                    return res.status(400).json({ error: 'Too many files. Maximum is 20 files.' });
+                }
+                return res.status(400).json({ error: err.message });
+            }
+
+            if (!req.files || req.files.length === 0) {
+                return res.status(400).json({ error: 'No files provided' });
+            }
+
+            // Return list of uploaded files
+            const uploadedFiles = req.files.map(file => ({
+                name: file.filename,
+                originalName: file.originalname,
+                path: file.path,
+                size: file.size,
+                mimeType: file.mimetype
+            }));
+
+            res.json({
+                success: true,
+                files: uploadedFiles,
+                count: uploadedFiles.length
+            });
+        });
+
+    } catch (error) {
+        console.error('Error in file upload endpoint:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// Delete file or folder endpoint
+app.delete('/api/projects/:projectName/files', authenticateToken, async (req, res) => {
+    try {
+        const { projectName } = req.params;
+        const { filePath } = req.query;
+
+        if (!filePath) {
+            return res.status(400).json({ error: 'File path is required' });
+        }
+
+        // Get project root directory
+        const projectRoot = await extractProjectDirectory(projectName).catch(() => null);
+        if (!projectRoot) {
+            return res.status(404).json({ error: 'Project not found' });
+        }
+
+        // Resolve and validate target path
+        const resolvedPath = path.resolve(projectRoot, filePath);
+        const normalizedRoot = path.resolve(projectRoot);
+
+        // Security: ensure path is within project root
+        if (!resolvedPath.startsWith(normalizedRoot) || resolvedPath === normalizedRoot) {
+            return res.status(403).json({ error: 'Invalid file path' });
+        }
+
+        // Check if file/folder exists
+        try {
+            await fsPromises.access(resolvedPath);
+        } catch {
+            return res.status(404).json({ error: 'File or folder not found' });
+        }
+
+        // Get file stats to determine if it's a file or directory
+        const stats = await fsPromises.stat(resolvedPath);
+
+        if (stats.isDirectory()) {
+            // Delete directory recursively
+            await fsPromises.rm(resolvedPath, { recursive: true, force: true });
+        } else {
+            // Delete file
+            await fsPromises.unlink(resolvedPath);
+        }
+
+        res.json({
+            success: true,
+            deleted: filePath,
+            type: stats.isDirectory() ? 'directory' : 'file'
+        });
+
+    } catch (error) {
+        console.error('Error deleting file/folder:', error);
+        res.status(500).json({ error: 'Failed to delete file or folder' });
+    }
+});
+
 // Get token usage for a specific session
 app.get('/api/projects/:projectName/sessions/:sessionId/token-usage', authenticateToken, async (req, res) => {
     try {

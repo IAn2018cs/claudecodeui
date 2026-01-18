@@ -89,6 +89,16 @@ export const api = {
     }),
   getFiles: (projectName) =>
     authenticatedFetch(`/api/projects/${projectName}/files`),
+  uploadFiles: (projectName, formData) =>
+    authenticatedFetch(`/api/projects/${projectName}/upload-files`, {
+      method: 'POST',
+      body: formData,
+      headers: {}, // Let browser set Content-Type for FormData
+    }),
+  deleteFile: (projectName, filePath) =>
+    authenticatedFetch(`/api/projects/${projectName}/files?filePath=${encodeURIComponent(filePath)}`, {
+      method: 'DELETE',
+    }),
   transcribe: (formData) =>
     authenticatedFetch('/api/transcribe', {
       method: 'POST',

@@ -1,12 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { ScrollArea } from './ui/scroll-area';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
-import { Folder, FolderOpen, File, FileText, FileCode, List, TableProperties, Eye, Search, X } from 'lucide-react';
+import { Folder, FolderOpen, File, FileText, FileCode, List, TableProperties, Eye, Search, X, Upload, Trash2 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import CodeEditor from './CodeEditor';
 import ImageViewer from './ImageViewer';
 import { api } from '../utils/api';
+import { useDropzone } from 'react-dropzone';
 
 function FileTree({ selectedProject }) {
   const [files, setFiles] = useState([]);
@@ -17,6 +18,11 @@ function FileTree({ selectedProject }) {
   const [viewMode, setViewMode] = useState('detailed'); // 'simple', 'detailed', 'compact'
   const [searchQuery, setSearchQuery] = useState('');
   const [filteredFiles, setFilteredFiles] = useState([]);
+  const [showUploadModal, setShowUploadModal] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadError, setUploadError] = useState(null);
+  const [uploadProgress, setUploadProgress] = useState({});
+  const [deleteConfirm, setDeleteConfirm] = useState(null); // { path, name, type }
 
   useEffect(() => {
     if (selectedProject) {
@@ -81,14 +87,14 @@ function FileTree({ selectedProject }) {
     setLoading(true);
     try {
       const response = await api.getFiles(selectedProject.name);
-      
+
       if (!response.ok) {
         const errorText = await response.text();
         console.error('❌ File fetch failed:', response.status, errorText);
         setFiles([]);
         return;
       }
-      
+
       const data = await response.json();
       setFiles(data);
     } catch (error) {
@@ -96,6 +102,85 @@ function FileTree({ selectedProject }) {
       setFiles([]);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Handle file upload
+  const handleFileDrop = useCallback(async (acceptedFiles) => {
+    if (!selectedProject || acceptedFiles.length === 0) return;
+
+    setIsUploading(true);
+    setUploadError(null);
+
+    const formData = new FormData();
+    acceptedFiles.forEach(file => {
+      formData.append('files', file);
+    });
+
+    // Initialize progress tracking
+    const initialProgress = {};
+    acceptedFiles.forEach(file => {
+      initialProgress[file.name] = 0;
+    });
+    setUploadProgress(initialProgress);
+
+    try {
+      const response = await api.uploadFiles(selectedProject.name, formData);
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Upload failed');
+      }
+
+      // Mark all as complete
+      const completeProgress = {};
+      acceptedFiles.forEach(file => {
+        completeProgress[file.name] = 100;
+      });
+      setUploadProgress(completeProgress);
+
+      // Refresh file list
+      await fetchFiles();
+
+      // Close modal after short delay
+      setTimeout(() => {
+        setShowUploadModal(false);
+        setUploadProgress({});
+      }, 1000);
+
+    } catch (error) {
+      console.error('Upload failed:', error);
+      setUploadError(error.message);
+    } finally {
+      setIsUploading(false);
+    }
+  }, [selectedProject]);
+
+  // Dropzone configuration
+  const { getRootProps, getInputProps, isDragActive, open: openFileDialog } = useDropzone({
+    onDrop: handleFileDrop,
+    noClick: true,
+    noKeyboard: true,
+  });
+
+  // Handle file/folder deletion
+  const handleDelete = async (filePath) => {
+    if (!selectedProject) return;
+
+    try {
+      const response = await api.deleteFile(selectedProject.name, filePath);
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Delete failed');
+      }
+
+      // Refresh file list
+      await fetchFiles();
+      setDeleteConfirm(null);
+    } catch (error) {
+      console.error('Delete failed:', error);
+      alert(`Failed to delete: ${error.message}`);
     }
   };
 
@@ -140,18 +225,16 @@ function FileTree({ selectedProject }) {
 
   const renderFileTree = (items, level = 0) => {
     return items.map((item) => (
-      <div key={item.path} className="select-none">
-        <Button
-          variant="ghost"
+      <div key={item.path} className="select-none group/item">
+        <div
           className={cn(
-            "w-full justify-start p-2 h-auto font-normal text-left hover:bg-accent",
+            "w-full flex items-center justify-between p-2 hover:bg-accent cursor-pointer",
           )}
           style={{ paddingLeft: `${level * 16 + 12}px` }}
           onClick={() => {
             if (item.type === 'directory') {
               toggleDirectory(item.path);
             } else if (isImageFile(item.name)) {
-              // Open image in viewer
               setSelectedImage({
                 name: item.name,
                 path: item.path,
@@ -159,7 +242,6 @@ function FileTree({ selectedProject }) {
                 projectName: selectedProject.name
               });
             } else {
-              // Open file in editor
               setSelectedFile({
                 name: item.name,
                 path: item.path,
@@ -169,7 +251,7 @@ function FileTree({ selectedProject }) {
             }
           }}
         >
-          <div className="flex items-center gap-2 min-w-0 w-full">
+          <div className="flex items-center gap-2 min-w-0 flex-1">
             {item.type === 'directory' ? (
               expandedDirs.has(item.path) ? (
                 <FolderOpen className="w-4 h-4 text-blue-500 flex-shrink-0" />
@@ -183,11 +265,23 @@ function FileTree({ selectedProject }) {
               {item.name}
             </span>
           </div>
-        </Button>
-        
-        {item.type === 'directory' && 
-         expandedDirs.has(item.path) && 
-         item.children && 
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-6 w-6 p-0 opacity-0 group-hover/item:opacity-100 transition-opacity flex-shrink-0"
+            onClick={(e) => {
+              e.stopPropagation();
+              setDeleteConfirm({ path: item.path, name: item.name, type: item.type });
+            }}
+            title={`Delete ${item.type === 'directory' ? 'folder' : 'file'}`}
+          >
+            <Trash2 className="w-3.5 h-3.5 text-muted-foreground hover:text-destructive" />
+          </Button>
+        </div>
+
+        {item.type === 'directory' &&
+         expandedDirs.has(item.path) &&
+         item.children &&
          item.children.length > 0 && (
           <div>
             {renderFileTree(item.children, level + 1)}
@@ -224,7 +318,7 @@ function FileTree({ selectedProject }) {
   // Render detailed view with table-like layout
   const renderDetailedView = (items, level = 0) => {
     return items.map((item) => (
-      <div key={item.path} className="select-none">
+      <div key={item.path} className="select-none group/item">
         <div
           className={cn(
             "grid grid-cols-12 gap-2 p-2 hover:bg-accent cursor-pointer items-center",
@@ -250,7 +344,7 @@ function FileTree({ selectedProject }) {
             }
           }}
         >
-          <div className="col-span-5 flex items-center gap-2 min-w-0">
+          <div className="col-span-4 flex items-center gap-2 min-w-0">
             {item.type === 'directory' ? (
               expandedDirs.has(item.path) ? (
                 <FolderOpen className="w-4 h-4 text-blue-500 flex-shrink-0" />
@@ -273,11 +367,25 @@ function FileTree({ selectedProject }) {
           <div className="col-span-2 text-sm text-muted-foreground font-mono">
             {item.permissionsRwx || '-'}
           </div>
+          <div className="col-span-1 flex justify-end">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-6 w-6 p-0 opacity-0 group-hover/item:opacity-100 transition-opacity"
+              onClick={(e) => {
+                e.stopPropagation();
+                setDeleteConfirm({ path: item.path, name: item.name, type: item.type });
+              }}
+              title={`Delete ${item.type === 'directory' ? 'folder' : 'file'}`}
+            >
+              <Trash2 className="w-3.5 h-3.5 text-muted-foreground hover:text-destructive" />
+            </Button>
+          </div>
         </div>
-        
-        {item.type === 'directory' && 
-         expandedDirs.has(item.path) && 
-         item.children && 
+
+        {item.type === 'directory' &&
+         expandedDirs.has(item.path) &&
+         item.children &&
          renderDetailedView(item.children, level + 1)}
       </div>
     ));
@@ -286,7 +394,7 @@ function FileTree({ selectedProject }) {
   // Render compact view with inline details
   const renderCompactView = (items, level = 0) => {
     return items.map((item) => (
-      <div key={item.path} className="select-none">
+      <div key={item.path} className="select-none group/item">
         <div
           className={cn(
             "flex items-center justify-between p-2 hover:bg-accent cursor-pointer",
@@ -333,12 +441,24 @@ function FileTree({ selectedProject }) {
                 <span className="font-mono">{item.permissionsRwx}</span>
               </>
             )}
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-6 w-6 p-0 opacity-0 group-hover/item:opacity-100 transition-opacity"
+              onClick={(e) => {
+                e.stopPropagation();
+                setDeleteConfirm({ path: item.path, name: item.name, type: item.type });
+              }}
+              title={`Delete ${item.type === 'directory' ? 'folder' : 'file'}`}
+            >
+              <Trash2 className="w-3.5 h-3.5 text-muted-foreground hover:text-destructive" />
+            </Button>
           </div>
         </div>
-        
-        {item.type === 'directory' && 
-         expandedDirs.has(item.path) && 
-         item.children && 
+
+        {item.type === 'directory' &&
+         expandedDirs.has(item.path) &&
+         item.children &&
          renderCompactView(item.children, level + 1)}
       </div>
     ));
@@ -355,12 +475,30 @@ function FileTree({ selectedProject }) {
   }
 
   return (
-    <div className="h-full flex flex-col bg-card">
+    <div {...getRootProps()} className={cn("h-full flex flex-col bg-card relative", isDragActive && "ring-2 ring-primary ring-inset")}>
+      <input {...getInputProps()} />
+
+      {/* Drag overlay */}
+      {isDragActive && (
+        <div className="absolute inset-0 bg-primary/10 flex items-center justify-center z-10 pointer-events-none">
+          <div className="text-primary font-medium">Drop files to upload</div>
+        </div>
+      )}
+
       {/* Header with Search and View Mode Toggle */}
       <div className="p-4 border-b border-border space-y-3">
         <div className="flex items-center justify-between">
           <h3 className="text-sm font-medium text-foreground">Files</h3>
           <div className="flex gap-1">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 w-8 p-0"
+              onClick={() => setShowUploadModal(true)}
+              title="Upload files"
+            >
+              <Upload className="w-4 h-4" />
+            </Button>
             <Button
               variant={viewMode === 'simple' ? 'default' : 'ghost'}
               size="sm"
@@ -419,10 +557,11 @@ function FileTree({ selectedProject }) {
       {viewMode === 'detailed' && filteredFiles.length > 0 && (
         <div className="px-4 pt-2 pb-1 border-b border-border">
           <div className="grid grid-cols-12 gap-2 px-2 text-xs font-medium text-muted-foreground">
-            <div className="col-span-5">Name</div>
+            <div className="col-span-4">Name</div>
             <div className="col-span-2">Size</div>
             <div className="col-span-3">Modified</div>
             <div className="col-span-2">Permissions</div>
+            <div className="col-span-1"></div>
           </div>
         </div>
       )}
@@ -472,6 +611,106 @@ function FileTree({ selectedProject }) {
           file={selectedImage}
           onClose={() => setSelectedImage(null)}
         />
+      )}
+
+      {/* Upload Modal */}
+      {showUploadModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-card rounded-lg shadow-xl p-6 w-full max-w-md mx-4 border border-border">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-medium text-foreground">Upload Files</h3>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 w-8 p-0"
+                onClick={() => {
+                  setShowUploadModal(false);
+                  setUploadError(null);
+                  setUploadProgress({});
+                }}
+              >
+                <X className="w-4 h-4" />
+              </Button>
+            </div>
+
+            {/* Dropzone */}
+            <div
+              onClick={openFileDialog}
+              className={cn(
+                "border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors",
+                "border-border hover:border-primary/50"
+              )}
+            >
+              <Upload className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
+              <p className="text-foreground">Drag files here or click to browse</p>
+              <p className="text-sm text-muted-foreground mt-1">Max 20 files per upload</p>
+            </div>
+
+            {/* Upload progress */}
+            {Object.keys(uploadProgress).length > 0 && (
+              <div className="mt-4 space-y-2 max-h-40 overflow-y-auto">
+                {Object.entries(uploadProgress).map(([filename, progress]) => (
+                  <div key={filename} className="flex items-center gap-2">
+                    <span className="text-sm truncate flex-1 text-foreground">{filename}</span>
+                    <div className="w-20 h-2 bg-muted rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-primary transition-all"
+                        style={{ width: `${progress}%` }}
+                      />
+                    </div>
+                    <span className="text-xs text-muted-foreground w-10">{progress}%</span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Error display */}
+            {uploadError && (
+              <div className="mt-4 p-3 bg-destructive/10 border border-destructive/20 rounded-lg">
+                <p className="text-sm text-destructive">{uploadError}</p>
+              </div>
+            )}
+
+            {/* Upload button */}
+            {isUploading && (
+              <div className="mt-4 text-center text-sm text-muted-foreground">
+                Uploading...
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {deleteConfirm && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-card rounded-lg shadow-xl p-6 w-full max-w-sm mx-4 border border-border">
+            <h3 className="text-lg font-medium text-foreground mb-2">Confirm Delete</h3>
+            <p className="text-sm text-muted-foreground mb-4">
+              Are you sure you want to delete {deleteConfirm.type === 'directory' ? 'folder' : 'file'}{' '}
+              <span className="font-medium text-foreground">"{deleteConfirm.name}"</span>?
+              {deleteConfirm.type === 'directory' && (
+                <span className="block mt-1 text-destructive">This will delete all contents inside.</span>
+              )}
+            </p>
+            <div className="flex justify-end gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setDeleteConfirm(null)}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={() => handleDelete(deleteConfirm.path)}
+              >
+                Delete
+              </Button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
