@@ -8,7 +8,6 @@ import ClaudeLogo from './ClaudeLogo';
 import { authenticatedFetch } from '../utils/api';
 
 // New settings components
-import AgentListItem from './settings/AgentListItem';
 import PermissionsContent from './settings/PermissionsContent';
 import McpServersContent from './settings/McpServersContent';
 
@@ -48,7 +47,6 @@ function Settings({ isOpen, onClose, projects = [], initialTab = 'agents' }) {
   const [mcpToolsLoading, setMcpToolsLoading] = useState({});
   const [activeTab, setActiveTab] = useState(initialTab);
   const [jsonValidationError, setJsonValidationError] = useState('');
-  const [selectedAgent, setSelectedAgent] = useState('claude'); // Only Claude is supported
   const [selectedCategory, setSelectedCategory] = useState('permissions'); // 'permissions' or 'mcp'
 
   // Code Editor settings
@@ -789,30 +787,7 @@ function Settings({ isOpen, onClose, projects = [], initialTab = 'agents' }) {
 
             {/* Agents Tab */}
             {activeTab === 'agents' && (
-              <div className="flex flex-col md:flex-row h-full min-h-[400px] md:min-h-[500px]">
-                {/* Mobile: Horizontal Agent Tabs */}
-                <div className="md:hidden border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
-                  <div className="flex">
-                    <AgentListItem
-                      agentId="claude"
-                      isSelected={selectedAgent === 'claude'}
-                      onClick={() => setSelectedAgent('claude')}
-                      isMobile={true}
-                    />
-                  </div>
-                </div>
-
-                {/* Desktop: Sidebar - Agent List */}
-                <div className="hidden md:block w-48 border-r border-gray-200 dark:border-gray-700 flex-shrink-0">
-                  <div className="p-2">
-                    <AgentListItem
-                      agentId="claude"
-                      isSelected={selectedAgent === 'claude'}
-                      onClick={() => setSelectedAgent('claude')}
-                    />
-                  </div>
-                </div>
-
+              <div className="flex flex-col h-full min-h-[400px] md:min-h-[500px]">
                 {/* Main Panel */}
                 <div className="flex-1 flex flex-col overflow-hidden">
                   {/* Category Tabs */}
