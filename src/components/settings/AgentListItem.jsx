@@ -17,7 +17,7 @@ const colorClasses = {
   },
 };
 
-export default function AgentListItem({ agentId, authStatus, isSelected, onClick, isMobile = false }) {
+export default function AgentListItem({ agentId, isSelected, onClick, isMobile = false }) {
   const config = agentConfig[agentId] || agentConfig.claude;
   const colors = colorClasses[config.color];
   const { Logo } = config;
@@ -35,9 +35,6 @@ export default function AgentListItem({ agentId, authStatus, isSelected, onClick
         <div className="flex flex-col items-center gap-1">
           <Logo className="w-5 h-5" />
           <span className="text-xs font-medium text-foreground">{config.name}</span>
-          {authStatus?.authenticated && (
-            <span className={`w-1.5 h-1.5 rounded-full ${colors.dot}`} />
-          )}
         </div>
       </button>
     );
@@ -52,26 +49,9 @@ export default function AgentListItem({ agentId, authStatus, isSelected, onClick
           : 'border-transparent hover:bg-gray-50 dark:hover:bg-gray-800'
         }`}
     >
-      <div className="flex items-center gap-2 mb-1">
+      <div className="flex items-center gap-2">
         <Logo className="w-4 h-4" />
         <span className="font-medium text-foreground">{config.name}</span>
-      </div>
-      <div className="text-xs text-muted-foreground pl-6">
-        {authStatus?.loading ? (
-          <span className="text-gray-400">Checking...</span>
-        ) : authStatus?.authenticated ? (
-          <div className="flex items-center gap-1">
-            <span className={`w-1.5 h-1.5 rounded-full ${colors.dot}`} />
-            <span className="truncate max-w-[120px]" title={authStatus.email}>
-              {authStatus.email || 'Connected'}
-            </span>
-          </div>
-        ) : (
-          <div className="flex items-center gap-1">
-            <span className="w-1.5 h-1.5 rounded-full bg-gray-400" />
-            <span>Not connected</span>
-          </div>
-        )}
       </div>
     </button>
   );

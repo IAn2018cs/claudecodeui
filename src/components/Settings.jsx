@@ -2,15 +2,13 @@ import { useState, useEffect } from 'react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Badge } from './ui/badge';
-import { X, Plus, Settings as SettingsIcon, Shield, AlertTriangle, Moon, Sun, Server, Edit3, Trash2, Globe, Terminal, Zap, FolderOpen, LogIn, Check } from 'lucide-react';
+import { X, Plus, Settings as SettingsIcon, Shield, AlertTriangle, Moon, Sun, Server, Edit3, Trash2, Globe, Terminal, Zap, FolderOpen, Check } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 import ClaudeLogo from './ClaudeLogo';
-import LoginModal from './LoginModal';
 import { authenticatedFetch } from '../utils/api';
 
 // New settings components
 import AgentListItem from './settings/AgentListItem';
-import AccountContent from './settings/AccountContent';
 import PermissionsContent from './settings/PermissionsContent';
 import McpServersContent from './settings/McpServersContent';
 
@@ -51,7 +49,7 @@ function Settings({ isOpen, onClose, projects = [], initialTab = 'agents' }) {
   const [activeTab, setActiveTab] = useState(initialTab);
   const [jsonValidationError, setJsonValidationError] = useState('');
   const [selectedAgent, setSelectedAgent] = useState('claude'); // Only Claude is supported
-  const [selectedCategory, setSelectedCategory] = useState('account'); // 'account', 'permissions', or 'mcp'
+  const [selectedCategory, setSelectedCategory] = useState('permissions'); // 'permissions' or 'mcp'
 
   // Code Editor settings
   const [codeEditorTheme, setCodeEditorTheme] = useState(() =>
@@ -69,17 +67,6 @@ function Settings({ isOpen, onClose, projects = [], initialTab = 'agents' }) {
   const [codeEditorFontSize, setCodeEditorFontSize] = useState(() =>
     localStorage.getItem('codeEditorFontSize') || '14'
   );
-
-  const [showLoginModal, setShowLoginModal] = useState(false);
-  const [loginProvider, setLoginProvider] = useState('');
-  const [selectedProject, setSelectedProject] = useState(null);
-
-  const [claudeAuthStatus, setClaudeAuthStatus] = useState({
-    authenticated: false,
-    email: null,
-    loading: true,
-    error: null
-  });
 
   // Common tool patterns for Claude
   const commonTools = [
@@ -263,7 +250,6 @@ function Settings({ isOpen, onClose, projects = [], initialTab = 'agents' }) {
   useEffect(() => {
     if (isOpen) {
       loadSettings();
-      checkClaudeAuthStatus();
       setActiveTab(initialTab);
     }
   }, [isOpen, initialTab]);
@@ -322,50 +308,6 @@ function Settings({ isOpen, onClose, projects = [], initialTab = 'agents' }) {
       setDisallowedTools([]);
       setSkipPermissions(false);
       setProjectSortOrder('name');
-    }
-  };
-
-  const checkClaudeAuthStatus = async () => {
-    try {
-      const response = await authenticatedFetch('/api/cli/claude/status');
-
-      if (response.ok) {
-        const data = await response.json();
-        setClaudeAuthStatus({
-          authenticated: data.authenticated,
-          email: data.email,
-          loading: false,
-          error: data.error || null
-        });
-      } else {
-        setClaudeAuthStatus({
-          authenticated: false,
-          email: null,
-          loading: false,
-          error: 'Failed to check authentication status'
-        });
-      }
-    } catch (error) {
-      console.error('Error checking Claude auth status:', error);
-      setClaudeAuthStatus({
-        authenticated: false,
-        email: null,
-        loading: false,
-        error: error.message
-      });
-    }
-  };
-
-  const handleClaudeLogin = () => {
-    setLoginProvider('claude');
-    setSelectedProject(projects?.[0] || { name: 'default', fullPath: process.cwd() });
-    setShowLoginModal(true);
-  };
-
-  const handleLoginComplete = (exitCode) => {
-    if (exitCode === 0) {
-      setSaveStatus('success');
-      checkClaudeAuthStatus();
     }
   };
 
@@ -853,7 +795,6 @@ function Settings({ isOpen, onClose, projects = [], initialTab = 'agents' }) {
                   <div className="flex">
                     <AgentListItem
                       agentId="claude"
-                      authStatus={claudeAuthStatus}
                       isSelected={selectedAgent === 'claude'}
                       onClick={() => setSelectedAgent('claude')}
                       isMobile={true}
@@ -866,7 +807,6 @@ function Settings({ isOpen, onClose, projects = [], initialTab = 'agents' }) {
                   <div className="p-2">
                     <AgentListItem
                       agentId="claude"
-                      authStatus={claudeAuthStatus}
                       isSelected={selectedAgent === 'claude'}
                       onClick={() => setSelectedAgent('claude')}
                     />
@@ -878,15 +818,6 @@ function Settings({ isOpen, onClose, projects = [], initialTab = 'agents' }) {
                   {/* Category Tabs */}
                   <div className="border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
                     <div className="flex px-2 md:px-4 overflow-x-auto">
-                      <button
-                        onClick={() => setSelectedCategory('account')}
-                        className={`px-3 md:px-4 py-2 md:py-3 text-xs md:text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${selectedCategory === 'account'
-                          ? 'border-blue-600 text-blue-600 dark:text-blue-400'
-                          : 'border-transparent text-muted-foreground hover:text-foreground'
-                          }`}
-                      >
-                        Account
-                      </button>
                       <button
                         onClick={() => setSelectedCategory('permissions')}
                         className={`px-3 md:px-4 py-2 md:py-3 text-xs md:text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${selectedCategory === 'permissions'
@@ -910,15 +841,6 @@ function Settings({ isOpen, onClose, projects = [], initialTab = 'agents' }) {
 
                   {/* Category Content */}
                   <div className="flex-1 overflow-y-auto p-3 md:p-4">
-                    {/* Account Category */}
-                    {selectedCategory === 'account' && (
-                      <AccountContent
-                        agent={selectedAgent}
-                        authStatus={claudeAuthStatus}
-                        onLogin={handleClaudeLogin}
-                      />
-                    )}
-
                     {/* Permissions Category */}
                     {selectedCategory === 'permissions' && (
                       <PermissionsContent
@@ -1350,16 +1272,6 @@ function Settings({ isOpen, onClose, projects = [], initialTab = 'agents' }) {
           </div>
         </div>
       </div>
-
-      {/* Login Modal */}
-      <LoginModal
-        key={loginProvider}
-        isOpen={showLoginModal}
-        onClose={() => setShowLoginModal(false)}
-        provider={loginProvider}
-        project={selectedProject}
-        onComplete={handleLoginComplete}
-      />
     </div>
   );
 }
