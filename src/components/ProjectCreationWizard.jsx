@@ -1,93 +1,50 @@
-import React, { useState, useEffect } from 'react';
-import { X, FolderPlus, GitBranch, ChevronRight, ChevronLeft, Check, Loader2, AlertCircle } from 'lucide-react';
+import React, { useState } from 'react';
+import { X, FolderPlus, Loader2, AlertCircle } from 'lucide-react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { api } from '../utils/api';
 
-const ProjectCreationWizard = ({ onClose, onProjectCreated }) => {
-  // Wizard state
-  const [step, setStep] = useState(1); // 1: Choose type, 2: Configure, 3: Confirm
-  const [workspaceType, setWorkspaceType] = useState(null); // 'existing' or 'new'
+// Project name validation: only letters, numbers, hyphens, and underscores
+const PROJECT_NAME_REGEX = /^[a-zA-Z0-9_-]+$/;
 
+const ProjectCreationWizard = ({ onClose, onProjectCreated }) => {
   // Form state
-  const [workspacePath, setWorkspacePath] = useState('');
+  const [projectName, setProjectName] = useState('');
   const [githubUrl, setGithubUrl] = useState('');
 
   // UI state
   const [isCreating, setIsCreating] = useState(false);
   const [error, setError] = useState(null);
-  const [pathSuggestions, setPathSuggestions] = useState([]);
-  const [showPathDropdown, setShowPathDropdown] = useState(false);
 
-  // Load path suggestions
-  useEffect(() => {
-    if (workspacePath.length > 2) {
-      loadPathSuggestions(workspacePath);
-    } else {
-      setPathSuggestions([]);
-      setShowPathDropdown(false);
+  const validateProjectName = (name) => {
+    if (!name.trim()) {
+      return 'Project name is required';
     }
-  }, [workspacePath]);
-
-  const loadPathSuggestions = async (inputPath) => {
-    try {
-      // Extract the directory to browse (parent of input)
-      const lastSlash = inputPath.lastIndexOf('/');
-      const dirPath = lastSlash > 0 ? inputPath.substring(0, lastSlash) : '~';
-
-      const response = await api.browseFilesystem(dirPath);
-      const data = await response.json();
-
-      if (data.suggestions) {
-        // Filter suggestions based on the input
-        const filtered = data.suggestions.filter(s =>
-          s.path.toLowerCase().startsWith(inputPath.toLowerCase())
-        );
-        setPathSuggestions(filtered.slice(0, 5));
-        setShowPathDropdown(filtered.length > 0);
-      }
-    } catch (error) {
-      console.error('Error loading path suggestions:', error);
+    if (!PROJECT_NAME_REGEX.test(name.trim())) {
+      return 'Project name can only contain letters, numbers, hyphens, and underscores';
     }
-  };
-
-  const handleNext = () => {
-    setError(null);
-
-    if (step === 1) {
-      if (!workspaceType) {
-        setError('Please select whether you have an existing workspace or want to create a new one');
-        return;
-      }
-      setStep(2);
-    } else if (step === 2) {
-      if (!workspacePath.trim()) {
-        setError('Please provide a workspace path');
-        return;
-      }
-
-      // No validation for GitHub token - it's optional (only needed for private repos)
-      setStep(3);
-    }
-  };
-
-  const handleBack = () => {
-    setError(null);
-    setStep(step - 1);
+    return null;
   };
 
   const handleCreate = async () => {
-    setIsCreating(true);
     setError(null);
+
+    // Validate project name
+    const nameError = validateProjectName(projectName);
+    if (nameError) {
+      setError(nameError);
+      return;
+    }
+
+    setIsCreating(true);
 
     try {
       const payload = {
-        workspaceType,
-        path: workspacePath.trim(),
+        name: projectName.trim(),
       };
 
-      // Add GitHub info if creating new workspace with GitHub URL
-      if (workspaceType === 'new' && githubUrl) {
+      // Add GitHub URL if provided
+      if (githubUrl.trim()) {
         payload.githubUrl = githubUrl.trim();
       }
 
@@ -95,7 +52,7 @@ const ProjectCreationWizard = ({ onClose, onProjectCreated }) => {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to create workspace');
+        throw new Error(data.error || 'Failed to create project');
       }
 
       // Success!
@@ -105,21 +62,22 @@ const ProjectCreationWizard = ({ onClose, onProjectCreated }) => {
 
       onClose();
     } catch (error) {
-      console.error('Error creating workspace:', error);
-      setError(error.message || 'Failed to create workspace');
+      console.error('Error creating project:', error);
+      setError(error.message || 'Failed to create project');
     } finally {
       setIsCreating(false);
     }
   };
 
-  const selectPathSuggestion = (suggestion) => {
-    setWorkspacePath(suggestion.path);
-    setShowPathDropdown(false);
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter' && !isCreating) {
+      handleCreate();
+    }
   };
 
   return (
     <div className="fixed top-0 left-0 right-0 bottom-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[60] p-0 sm:p-4">
-      <div className="bg-white dark:bg-gray-800 rounded-none sm:rounded-lg shadow-xl w-full h-full sm:h-auto sm:max-w-2xl border-0 sm:border border-gray-200 dark:border-gray-700 overflow-y-auto">
+      <div className="bg-white dark:bg-gray-800 rounded-none sm:rounded-lg shadow-xl w-full h-full sm:h-auto sm:max-w-md border-0 sm:border border-gray-200 dark:border-gray-700 overflow-y-auto">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
           <div className="flex items-center gap-3">
@@ -139,41 +97,8 @@ const ProjectCreationWizard = ({ onClose, onProjectCreated }) => {
           </button>
         </div>
 
-        {/* Progress Indicator */}
-        <div className="px-6 pt-4 pb-2">
-          <div className="flex items-center justify-between">
-            {[1, 2, 3].map((s) => (
-              <React.Fragment key={s}>
-                <div className="flex items-center gap-2">
-                  <div
-                    className={`w-8 h-8 rounded-full flex items-center justify-center font-medium text-sm ${
-                      s < step
-                        ? 'bg-green-500 text-white'
-                        : s === step
-                        ? 'bg-blue-500 text-white'
-                        : 'bg-gray-200 dark:bg-gray-700 text-gray-500'
-                    }`}
-                  >
-                    {s < step ? <Check className="w-4 h-4" /> : s}
-                  </div>
-                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300 hidden sm:inline">
-                    {s === 1 ? 'Type' : s === 2 ? 'Configure' : 'Confirm'}
-                  </span>
-                </div>
-                {s < 3 && (
-                  <div
-                    className={`flex-1 h-1 mx-2 rounded ${
-                      s < step ? 'bg-green-500' : 'bg-gray-200 dark:bg-gray-700'
-                    }`}
-                  />
-                )}
-              </React.Fragment>
-            ))}
-          </div>
-        </div>
-
         {/* Content */}
-        <div className="p-6 space-y-6 min-h-[300px]">
+        <div className="p-6 space-y-5">
           {/* Error Display */}
           {error && (
             <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 flex items-start gap-3">
@@ -184,207 +109,65 @@ const ProjectCreationWizard = ({ onClose, onProjectCreated }) => {
             </div>
           )}
 
-          {/* Step 1: Choose workspace type */}
-          {step === 1 && (
-            <div className="space-y-4">
-              <div>
-                <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
-                  Do you already have a workspace, or would you like to create a new one?
-                </h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {/* Existing Workspace */}
-                  <button
-                    onClick={() => setWorkspaceType('existing')}
-                    className={`p-4 border-2 rounded-lg text-left transition-all ${
-                      workspaceType === 'existing'
-                        ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
-                        : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
-                    }`}
-                  >
-                    <div className="flex items-start gap-3">
-                      <div className="w-10 h-10 bg-green-100 dark:bg-green-900/50 rounded-lg flex items-center justify-center flex-shrink-0">
-                        <FolderPlus className="w-5 h-5 text-green-600 dark:text-green-400" />
-                      </div>
-                      <div className="flex-1">
-                        <h5 className="font-semibold text-gray-900 dark:text-white mb-1">
-                          Existing Workspace
-                        </h5>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">
-                          I already have a workspace on my server and just need to add it to the project list
-                        </p>
-                      </div>
-                    </div>
-                  </button>
+          {/* Project Name */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Project Name <span className="text-red-500">*</span>
+            </label>
+            <Input
+              type="text"
+              value={projectName}
+              onChange={(e) => setProjectName(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder="my-awesome-project"
+              className="w-full"
+              autoFocus
+            />
+            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+              Only letters, numbers, hyphens, and underscores are allowed
+            </p>
+          </div>
 
-                  {/* New Workspace */}
-                  <button
-                    onClick={() => setWorkspaceType('new')}
-                    className={`p-4 border-2 rounded-lg text-left transition-all ${
-                      workspaceType === 'new'
-                        ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
-                        : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
-                    }`}
-                  >
-                    <div className="flex items-start gap-3">
-                      <div className="w-10 h-10 bg-purple-100 dark:bg-purple-900/50 rounded-lg flex items-center justify-center flex-shrink-0">
-                        <GitBranch className="w-5 h-5 text-purple-600 dark:text-purple-400" />
-                      </div>
-                      <div className="flex-1">
-                        <h5 className="font-semibold text-gray-900 dark:text-white mb-1">
-                          New Workspace
-                        </h5>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">
-                          Create a new workspace, optionally clone from a GitHub repository
-                        </p>
-                      </div>
-                    </div>
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Step 2: Configure workspace */}
-          {step === 2 && (
-            <div className="space-y-4">
-              {/* Workspace Path */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  {workspaceType === 'existing' ? 'Workspace Path' : 'Where should the workspace be created?'}
-                </label>
-                <div className="relative">
-                  <Input
-                    type="text"
-                    value={workspacePath}
-                    onChange={(e) => setWorkspacePath(e.target.value)}
-                    placeholder={workspaceType === 'existing' ? '/path/to/existing/workspace' : '/path/to/new/workspace'}
-                    className="w-full"
-                  />
-                  {showPathDropdown && pathSuggestions.length > 0 && (
-                    <div className="absolute z-10 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg max-h-60 overflow-y-auto">
-                      {pathSuggestions.map((suggestion, index) => (
-                        <button
-                          key={index}
-                          onClick={() => selectPathSuggestion(suggestion)}
-                          className="w-full px-4 py-2 text-left hover:bg-gray-100 dark:hover:bg-gray-700 text-sm"
-                        >
-                          <div className="font-medium text-gray-900 dark:text-white">{suggestion.name}</div>
-                          <div className="text-xs text-gray-500 dark:text-gray-400">{suggestion.path}</div>
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                  {workspaceType === 'existing'
-                    ? 'Full path to your existing workspace directory'
-                    : 'Full path where the new workspace will be created'}
-                </p>
-              </div>
-
-              {/* GitHub URL (only for new workspace) */}
-              {workspaceType === 'new' && (
-                <>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      GitHub URL (Optional)
-                    </label>
-                    <Input
-                      type="text"
-                      value={githubUrl}
-                      onChange={(e) => setGithubUrl(e.target.value)}
-                      placeholder="https://github.com/username/repository"
-                      className="w-full"
-                    />
-                    <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                      Leave empty to create an empty workspace, or provide a public GitHub URL to clone
-                    </p>
-                  </div>
-                </>
-              )}
-            </div>
-          )}
-
-          {/* Step 3: Confirm */}
-          {step === 3 && (
-            <div className="space-y-4">
-              <div className="bg-gray-50 dark:bg-gray-900/50 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
-                <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">
-                  Review Your Configuration
-                </h4>
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600 dark:text-gray-400">Workspace Type:</span>
-                    <span className="font-medium text-gray-900 dark:text-white">
-                      {workspaceType === 'existing' ? 'Existing Workspace' : 'New Workspace'}
-                    </span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600 dark:text-gray-400">Path:</span>
-                    <span className="font-mono text-xs text-gray-900 dark:text-white break-all">
-                      {workspacePath}
-                    </span>
-                  </div>
-                  {workspaceType === 'new' && githubUrl && (
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-600 dark:text-gray-400">Clone From:</span>
-                      <span className="font-mono text-xs text-gray-900 dark:text-white break-all">
-                        {githubUrl}
-                      </span>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 border border-blue-200 dark:border-blue-800">
-                <p className="text-sm text-blue-800 dark:text-blue-200">
-                  {workspaceType === 'existing'
-                    ? 'The workspace will be added to your project list and will be available for Claude/Cursor sessions.'
-                    : githubUrl
-                    ? 'A new workspace will be created and the repository will be cloned from GitHub.'
-                    : 'An empty workspace directory will be created at the specified path.'}
-                </p>
-              </div>
-            </div>
-          )}
+          {/* GitHub URL */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              GitHub URL (Optional)
+            </label>
+            <Input
+              type="text"
+              value={githubUrl}
+              onChange={(e) => setGithubUrl(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder="https://github.com/user/repo"
+              className="w-full"
+            />
+            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+              Leave empty to create an empty project, or enter a public repository URL to clone
+            </p>
+          </div>
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-between p-6 border-t border-gray-200 dark:border-gray-700">
+        <div className="flex items-center justify-end gap-3 p-6 border-t border-gray-200 dark:border-gray-700">
           <Button
             variant="outline"
-            onClick={step === 1 ? onClose : handleBack}
+            onClick={onClose}
             disabled={isCreating}
           >
-            {step === 1 ? (
-              'Cancel'
-            ) : (
-              <>
-                <ChevronLeft className="w-4 h-4 mr-1" />
-                Back
-              </>
-            )}
+            Cancel
           </Button>
 
           <Button
-            onClick={step === 3 ? handleCreate : handleNext}
-            disabled={isCreating || (step === 1 && !workspaceType)}
+            onClick={handleCreate}
+            disabled={isCreating || !projectName.trim()}
           >
             {isCreating ? (
               <>
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                 Creating...
               </>
-            ) : step === 3 ? (
-              <>
-                <Check className="w-4 h-4 mr-1" />
-                Create Project
-              </>
             ) : (
-              <>
-                Next
-                <ChevronRight className="w-4 h-4 ml-1" />
-              </>
+              'Create Project'
             )}
           </Button>
         </div>
