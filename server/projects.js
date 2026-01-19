@@ -40,6 +40,7 @@ import fsSync from 'fs';
 import path from 'path';
 import readline from 'readline';
 import os from 'os';
+import { getUserPaths, DATA_DIR } from './services/user-directories.js';
 
 // Cache for extracted project directories
 const projectDirectoryCache = new Map();
@@ -50,8 +51,11 @@ function clearProjectDirectoryCache() {
 }
 
 // Load project configuration file
-async function loadProjectConfig() {
-  const configPath = path.join(os.homedir(), '.claude', 'project-config.json');
+async function loadProjectConfig(userUuid = null) {
+  const basePath = userUuid
+    ? getUserPaths(userUuid).configDir
+    : os.homedir();
+  const configPath = path.join(basePath, '.claude', 'project-config.json');
   try {
     const configData = await fs.readFile(configPath, 'utf8');
     return JSON.parse(configData);
@@ -62,10 +66,13 @@ async function loadProjectConfig() {
 }
 
 // Save project configuration file
-async function saveProjectConfig(config) {
-  const claudeDir = path.join(os.homedir(), '.claude');
+async function saveProjectConfig(config, userUuid = null) {
+  const basePath = userUuid
+    ? getUserPaths(userUuid).configDir
+    : os.homedir();
+  const claudeDir = path.join(basePath, '.claude');
   const configPath = path.join(claudeDir, 'project-config.json');
-  
+
   // Ensure the .claude directory exists
   try {
     await fs.mkdir(claudeDir, { recursive: true });
@@ -74,7 +81,7 @@ async function saveProjectConfig(config) {
       throw error;
     }
   }
-  
+
   await fs.writeFile(configPath, JSON.stringify(config, null, 2), 'utf8');
 }
 
@@ -108,22 +115,26 @@ async function generateDisplayName(projectName, actualProjectDir = null) {
 }
 
 // Extract the actual project directory from JSONL sessions (with caching)
-async function extractProjectDirectory(projectName) {
+async function extractProjectDirectory(projectName, userUuid = null) {
   // Check cache first
-  if (projectDirectoryCache.has(projectName)) {
-    return projectDirectoryCache.get(projectName);
+  const cacheKey = userUuid ? `${userUuid}:${projectName}` : projectName;
+  if (projectDirectoryCache.has(cacheKey)) {
+    return projectDirectoryCache.get(cacheKey);
   }
 
   // Check project config for originalPath (manually added projects via UI or platform)
   // This handles projects with dashes in their directory names correctly
-  const config = await loadProjectConfig();
+  const config = await loadProjectConfig(userUuid);
   if (config[projectName]?.originalPath) {
     const originalPath = config[projectName].originalPath;
-    projectDirectoryCache.set(projectName, originalPath);
+    projectDirectoryCache.set(cacheKey, originalPath);
     return originalPath;
   }
 
-  const projectDir = path.join(os.homedir(), '.claude', 'projects', projectName);
+  const basePath = userUuid
+    ? getUserPaths(userUuid).configDir
+    : os.homedir();
+  const projectDir = path.join(basePath, '.claude', 'projects', projectName);
   const cwdCounts = new Map();
   let latestTimestamp = 0;
   let latestCwd = null;
@@ -205,10 +216,10 @@ async function extractProjectDirectory(projectName) {
     }
     
     // Cache the result
-    projectDirectoryCache.set(projectName, extractedPath);
-    
+    projectDirectoryCache.set(cacheKey, extractedPath);
+
     return extractedPath;
-    
+
   } catch (error) {
     // If the directory doesn't exist, just use the decoded project name
     if (error.code === 'ENOENT') {
@@ -218,40 +229,48 @@ async function extractProjectDirectory(projectName) {
       // Fall back to decoded project name for other errors
       extractedPath = projectName.replace(/-/g, '/');
     }
-    
+
     // Cache the fallback result too
-    projectDirectoryCache.set(projectName, extractedPath);
-    
+    projectDirectoryCache.set(cacheKey, extractedPath);
+
     return extractedPath;
   }
 }
 
-async function getProjects() {
-  const claudeDir = path.join(os.homedir(), '.claude', 'projects');
-  const config = await loadProjectConfig();
+async function getProjects(userUuid = null) {
+  let claudeDir;
+
+  if (userUuid) {
+    const userPaths = getUserPaths(userUuid);
+    claudeDir = path.join(userPaths.configDir, '.claude', 'projects');
+  } else {
+    claudeDir = path.join(os.homedir(), '.claude', 'projects');
+  }
+
+  const config = await loadProjectConfig(userUuid);
   const projects = [];
   const existingProjects = new Set();
-  
+
   try {
     // Check if the .claude/projects directory exists
     await fs.access(claudeDir);
-    
+
     // First, get existing Claude projects from the file system
     const entries = await fs.readdir(claudeDir, { withFileTypes: true });
-    
+
     for (const entry of entries) {
       if (entry.isDirectory()) {
         existingProjects.add(entry.name);
         const projectPath = path.join(claudeDir, entry.name);
-        
+
         // Extract actual project directory from JSONL sessions
-        const actualProjectDir = await extractProjectDirectory(entry.name);
-        
+        const actualProjectDir = await extractProjectDirectory(entry.name, userUuid);
+
         // Get display name from config or generate one
         const customName = config[entry.name]?.displayName;
         const autoDisplayName = await generateDisplayName(entry.name, actualProjectDir);
         const fullPath = actualProjectDir;
-        
+
         const project = {
           name: entry.name,
           path: actualProjectDir,
@@ -260,10 +279,10 @@ async function getProjects() {
           isCustomName: !!customName,
           sessions: []
         };
-        
+
         // Try to get sessions for this project (just first 5 for performance)
         try {
-          const sessionResult = await getSessions(entry.name, 5, 0);
+          const sessionResult = await getSessions(entry.name, 5, 0, userUuid);
           project.sessions = sessionResult.sessions || [];
           project.sessionMeta = {
             hasMore: sessionResult.hasMore,
@@ -282,41 +301,44 @@ async function getProjects() {
       console.error('Error reading projects directory:', error);
     }
   }
-  
+
   // Add manually configured projects that don't exist as folders yet
   for (const [projectName, projectConfig] of Object.entries(config)) {
     if (!existingProjects.has(projectName) && projectConfig.manuallyAdded) {
       // Use the original path if available, otherwise extract from potential sessions
       let actualProjectDir = projectConfig.originalPath;
-      
+
       if (!actualProjectDir) {
         try {
-          actualProjectDir = await extractProjectDirectory(projectName);
+          actualProjectDir = await extractProjectDirectory(projectName, userUuid);
         } catch (error) {
           // Fall back to decoded project name
           actualProjectDir = projectName.replace(/-/g, '/');
         }
       }
-      
-              const project = {
-          name: projectName,
-          path: actualProjectDir,
-          displayName: projectConfig.displayName || await generateDisplayName(projectName, actualProjectDir),
-          fullPath: actualProjectDir,
-          isCustomName: !!projectConfig.displayName,
-          isManuallyAdded: true,
-          sessions: []
-        };
+
+      const project = {
+        name: projectName,
+        path: actualProjectDir,
+        displayName: projectConfig.displayName || await generateDisplayName(projectName, actualProjectDir),
+        fullPath: actualProjectDir,
+        isCustomName: !!projectConfig.displayName,
+        isManuallyAdded: true,
+        sessions: []
+      };
 
       projects.push(project);
     }
   }
-  
+
   return projects;
 }
 
-async function getSessions(projectName, limit = 5, offset = 0) {
-  const projectDir = path.join(os.homedir(), '.claude', 'projects', projectName);
+async function getSessions(projectName, limit = 5, offset = 0, userUuid = null) {
+  const basePath = userUuid
+    ? getUserPaths(userUuid).configDir
+    : os.homedir();
+  const projectDir = path.join(basePath, '.claude', 'projects', projectName);
 
   try {
     const files = await fs.readdir(projectDir);
@@ -597,8 +619,11 @@ async function parseJsonlSessions(filePath) {
 }
 
 // Get messages for a specific session with pagination support
-async function getSessionMessages(projectName, sessionId, limit = null, offset = 0) {
-  const projectDir = path.join(os.homedir(), '.claude', 'projects', projectName);
+async function getSessionMessages(projectName, sessionId, limit = null, offset = 0, userUuid = null) {
+  const basePath = userUuid
+    ? getUserPaths(userUuid).configDir
+    : os.homedir();
+  const projectDir = path.join(basePath, '.claude', 'projects', projectName);
 
   try {
     const files = await fs.readdir(projectDir);
@@ -668,9 +693,9 @@ async function getSessionMessages(projectName, sessionId, limit = null, offset =
 }
 
 // Rename a project's display name
-async function renameProject(projectName, newDisplayName) {
-  const config = await loadProjectConfig();
-  
+async function renameProject(projectName, newDisplayName, userUuid = null) {
+  const config = await loadProjectConfig(userUuid);
+
   if (!newDisplayName || newDisplayName.trim() === '') {
     // Remove custom name if empty, will fall back to auto-generated
     delete config[projectName];
@@ -680,29 +705,32 @@ async function renameProject(projectName, newDisplayName) {
       displayName: newDisplayName.trim()
     };
   }
-  
-  await saveProjectConfig(config);
+
+  await saveProjectConfig(config, userUuid);
   return true;
 }
 
 // Delete a session from a project
-async function deleteSession(projectName, sessionId) {
-  const projectDir = path.join(os.homedir(), '.claude', 'projects', projectName);
-  
+async function deleteSession(projectName, sessionId, userUuid = null) {
+  const basePath = userUuid
+    ? getUserPaths(userUuid).configDir
+    : os.homedir();
+  const projectDir = path.join(basePath, '.claude', 'projects', projectName);
+
   try {
     const files = await fs.readdir(projectDir);
     const jsonlFiles = files.filter(file => file.endsWith('.jsonl'));
-    
+
     if (jsonlFiles.length === 0) {
       throw new Error('No session files found for this project');
     }
-    
+
     // Check all JSONL files to find which one contains the session
     for (const file of jsonlFiles) {
       const jsonlFile = path.join(projectDir, file);
       const content = await fs.readFile(jsonlFile, 'utf8');
       const lines = content.split('\n').filter(line => line.trim());
-      
+
       // Check if this file contains the session
       const hasSession = lines.some(line => {
         try {
@@ -712,7 +740,7 @@ async function deleteSession(projectName, sessionId) {
           return false;
         }
       });
-      
+
       if (hasSession) {
         // Filter out all entries for this session
         const filteredLines = lines.filter(line => {
@@ -723,13 +751,13 @@ async function deleteSession(projectName, sessionId) {
             return true; // Keep malformed lines
           }
         });
-        
+
         // Write back the filtered content
         await fs.writeFile(jsonlFile, filteredLines.join('\n') + (filteredLines.length > 0 ? '\n' : ''));
         return true;
       }
     }
-    
+
     throw new Error(`Session ${sessionId} not found in any files`);
   } catch (error) {
     console.error(`Error deleting session ${sessionId} from project ${projectName}:`, error);
@@ -738,9 +766,9 @@ async function deleteSession(projectName, sessionId) {
 }
 
 // Check if a project is empty (has no sessions)
-async function isProjectEmpty(projectName) {
+async function isProjectEmpty(projectName, userUuid = null) {
   try {
-    const sessionsResult = await getSessions(projectName, 1, 0);
+    const sessionsResult = await getSessions(projectName, 1, 0, userUuid);
     return sessionsResult.total === 0;
   } catch (error) {
     console.error(`Error checking if project ${projectName} is empty:`, error);
@@ -749,24 +777,27 @@ async function isProjectEmpty(projectName) {
 }
 
 // Delete an empty project
-async function deleteProject(projectName) {
-  const projectDir = path.join(os.homedir(), '.claude', 'projects', projectName);
-  
+async function deleteProject(projectName, userUuid = null) {
+  const basePath = userUuid
+    ? getUserPaths(userUuid).configDir
+    : os.homedir();
+  const projectDir = path.join(basePath, '.claude', 'projects', projectName);
+
   try {
     // First check if the project is empty
-    const isEmpty = await isProjectEmpty(projectName);
+    const isEmpty = await isProjectEmpty(projectName, userUuid);
     if (!isEmpty) {
       throw new Error('Cannot delete project with existing sessions');
     }
-    
+
     // Remove the project directory
     await fs.rm(projectDir, { recursive: true, force: true });
-    
+
     // Remove from project config
-    const config = await loadProjectConfig();
+    const config = await loadProjectConfig(userUuid);
     delete config[projectName];
-    await saveProjectConfig(config);
-    
+    await saveProjectConfig(config, userUuid);
+
     return true;
   } catch (error) {
     console.error(`Error deleting project ${projectName}:`, error);
@@ -775,22 +806,25 @@ async function deleteProject(projectName) {
 }
 
 // Add a project manually to the config (without creating folders)
-async function addProjectManually(projectPath, displayName = null) {
+async function addProjectManually(projectPath, displayName = null, userUuid = null) {
   const absolutePath = path.resolve(projectPath);
-  
+
   try {
     // Check if the path exists
     await fs.access(absolutePath);
   } catch (error) {
     throw new Error(`Path does not exist: ${absolutePath}`);
   }
-  
+
   // Generate project name (encode path for use as directory name)
   const projectName = absolutePath.replace(/\//g, '-');
-  
+
   // Check if project already exists in config
-  const config = await loadProjectConfig();
-  const projectDir = path.join(os.homedir(), '.claude', 'projects', projectName);
+  const config = await loadProjectConfig(userUuid);
+  const basePath = userUuid
+    ? getUserPaths(userUuid).configDir
+    : os.homedir();
+  const projectDir = path.join(basePath, '.claude', 'projects', projectName);
 
   if (config[projectName]) {
     throw new Error(`Project already configured for path: ${absolutePath}`);
@@ -798,20 +832,20 @@ async function addProjectManually(projectPath, displayName = null) {
 
   // Allow adding projects even if the directory exists - this enables tracking
   // existing Claude Code or Cursor projects in the UI
-  
+
   // Add to config as manually added project
   config[projectName] = {
     manuallyAdded: true,
     originalPath: absolutePath
   };
-  
+
   if (displayName) {
     config[projectName].displayName = displayName;
   }
-  
-  await saveProjectConfig(config);
-  
-  
+
+  await saveProjectConfig(config, userUuid);
+
+
   return {
     name: projectName,
     path: absolutePath,
