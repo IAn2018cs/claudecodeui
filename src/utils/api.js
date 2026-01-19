@@ -75,10 +75,11 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ path }),
     }),
-  createWorkspace: (workspaceData) =>
+  // Create project with name (path auto-calculated in user's project directory)
+  createWorkspace: (projectData) =>
     authenticatedFetch('/api/projects/create-workspace', {
       method: 'POST',
-      body: JSON.stringify(workspaceData),
+      body: JSON.stringify(projectData),
     }),
   readFile: (projectName, filePath) =>
     authenticatedFetch(`/api/projects/${projectName}/file?filePath=${encodeURIComponent(filePath)}`),
@@ -105,14 +106,6 @@ export const api = {
       body: formData,
       headers: {}, // Let browser set Content-Type for FormData
     }),
-
-  // Browse filesystem for project suggestions
-  browseFilesystem: (dirPath = null) => {
-    const params = new URLSearchParams();
-    if (dirPath) params.append('path', dirPath);
-
-    return authenticatedFetch(`/api/browse-filesystem?${params}`);
-  },
 
   // Generic GET method for any endpoint
   get: (endpoint) => authenticatedFetch(`/api${endpoint}`),
