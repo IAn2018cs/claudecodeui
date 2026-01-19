@@ -20,6 +20,7 @@ import { promises as fs } from 'fs';
 import path from 'path';
 import os from 'os';
 import { CLAUDE_MODELS } from '../shared/modelConstants.js';
+import { getUserPaths } from './services/user-directories.js';
 
 // Session tracking: Map of session IDs to active query instances
 const activeSessions = new Map();
@@ -401,13 +402,17 @@ async function cleanupTempFiles(tempImagePaths, tempDir) {
 }
 
 /**
- * Loads MCP server configurations from ~/.claude.json
+ * Loads MCP server configurations from ~/.claude.json or user-specific config
  * @param {string} cwd - Current working directory for project-specific configs
+ * @param {string} userUuid - Optional user UUID for user-specific config
  * @returns {Object|null} MCP servers object or null if none found
  */
-async function loadMcpConfig(cwd) {
+async function loadMcpConfig(cwd, userUuid = null) {
   try {
-    const claudeConfigPath = path.join(os.homedir(), '.claude.json');
+    const configDir = userUuid
+      ? getUserPaths(userUuid).configDir
+      : os.homedir();
+    const claudeConfigPath = path.join(configDir, '.claude.json');
 
     // Check if config file exists
     try {
@@ -468,18 +473,25 @@ async function loadMcpConfig(cwd) {
  * @returns {Promise<void>}
  */
 async function queryClaudeSDK(command, options = {}, ws) {
-  const { sessionId } = options;
+  const { sessionId, userUuid } = options;
   let capturedSessionId = sessionId;
   let sessionCreatedSent = false;
   let tempImagePaths = [];
   let tempDir = null;
+
+  // Set CLAUDE_CONFIG_DIR for user isolation
+  if (userUuid) {
+    const userPaths = getUserPaths(userUuid);
+    process.env.CLAUDE_CONFIG_DIR = userPaths.configDir;
+    console.log(`Set CLAUDE_CONFIG_DIR to ${userPaths.configDir} for user ${userUuid}`);
+  }
 
   try {
     // Map CLI options to SDK format
     const sdkOptions = mapCliOptionsToSDK(options);
 
     // Load MCP configuration
-    const mcpServers = await loadMcpConfig(options.cwd);
+    const mcpServers = await loadMcpConfig(options.cwd, userUuid);
     if (mcpServers) {
       sdkOptions.mcpServers = mcpServers;
     }
