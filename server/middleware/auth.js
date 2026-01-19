@@ -52,6 +52,11 @@ const authenticateToken = async (req, res, next) => {
       return res.status(401).json({ error: 'Invalid token. User not found.' });
     }
 
+    // Check user status
+    if (user.status === 'disabled') {
+      return res.status(401).json({ error: 'Account has been disabled' });
+    }
+
     req.user = user;
     next();
   } catch (error) {
@@ -63,9 +68,11 @@ const authenticateToken = async (req, res, next) => {
 // Generate JWT token (never expires)
 const generateToken = (user) => {
   return jwt.sign(
-    { 
-      userId: user.id, 
-      username: user.username 
+    {
+      userId: user.id,
+      username: user.username,
+      uuid: user.uuid,
+      role: user.role
     },
     JWT_SECRET
     // No expiration - token lasts forever
