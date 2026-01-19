@@ -132,3 +132,6 @@ tasks/
 
 # Git worktrees
 .worktrees/ 
+
+# Multi-user data
+data/
