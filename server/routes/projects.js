@@ -10,6 +10,9 @@ const router = express.Router();
 // Project name validation: letters, numbers, hyphens, underscores, 1-100 characters
 const PROJECT_NAME_REGEX = /^[a-zA-Z0-9_-]{1,100}$/;
 
+// Trusted git hosting domains
+const TRUSTED_GIT_HOSTS = ['github.com', 'gitlab.com', 'bitbucket.org'];
+
 /**
  * Validates a project name
  * @param {string} name - The project name to validate
@@ -24,6 +27,41 @@ function validateProjectName(name) {
     return {
       valid: false,
       error: 'Project name must be 1-100 characters and contain only letters, numbers, hyphens, and underscores'
+    };
+  }
+
+  return { valid: true };
+}
+
+/**
+ * Validates a GitHub/Git repository URL
+ * @param {string} url - The repository URL to validate
+ * @returns {{valid: boolean, error?: string}}
+ */
+function validateGitHubUrl(url) {
+  if (!url || typeof url !== 'string') {
+    return { valid: false, error: 'Repository URL is required' };
+  }
+
+  // Parse the URL
+  let parsedUrl;
+  try {
+    parsedUrl = new URL(url);
+  } catch {
+    return { valid: false, error: 'Invalid URL format' };
+  }
+
+  // Only allow HTTPS protocol
+  if (parsedUrl.protocol !== 'https:') {
+    return { valid: false, error: 'Only HTTPS URLs are allowed for security reasons' };
+  }
+
+  // Check if host is a trusted git hosting provider
+  const host = parsedUrl.hostname.toLowerCase();
+  if (!TRUSTED_GIT_HOSTS.includes(host)) {
+    return {
+      valid: false,
+      error: `Only trusted git hosts are allowed: ${TRUSTED_GIT_HOSTS.join(', ')}`
     };
   }
 
@@ -73,14 +111,20 @@ router.post('/create-workspace', async (req, res) => {
       // Path doesn't exist - good, we can create it
     }
 
-    // Ensure parent directory exists
-    await fs.mkdir(projectsDir, { recursive: true });
+    // If GitHub URL is provided, validate it BEFORE creating the directory
+    if (githubUrl) {
+      const urlValidation = validateGitHubUrl(githubUrl);
+      if (!urlValidation.valid) {
+        return res.status(400).json({ error: urlValidation.error });
+      }
+    }
 
-    // Create the project directory
+    // Create the project directory (also creates parent directories if needed)
     await fs.mkdir(absolutePath, { recursive: true });
 
     // If GitHub URL is provided, clone the repository (public repos only)
     if (githubUrl) {
+
       try {
         await cloneGitHubRepository(githubUrl, absolutePath);
       } catch (error) {
