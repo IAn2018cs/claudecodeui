@@ -64,6 +64,7 @@ import mcpRoutes from './routes/mcp.js';
 import mcpUtilsRoutes from './routes/mcp-utils.js';
 import commandsRoutes from './routes/commands.js';
 import projectsRoutes from './routes/projects.js';
+import adminRoutes from './routes/admin.js';
 import { initializeDatabase } from './database/db.js';
 import { validateApiKey, authenticateToken, authenticateWebSocket } from './middleware/auth.js';
 
@@ -243,6 +244,9 @@ app.use('/api/mcp-utils', authenticateToken, mcpUtilsRoutes);
 
 // Commands API Routes (protected)
 app.use('/api/commands', authenticateToken, commandsRoutes);
+
+// Admin API Routes (protected, admin only)
+app.use('/api/admin', adminRoutes);
 
 // Static files served after API routes
 // Add cache control: HTML files should not be cached, but assets can be cached
