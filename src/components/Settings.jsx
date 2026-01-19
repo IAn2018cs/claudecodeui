@@ -4,15 +4,19 @@ import { Input } from './ui/input';
 import { Badge } from './ui/badge';
 import { X, Plus, Settings as SettingsIcon, Shield, AlertTriangle, Moon, Sun, Server, Edit3, Trash2, Globe, Terminal, Zap, FolderOpen, Check } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
+import { useAuth } from '../contexts/AuthContext';
 import ClaudeLogo from './ClaudeLogo';
 import { authenticatedFetch } from '../utils/api';
 
 // New settings components
 import PermissionsContent from './settings/PermissionsContent';
 import McpServersContent from './settings/McpServersContent';
+import UserManagement from './settings/UserManagement';
 
 function Settings({ isOpen, onClose, projects = [], initialTab = 'agents' }) {
   const { isDarkMode, toggleDarkMode } = useTheme();
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
   const [allowedTools, setAllowedTools] = useState([]);
   const [disallowedTools, setDisallowedTools] = useState([]);
   const [newAllowedTool, setNewAllowedTool] = useState('');
@@ -561,6 +565,18 @@ function Settings({ isOpen, onClose, projects = [], initialTab = 'agents' }) {
               >
                 Appearance
               </button>
+              {isAdmin && (
+                <button
+                  onClick={() => setActiveTab('users')}
+                  className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
+                    activeTab === 'users'
+                      ? 'border-blue-600 text-blue-600 dark:text-blue-400'
+                      : 'border-transparent text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  Users
+                </button>
+              )}
             </div>
           </div>
 
@@ -850,6 +866,13 @@ function Settings({ isOpen, onClose, projects = [], initialTab = 'agents' }) {
                     )}
                   </div>
                 </div>
+              </div>
+            )}
+
+            {/* Users Tab */}
+            {activeTab === 'users' && isAdmin && (
+              <div className="space-y-6 md:space-y-8">
+                <UserManagement />
               </div>
             )}
 
