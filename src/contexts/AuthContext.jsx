@@ -9,7 +9,8 @@ const AuthContext = createContext({
   logout: () => {},
   isLoading: true,
   needsSetup: false,
-  error: null
+  error: null,
+  isAdmin: false
 });
 
 export const useAuth = () => {
@@ -153,7 +154,8 @@ export const AuthProvider = ({ children }) => {
     logout,
     isLoading,
     needsSetup,
-    error
+    error,
+    isAdmin: user?.role === 'admin'
   };
 
   return (
