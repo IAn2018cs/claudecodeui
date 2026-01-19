@@ -335,7 +335,7 @@ app.post('/api/system/update', authenticateToken, async (req, res) => {
 
 app.get('/api/projects', authenticateToken, async (req, res) => {
     try {
-        const projects = await getProjects();
+        const projects = await getProjects(req.user.uuid);
         res.json(projects);
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -345,7 +345,7 @@ app.get('/api/projects', authenticateToken, async (req, res) => {
 app.get('/api/projects/:projectName/sessions', authenticateToken, async (req, res) => {
     try {
         const { limit = 5, offset = 0 } = req.query;
-        const result = await getSessions(req.params.projectName, parseInt(limit), parseInt(offset));
+        const result = await getSessions(req.params.projectName, parseInt(limit), parseInt(offset), req.user.uuid);
         res.json(result);
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -362,7 +362,7 @@ app.get('/api/projects/:projectName/sessions/:sessionId/messages', authenticateT
         const parsedLimit = limit ? parseInt(limit, 10) : null;
         const parsedOffset = offset ? parseInt(offset, 10) : 0;
 
-        const result = await getSessionMessages(projectName, sessionId, parsedLimit, parsedOffset);
+        const result = await getSessionMessages(projectName, sessionId, parsedLimit, parsedOffset, req.user.uuid);
 
         // Handle both old and new response formats
         if (Array.isArray(result)) {
@@ -381,7 +381,7 @@ app.get('/api/projects/:projectName/sessions/:sessionId/messages', authenticateT
 app.put('/api/projects/:projectName/rename', authenticateToken, async (req, res) => {
     try {
         const { displayName } = req.body;
-        await renameProject(req.params.projectName, displayName);
+        await renameProject(req.params.projectName, displayName, req.user.uuid);
         res.json({ success: true });
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -393,7 +393,7 @@ app.delete('/api/projects/:projectName/sessions/:sessionId', authenticateToken, 
     try {
         const { projectName, sessionId } = req.params;
         console.log(`[API] Deleting session: ${sessionId} from project: ${projectName}`);
-        await deleteSession(projectName, sessionId);
+        await deleteSession(projectName, sessionId, req.user.uuid);
         console.log(`[API] Session ${sessionId} deleted successfully`);
         res.json({ success: true });
     } catch (error) {
@@ -406,7 +406,7 @@ app.delete('/api/projects/:projectName/sessions/:sessionId', authenticateToken, 
 app.delete('/api/projects/:projectName', authenticateToken, async (req, res) => {
     try {
         const { projectName } = req.params;
-        await deleteProject(projectName);
+        await deleteProject(projectName, req.user.uuid);
         res.json({ success: true });
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -422,7 +422,7 @@ app.post('/api/projects/create', authenticateToken, async (req, res) => {
             return res.status(400).json({ error: 'Project path is required' });
         }
 
-        const project = await addProjectManually(projectPath.trim());
+        const project = await addProjectManually(projectPath.trim(), null, req.user.uuid);
         res.json({ success: true, project });
     } catch (error) {
         console.error('Error creating project:', error);
@@ -503,7 +503,7 @@ app.get('/api/projects/:projectName/file', authenticateToken, async (req, res) =
             return res.status(400).json({ error: 'Invalid file path' });
         }
 
-        const projectRoot = await extractProjectDirectory(projectName).catch(() => null);
+        const projectRoot = await extractProjectDirectory(projectName, req.user.uuid).catch(() => null);
         if (!projectRoot) {
             return res.status(404).json({ error: 'Project not found' });
         }
@@ -544,7 +544,7 @@ app.get('/api/projects/:projectName/files/content', authenticateToken, async (re
             return res.status(400).json({ error: 'Invalid file path' });
         }
 
-        const projectRoot = await extractProjectDirectory(projectName).catch(() => null);
+        const projectRoot = await extractProjectDirectory(projectName, req.user.uuid).catch(() => null);
         if (!projectRoot) {
             return res.status(404).json({ error: 'Project not found' });
         }
@@ -602,7 +602,7 @@ app.put('/api/projects/:projectName/file', authenticateToken, async (req, res) =
             return res.status(400).json({ error: 'Content is required' });
         }
 
-        const projectRoot = await extractProjectDirectory(projectName).catch(() => null);
+        const projectRoot = await extractProjectDirectory(projectName, req.user.uuid).catch(() => null);
         if (!projectRoot) {
             return res.status(404).json({ error: 'Project not found' });
         }
@@ -644,7 +644,7 @@ app.get('/api/projects/:projectName/files', authenticateToken, async (req, res) 
         // Use extractProjectDirectory to get the actual project path
         let actualPath;
         try {
-            actualPath = await extractProjectDirectory(req.params.projectName);
+            actualPath = await extractProjectDirectory(req.params.projectName, req.user.uuid);
         } catch (error) {
             console.error('Error extracting project directory:', error);
             // Fallback to simple dash replacement
@@ -672,14 +672,17 @@ wss.on('connection', (ws, request) => {
     const url = request.url;
     console.log('[INFO] Client connected to:', url);
 
+    // Get user data from WebSocket authentication
+    const userData = request.user;
+
     // Parse URL to get pathname without query parameters
     const urlObj = new URL(url, 'http://localhost');
     const pathname = urlObj.pathname;
 
     if (pathname === '/shell') {
-        handleShellConnection(ws);
+        handleShellConnection(ws, userData);
     } else if (pathname === '/ws') {
-        handleChatConnection(ws);
+        handleChatConnection(ws, userData);
     } else {
         console.log('[WARN] Unknown WebSocket path:', pathname);
         ws.close();
@@ -713,8 +716,11 @@ class WebSocketWriter {
 }
 
 // Handle chat WebSocket connections
-function handleChatConnection(ws) {
+function handleChatConnection(ws, userData) {
     console.log('[INFO] Chat WebSocket connected');
+
+    // Extract userUuid from userData (set during WebSocket authentication)
+    const userUuid = userData?.uuid || null;
 
     // Add to connected clients for project updates
     connectedClients.add(ws);
@@ -731,8 +737,11 @@ function handleChatConnection(ws) {
                 console.log('📁 Project:', data.options?.projectPath || 'Unknown');
                 console.log('🔄 Session:', data.options?.sessionId ? 'Resume' : 'New');
 
-                // Use Claude Agents SDK
-                await queryClaudeSDK(data.command, data.options, writer);
+                // Use Claude Agents SDK - pass userUuid for user isolation
+                await queryClaudeSDK(data.command, {
+                    ...data.options,
+                    userUuid,
+                }, writer);
             } else if (data.type === 'abort-session') {
                 console.log('[DEBUG] Abort session request:', data.sessionId);
                 // Use Claude Agents SDK
@@ -794,7 +803,7 @@ function handleChatConnection(ws) {
 }
 
 // Handle shell WebSocket connections
-function handleShellConnection(ws) {
+function handleShellConnection(ws, userData) {
     console.log('🐚 Shell client connected');
     let shellProcess = null;
     let ptySessionKey = null;
@@ -1327,7 +1336,7 @@ app.post('/api/projects/:projectName/upload-files', authenticateToken, async (re
         const { projectName } = req.params;
 
         // Get project root directory
-        const projectRoot = await extractProjectDirectory(projectName).catch(() => null);
+        const projectRoot = await extractProjectDirectory(projectName, req.user.uuid).catch(() => null);
         if (!projectRoot) {
             return res.status(404).json({ error: 'Project not found' });
         }
@@ -1431,7 +1440,7 @@ app.delete('/api/projects/:projectName/files', authenticateToken, async (req, re
         }
 
         // Get project root directory
-        const projectRoot = await extractProjectDirectory(projectName).catch(() => null);
+        const projectRoot = await extractProjectDirectory(projectName, req.user.uuid).catch(() => null);
         if (!projectRoot) {
             return res.status(404).json({ error: 'Project not found' });
         }
@@ -1491,7 +1500,7 @@ app.get('/api/projects/:projectName/sessions/:sessionId/token-usage', authentica
         // Extract actual project path
         let projectPath;
         try {
-            projectPath = await extractProjectDirectory(projectName);
+            projectPath = await extractProjectDirectory(projectName, req.user.uuid);
         } catch (error) {
             console.error('Error extracting project directory:', error);
             return res.status(500).json({ error: 'Failed to determine project path' });
