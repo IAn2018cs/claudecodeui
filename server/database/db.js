@@ -74,6 +74,30 @@ const runMigrations = () => {
       db.exec('ALTER TABLE users ADD COLUMN has_completed_onboarding BOOLEAN DEFAULT 0');
     }
 
+    // Add uuid column if not exists (without UNIQUE constraint - use index instead)
+    if (!columnNames.includes('uuid')) {
+      console.log('Running migration: Adding uuid column');
+      db.exec('ALTER TABLE users ADD COLUMN uuid TEXT');
+    }
+    // Create unique index for uuid (safe to run even if already exists)
+    db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_users_uuid ON users(uuid)');
+
+    // Add role column if not exists
+    if (!columnNames.includes('role')) {
+      console.log('Running migration: Adding role column');
+      db.exec("ALTER TABLE users ADD COLUMN role TEXT DEFAULT 'user'");
+    }
+    // Create index for role (safe to run even if already exists)
+    db.exec('CREATE INDEX IF NOT EXISTS idx_users_role ON users(role)');
+
+    // Add status column if not exists
+    if (!columnNames.includes('status')) {
+      console.log('Running migration: Adding status column');
+      db.exec("ALTER TABLE users ADD COLUMN status TEXT DEFAULT 'active'");
+    }
+    // Create index for status (safe to run even if already exists)
+    db.exec('CREATE INDEX IF NOT EXISTS idx_users_status ON users(status)');
+
     console.log('Database migrations completed successfully');
   } catch (error) {
     console.error('Error running migrations:', error.message);
@@ -186,6 +210,67 @@ const userDb = {
     try {
       const row = db.prepare('SELECT has_completed_onboarding FROM users WHERE id = ?').get(userId);
       return row?.has_completed_onboarding === 1;
+    } catch (err) {
+      throw err;
+    }
+  },
+
+  // Get user count
+  getUserCount: () => {
+    try {
+      const row = db.prepare('SELECT COUNT(*) as count FROM users').get();
+      return row.count;
+    } catch (err) {
+      throw err;
+    }
+  },
+
+  // Create user with full details
+  createUserFull: (username, passwordHash, uuid, role) => {
+    try {
+      const stmt = db.prepare(
+        'INSERT INTO users (username, password_hash, uuid, role) VALUES (?, ?, ?, ?)'
+      );
+      const result = stmt.run(username, passwordHash, uuid, role);
+      return { id: result.lastInsertRowid, username, uuid, role };
+    } catch (err) {
+      throw err;
+    }
+  },
+
+  // Get all users (for admin)
+  getAllUsers: () => {
+    try {
+      return db.prepare(
+        'SELECT id, username, uuid, role, status, created_at, last_login FROM users ORDER BY created_at DESC'
+      ).all();
+    } catch (err) {
+      throw err;
+    }
+  },
+
+  // Update user status
+  updateUserStatus: (userId, status) => {
+    try {
+      db.prepare('UPDATE users SET status = ? WHERE id = ?').run(status, userId);
+    } catch (err) {
+      throw err;
+    }
+  },
+
+  // Delete user by ID
+  deleteUserById: (userId) => {
+    try {
+      db.prepare('DELETE FROM users WHERE id = ?').run(userId);
+    } catch (err) {
+      throw err;
+    }
+  },
+
+  // Get user by UUID
+  getUserByUuid: (uuid) => {
+    try {
+      return db.prepare('SELECT * FROM users WHERE uuid = ?').get(uuid);
     } catch (err) {
       throw err;
     }
