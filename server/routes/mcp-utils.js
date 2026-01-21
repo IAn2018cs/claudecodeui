@@ -13,11 +13,17 @@ const router = express.Router();
 
 /**
  * GET /api/mcp-utils/all-servers
- * Get all configured MCP servers
+ * Get all configured MCP servers for the current user
  */
 router.get('/all-servers', async (req, res) => {
     try {
-        const result = await getAllMCPServers();
+        const userUuid = req.user?.uuid;
+        if (!userUuid) {
+            return res.status(401).json({
+                error: 'User authentication required'
+            });
+        }
+        const result = await getAllMCPServers(userUuid);
         res.json(result);
     } catch (error) {
         console.error('MCP servers detection error:', error);

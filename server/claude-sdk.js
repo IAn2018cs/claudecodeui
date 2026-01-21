@@ -18,7 +18,6 @@ import { query } from '@anthropic-ai/claude-agent-sdk';
 import crypto from 'crypto';
 import { promises as fs } from 'fs';
 import path from 'path';
-import os from 'os';
 import { CLAUDE_MODELS } from '../shared/modelConstants.js';
 import { getUserPaths } from './services/user-directories.js';
 
@@ -402,16 +401,18 @@ async function cleanupTempFiles(tempImagePaths, tempDir) {
 }
 
 /**
- * Loads MCP server configurations from ~/.claude.json or user-specific config
+ * Loads MCP server configurations from user-specific .claude.json
  * @param {string} cwd - Current working directory for project-specific configs
- * @param {string} userUuid - Optional user UUID for user-specific config
+ * @param {string} userUuid - User UUID for user-specific config (required)
  * @returns {Object|null} MCP servers object or null if none found
  */
-async function loadMcpConfig(cwd, userUuid = null) {
+async function loadMcpConfig(cwd, userUuid) {
+  if (!userUuid) {
+    console.log('No userUuid provided for loadMcpConfig, proceeding without MCP servers');
+    return null;
+  }
   try {
-    const configDir = userUuid
-      ? getUserPaths(userUuid).configDir
-      : os.homedir();
+    const configDir = getUserPaths(userUuid).configDir;
     const claudeConfigPath = path.join(configDir, '.claude.json');
 
     // Check if config file exists

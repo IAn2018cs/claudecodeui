@@ -8,23 +8,33 @@
 
 import { promises as fsPromises } from 'fs';
 import path from 'path';
-import os from 'os';
+import { getUserPaths } from '../services/user-directories.js';
 
 /**
- * Get all configured MCP servers
+ * Get all configured MCP servers for a specific user
+ * @param {string} userUuid - User UUID (required)
  * @returns {Promise<Object>} All MCP servers configuration
  */
-export async function getAllMCPServers() {
+export async function getAllMCPServers(userUuid) {
+    if (!userUuid) {
+        return {
+            hasConfig: false,
+            error: 'userUuid is required',
+            servers: {},
+            projectServers: {}
+        };
+    }
+
     try {
-        const homeDir = os.homedir();
+        const userPaths = getUserPaths(userUuid);
         const configPaths = [
-            path.join(homeDir, '.claude.json'),
-            path.join(homeDir, '.claude', 'settings.json')
+            userPaths.claudeJson,
+            path.join(userPaths.claudeDir, 'settings.json')
         ];
-        
+
         let configData = null;
         let configPath = null;
-        
+
         // Try to read from either config file
         for (const filepath of configPaths) {
             try {
@@ -36,7 +46,7 @@ export async function getAllMCPServers() {
                 continue;
             }
         }
-        
+
         if (!configData) {
             return {
                 hasConfig: false,

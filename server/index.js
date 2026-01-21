@@ -67,23 +67,34 @@ import projectsRoutes from './routes/projects.js';
 import adminRoutes from './routes/admin.js';
 import { initializeDatabase } from './database/db.js';
 import { validateApiKey, authenticateToken, authenticateWebSocket } from './middleware/auth.js';
+import { getUserPaths } from './services/user-directories.js';
 
-// File system watcher for projects folder
-let projectsWatcher = null;
+// File system watcher for projects folder - per user
+const userWatchers = new Map(); // Map<userUuid, { watcher, clients: Set<ws> }>
 const connectedClients = new Set();
 
-// Setup file system watcher for Claude projects folder using chokidar
-async function setupProjectsWatcher() {
-    const chokidar = (await import('chokidar')).default;
-    const claudeProjectsPath = path.join(os.homedir(), '.claude', 'projects');
+// Setup file system watcher for a specific user's Claude projects folder
+async function setupUserProjectsWatcher(userUuid, ws) {
+    if (!userUuid) {
+        console.log('[WARN] Cannot setup projects watcher without userUuid');
+        return;
+    }
 
-    if (projectsWatcher) {
-        projectsWatcher.close();
+    const chokidar = (await import('chokidar')).default;
+    const userPaths = getUserPaths(userUuid);
+    const claudeProjectsPath = path.join(userPaths.claudeDir, 'projects');
+
+    // Check if we already have a watcher for this user
+    if (userWatchers.has(userUuid)) {
+        const existing = userWatchers.get(userUuid);
+        existing.clients.add(ws);
+        console.log(`[INFO] Added client to existing watcher for user ${userUuid}`);
+        return;
     }
 
     try {
         // Initialize chokidar watcher with optimized settings
-        projectsWatcher = chokidar.watch(claudeProjectsPath, {
+        const watcher = chokidar.watch(claudeProjectsPath, {
             ignored: [
                 '**/node_modules/**',
                 '**/.git/**',
@@ -94,14 +105,17 @@ async function setupProjectsWatcher() {
                 '**/.DS_Store'
             ],
             persistent: true,
-            ignoreInitial: true, // Don't fire events for existing files on startup
+            ignoreInitial: true,
             followSymlinks: false,
-            depth: 10, // Reasonable depth limit
+            depth: 10,
             awaitWriteFinish: {
-                stabilityThreshold: 100, // Wait 100ms for file to stabilize
+                stabilityThreshold: 100,
                 pollInterval: 50
             }
         });
+
+        const clients = new Set([ws]);
+        userWatchers.set(userUuid, { watcher, clients });
 
         // Debounce function to prevent excessive notifications
         let debounceTimer;
@@ -109,14 +123,13 @@ async function setupProjectsWatcher() {
             clearTimeout(debounceTimer);
             debounceTimer = setTimeout(async () => {
                 try {
-
                     // Clear project directory cache when files change
                     clearProjectDirectoryCache();
 
-                    // Get updated projects list
-                    const updatedProjects = await getProjects();
+                    // Get updated projects list for this user
+                    const updatedProjects = await getProjects(userUuid);
 
-                    // Notify all connected clients about the project changes
+                    // Notify all connected clients for this user
                     const updateMessage = JSON.stringify({
                         type: 'projects_updated',
                         projects: updatedProjects,
@@ -125,20 +138,22 @@ async function setupProjectsWatcher() {
                         changedFile: path.relative(claudeProjectsPath, filePath)
                     });
 
-                    connectedClients.forEach(client => {
-                        if (client.readyState === WebSocket.OPEN) {
-                            client.send(updateMessage);
-                        }
-                    });
-
+                    const userWatcher = userWatchers.get(userUuid);
+                    if (userWatcher) {
+                        userWatcher.clients.forEach(client => {
+                            if (client.readyState === WebSocket.OPEN) {
+                                client.send(updateMessage);
+                            }
+                        });
+                    }
                 } catch (error) {
                     console.error('[ERROR] Error handling project changes:', error);
                 }
-            }, 300); // 300ms debounce (slightly faster than before)
+            }, 300);
         };
 
         // Set up event listeners
-        projectsWatcher
+        watcher
             .on('add', (filePath) => debouncedUpdate('add', filePath))
             .on('change', (filePath) => debouncedUpdate('change', filePath))
             .on('unlink', (filePath) => debouncedUpdate('unlink', filePath))
@@ -148,10 +163,28 @@ async function setupProjectsWatcher() {
                 console.error('[ERROR] Chokidar watcher error:', error);
             })
             .on('ready', () => {
+                console.log(`[INFO] Projects watcher ready for user ${userUuid}`);
             });
 
     } catch (error) {
         console.error('[ERROR] Failed to setup projects watcher:', error);
+    }
+}
+
+// Cleanup watcher for a user when client disconnects
+function cleanupUserProjectsWatcher(userUuid, ws) {
+    if (!userUuid || !userWatchers.has(userUuid)) {
+        return;
+    }
+
+    const userWatcher = userWatchers.get(userUuid);
+    userWatcher.clients.delete(ws);
+
+    // If no more clients, close the watcher
+    if (userWatcher.clients.size === 0) {
+        console.log(`[INFO] Closing projects watcher for user ${userUuid} (no clients)`);
+        userWatcher.watcher.close();
+        userWatchers.delete(userUuid);
     }
 }
 
@@ -665,6 +698,11 @@ function handleChatConnection(ws, userData) {
     // Add to connected clients for project updates
     connectedClients.add(ws);
 
+    // Setup projects watcher for this user
+    if (userUuid) {
+        setupUserProjectsWatcher(userUuid, ws);
+    }
+
     // Wrap WebSocket with writer for consistent interface with SSEStreamWriter
     const writer = new WebSocketWriter(ws);
 
@@ -739,12 +777,17 @@ function handleChatConnection(ws, userData) {
         console.log('🔌 Chat client disconnected');
         // Remove from connected clients
         connectedClients.delete(ws);
+        // Cleanup projects watcher for this user
+        if (userUuid) {
+            cleanupUserProjectsWatcher(userUuid, ws);
+        }
     });
 }
 
 // Handle shell WebSocket connections
 function handleShellConnection(ws, userData) {
     console.log('🐚 Shell client connected');
+    const userUuid = userData?.uuid || null;
     let shellProcess = null;
     let ptySessionKey = null;
     let outputBuffer = [];
@@ -874,19 +917,29 @@ function handleShellConnection(ws, userData) {
                     const termRows = data.rows || 24;
                     console.log('📐 Using terminal dimensions:', termCols, 'x', termRows);
 
+                    // Build environment with user-specific CLAUDE_CONFIG_DIR
+                    const shellEnv = {
+                        ...process.env,
+                        TERM: 'xterm-256color',
+                        COLORTERM: 'truecolor',
+                        FORCE_COLOR: '3',
+                        // Override browser opening commands to echo URL for detection
+                        BROWSER: os.platform() === 'win32' ? 'echo "OPEN_URL:"' : 'echo "OPEN_URL:"'
+                    };
+
+                    // Set CLAUDE_CONFIG_DIR for user isolation when running Claude CLI
+                    if (userUuid) {
+                        const userPaths = getUserPaths(userUuid);
+                        shellEnv.CLAUDE_CONFIG_DIR = userPaths.claudeDir;
+                        console.log('🔐 Set CLAUDE_CONFIG_DIR for user:', userPaths.claudeDir);
+                    }
+
                     shellProcess = pty.spawn(shell, shellArgs, {
                         name: 'xterm-256color',
                         cols: termCols,
                         rows: termRows,
                         cwd: os.homedir(),
-                        env: {
-                            ...process.env,
-                            TERM: 'xterm-256color',
-                            COLORTERM: 'truecolor',
-                            FORCE_COLOR: '3',
-                            // Override browser opening commands to echo URL for detection
-                            BROWSER: os.platform() === 'win32' ? 'echo "OPEN_URL:"' : 'echo "OPEN_URL:"'
-                        }
+                        env: shellEnv
                     });
 
                     console.log('🟢 Shell process started with PTY, PID:', shellProcess.pid);
@@ -1428,7 +1481,11 @@ app.delete('/api/projects/:projectName/files', authenticateToken, async (req, re
 app.get('/api/projects/:projectName/sessions/:sessionId/token-usage', authenticateToken, async (req, res) => {
     try {
         const { projectName, sessionId } = req.params;
-        const homeDir = os.homedir();
+        const userUuid = req.user?.uuid;
+
+        if (!userUuid) {
+            return res.status(401).json({ error: 'User authentication required' });
+        }
 
         // Allow only safe characters in sessionId
         const safeSessionId = String(sessionId).replace(/[^a-zA-Z0-9._-]/g, '');
@@ -1440,17 +1497,17 @@ app.get('/api/projects/:projectName/sessions/:sessionId/token-usage', authentica
         // Extract actual project path
         let projectPath;
         try {
-            projectPath = await extractProjectDirectory(projectName, req.user.uuid);
+            projectPath = await extractProjectDirectory(projectName, userUuid);
         } catch (error) {
             console.error('Error extracting project directory:', error);
             return res.status(500).json({ error: 'Failed to determine project path' });
         }
 
-        // Construct the JSONL file path
-        // Claude stores session files in ~/.claude/projects/[encoded-project-path]/[session-id].jsonl
-        // The encoding replaces /, spaces, ~, and _ with -
+        // Construct the JSONL file path using user-specific directory
+        // Claude stores session files in [claudeDir]/projects/[encoded-project-path]/[session-id].jsonl
+        const userPaths = getUserPaths(userUuid);
         const encodedPath = projectPath.replace(/[\\/:\s~_]/g, '-');
-        const projectDir = path.join(homeDir, '.claude', 'projects', encodedPath);
+        const projectDir = path.join(userPaths.claudeDir, 'projects', encodedPath);
 
         const jsonlPath = path.join(projectDir, `${safeSessionId}.jsonl`);
 
@@ -1659,8 +1716,7 @@ async function startServer() {
             console.log(`${c.tip('[TIP]')}  Run "cloudcli status" for full configuration details`);
             console.log('');
 
-            // Start watching the projects folder for changes
-            await setupProjectsWatcher();
+            // Projects watcher is now per-user, initialized when user connects via WebSocket
         });
     } catch (error) {
         console.error('[ERROR] Failed to start server:', error);

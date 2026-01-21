@@ -2,9 +2,9 @@ import express from 'express';
 import { promises as fs } from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import os from 'os';
 import matter from 'gray-matter';
 import { CLAUDE_MODELS } from '../../shared/modelConstants.js';
+import { getUserPaths } from '../services/user-directories.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -324,6 +324,7 @@ Custom commands can be created in:
 router.post('/list', async (req, res) => {
   try {
     const { projectPath } = req.body;
+    const userUuid = req.user?.uuid;
     const allCommands = [...builtInCommands];
 
     // Scan project-level commands (.claude/commands/)
@@ -337,15 +338,17 @@ router.post('/list', async (req, res) => {
       allCommands.push(...projectCommands);
     }
 
-    // Scan user-level commands (~/.claude/commands/)
-    const homeDir = os.homedir();
-    const userCommandsDir = path.join(homeDir, '.claude', 'commands');
-    const userCommands = await scanCommandsDirectory(
-      userCommandsDir,
-      userCommandsDir,
-      'user'
-    );
-    allCommands.push(...userCommands);
+    // Scan user-level commands from user's .claude/commands/
+    if (userUuid) {
+      const userPaths = getUserPaths(userUuid);
+      const userCommandsDir = path.join(userPaths.claudeDir, 'commands');
+      const userCommands = await scanCommandsDirectory(
+        userCommandsDir,
+        userCommandsDir,
+        'user'
+      );
+      allCommands.push(...userCommands);
+    }
 
     // Separate built-in and custom commands
     const customCommands = allCommands.filter(cmd => cmd.namespace !== 'builtin');
@@ -374,6 +377,7 @@ router.post('/list', async (req, res) => {
 router.post('/load', async (req, res) => {
   try {
     const { commandPath } = req.body;
+    const userUuid = req.user?.uuid;
 
     if (!commandPath) {
       return res.status(400).json({
@@ -381,10 +385,20 @@ router.post('/load', async (req, res) => {
       });
     }
 
-    // Security: Prevent path traversal
+    // Security: Prevent path traversal - validate path is in allowed directories
     const resolvedPath = path.resolve(commandPath);
-    if (!resolvedPath.startsWith(path.resolve(os.homedir())) &&
-        !resolvedPath.includes('.claude/commands')) {
+    let isAllowed = resolvedPath.includes('.claude/commands');
+
+    // Also allow if path is under user's claudeDir
+    if (userUuid) {
+      const userPaths = getUserPaths(userUuid);
+      const userBase = path.resolve(userPaths.claudeDir);
+      if (resolvedPath.startsWith(userBase)) {
+        isAllowed = true;
+      }
+    }
+
+    if (!isAllowed) {
       return res.status(403).json({
         error: 'Access denied',
         message: 'Command must be in .claude/commands directory'
@@ -425,6 +439,7 @@ router.post('/load', async (req, res) => {
 router.post('/execute', async (req, res) => {
   try {
     const { commandName, commandPath, args = [], context = {} } = req.body;
+    const userUuid = req.user?.uuid;
 
     if (!commandName) {
       return res.status(400).json({
@@ -462,15 +477,19 @@ router.post('/execute', async (req, res) => {
     // Security: validate commandPath is within allowed directories
     {
       const resolvedPath = path.resolve(commandPath);
-      const userBase = path.resolve(path.join(os.homedir(), '.claude', 'commands'));
+      // Build user-specific base path
+      const userBase = userUuid
+        ? path.resolve(path.join(getUserPaths(userUuid).claudeDir, 'commands'))
+        : null;
       const projectBase = context?.projectPath
         ? path.resolve(path.join(context.projectPath, '.claude', 'commands'))
         : null;
       const isUnder = (base) => {
+        if (!base) return false;
         const rel = path.relative(base, resolvedPath);
         return rel !== '' && !rel.startsWith('..') && !path.isAbsolute(rel);
       };
-      if (!(isUnder(userBase) || (projectBase && isUnder(projectBase)))) {
+      if (!((userBase && isUnder(userBase)) || (projectBase && isUnder(projectBase)))) {
         return res.status(403).json({
           error: 'Access denied',
           message: 'Command must be in .claude/commands directory'

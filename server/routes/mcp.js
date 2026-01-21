@@ -1,10 +1,10 @@
 import express from 'express';
 import { promises as fs } from 'fs';
 import path from 'path';
-import os from 'os';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 import { spawn } from 'child_process';
+import { getUserPaths } from '../services/user-directories.js';
 
 const router = express.Router();
 const __filename = fileURLToPath(import.meta.url);
@@ -348,16 +348,25 @@ router.get('/cli/get/:name', async (req, res) => {
 router.get('/config/read', async (req, res) => {
   try {
     console.log('📖 Reading MCP servers from Claude config files');
-    
-    const homeDir = os.homedir();
+
+    const userUuid = req.user?.uuid;
+    if (!userUuid) {
+      return res.status(401).json({
+        success: false,
+        error: 'User authentication required',
+        servers: []
+      });
+    }
+
+    const userPaths = getUserPaths(userUuid);
     const configPaths = [
-      path.join(homeDir, '.claude.json'),
-      path.join(homeDir, '.claude', 'settings.json')
+      userPaths.claudeJson,
+      path.join(userPaths.claudeDir, 'settings.json')
     ];
-    
+
     let configData = null;
     let configPath = null;
-    
+
     // Try to read from either config file
     for (const filepath of configPaths) {
       try {
@@ -371,12 +380,12 @@ router.get('/config/read', async (req, res) => {
         console.log(`ℹ️ Config not found or invalid at: ${filepath}`);
       }
     }
-    
+
     if (!configData) {
-      return res.json({ 
-        success: false, 
+      return res.json({
+        success: false,
         message: 'No Claude configuration file found',
-        servers: [] 
+        servers: []
       });
     }
     
