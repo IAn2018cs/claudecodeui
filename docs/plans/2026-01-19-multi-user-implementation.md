@@ -762,7 +762,7 @@ async function loadMcpConfig(cwd, userUuid = null) {
 git add server/claude-sdk.js
 git commit -m "feat: add user isolation to Claude SDK
 
-Set CLAUDE_CONFIG_DIR based on user UUID for per-user config isolation."
+Set CLAUDE_CONFIG_DIR to user data directory (contains .claude folder)."
 ```
 
 ---

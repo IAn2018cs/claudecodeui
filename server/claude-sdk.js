@@ -482,8 +482,8 @@ async function queryClaudeSDK(command, options = {}, ws) {
   // Set CLAUDE_CONFIG_DIR for user isolation
   if (userUuid) {
     const userPaths = getUserPaths(userUuid);
-    process.env.CLAUDE_CONFIG_DIR = userPaths.configDir;
-    console.log(`Set CLAUDE_CONFIG_DIR to ${userPaths.configDir} for user ${userUuid}`);
+    process.env.CLAUDE_CONFIG_DIR = userPaths.claudeDir;
+    console.log(`Set CLAUDE_CONFIG_DIR to user data directory (contains .claude folder): ${userPaths.claudeDir}`);
   }
 
   try {
