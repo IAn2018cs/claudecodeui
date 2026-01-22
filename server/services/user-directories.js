@@ -22,7 +22,6 @@ export function getUserPaths(userUuid) {
   return {
     configDir: path.join(DATA_DIR, 'user-data', userUuid),
     claudeDir: path.join(DATA_DIR, 'user-data', userUuid, '.claude'),
-    claudeJson: path.join(DATA_DIR, 'user-data', userUuid, '.claude.json'),
     projectsDir: path.join(DATA_DIR, 'user-projects', userUuid),
   };
 }
@@ -37,6 +36,14 @@ export async function initUserDirectories(userUuid) {
   // Create directories
   await fs.mkdir(paths.claudeDir, { recursive: true });
   await fs.mkdir(paths.projectsDir, { recursive: true });
+
+  // Create .claude.json with hasCompletedOnboarding=true
+  const claudeJsonPath = path.join(paths.claudeDir, '.claude.json');
+  const claudeConfig = {
+    hasCompletedOnboarding: true
+  };
+  await fs.writeFile(claudeJsonPath, JSON.stringify(claudeConfig, null, 2));
+  console.log(`Created .claude.json for user ${userUuid}`);
 
   // Copy settings.json from ~/.claude if exists
   const sourceSettings = path.join(os.homedir(), '.claude', 'settings.json');

@@ -146,7 +146,7 @@ export function getUserPaths(userUuid) {
   return {
     configDir: path.join(DATA_DIR, 'user-data', userUuid),
     claudeDir: path.join(DATA_DIR, 'user-data', userUuid, '.claude'),
-    claudeJson: path.join(DATA_DIR, 'user-data', userUuid, '.claude.json'),
+    claudeJson: path.join(DATA_DIR, 'user-data', userUuid, '.claude', '.claude.json'),
     projectsDir: path.join(DATA_DIR, 'user-projects', userUuid),
   };
 }
@@ -160,6 +160,14 @@ export async function initUserDirectories(userUuid) {
   // Create directories
   await fs.mkdir(paths.claudeDir, { recursive: true });
   await fs.mkdir(paths.projectsDir, { recursive: true });
+
+  // Create .claude.json with hasCompletedOnboarding=true
+  const claudeJsonPath = path.join(paths.claudeDir, '.claude.json');
+  const claudeConfig = {
+    hasCompletedOnboarding: true
+  };
+  await fs.writeFile(claudeJsonPath, JSON.stringify(claudeConfig, null, 2));
+  console.log(`Created .claude.json for user ${userUuid}`);
 
   // Copy settings.json from ~/.claude if exists
   const sourceSettings = path.join(os.homedir(), '.claude', 'settings.json');
@@ -223,128 +231,7 @@ Handles creation, deletion, and path resolution for per-user data."
 
 ---
 
-## Task 3: Claude Config Watcher Service
-
-**Files:**
-- Create: `server/services/claude-config-watcher.js`
-
-### Step 1: Create config watcher service
-
-```javascript
-import chokidar from 'chokidar';
-import { promises as fs } from 'fs';
-import { getUserPaths, DATA_DIR } from './user-directories.js';
-import path from 'path';
-
-// Map of userUuid -> watcher instance
-const watchers = new Map();
-
-/**
- * Watch for .claude.json creation and set hasCompletedOnboarding
- */
-export function watchUserClaudeConfig(userUuid) {
-  const paths = getUserPaths(userUuid);
-  const configPath = paths.claudeJson;
-
-  // Don't create duplicate watchers
-  if (watchers.has(userUuid)) {
-    return;
-  }
-
-  console.log(`Starting config watcher for user ${userUuid}`);
-
-  const watcher = chokidar.watch(configPath, {
-    ignoreInitial: false,
-    persistent: true,
-  });
-
-  watcher.on('add', async (filePath) => {
-    console.log(`Detected .claude.json creation for user ${userUuid}`);
-    try {
-      const content = await fs.readFile(filePath, 'utf-8');
-      const config = JSON.parse(content);
-
-      if (!config.hasCompletedOnboarding) {
-        config.hasCompletedOnboarding = true;
-        await fs.writeFile(filePath, JSON.stringify(config, null, 2));
-        console.log(`Set hasCompletedOnboarding=true for user ${userUuid}`);
-      }
-
-      // Stop watching after successful update
-      stopWatcher(userUuid);
-    } catch (error) {
-      console.error(`Error processing .claude.json for user ${userUuid}:`, error);
-    }
-  });
-
-  watcher.on('error', (error) => {
-    console.error(`Watcher error for user ${userUuid}:`, error);
-  });
-
-  watchers.set(userUuid, watcher);
-}
-
-/**
- * Stop watching for a specific user
- */
-export function stopWatcher(userUuid) {
-  const watcher = watchers.get(userUuid);
-  if (watcher) {
-    watcher.close();
-    watchers.delete(userUuid);
-    console.log(`Stopped config watcher for user ${userUuid}`);
-  }
-}
-
-/**
- * Stop all watchers
- */
-export function stopAllWatchers() {
-  for (const [userUuid, watcher] of watchers) {
-    watcher.close();
-    console.log(`Stopped config watcher for user ${userUuid}`);
-  }
-  watchers.clear();
-}
-
-/**
- * Initialize watchers for all users that need them
- */
-export async function initializeWatchers(users) {
-  for (const user of users) {
-    if (!user.uuid) continue;
-
-    const paths = getUserPaths(user.uuid);
-    try {
-      // Check if .claude.json exists and has onboarding completed
-      const content = await fs.readFile(paths.claudeJson, 'utf-8');
-      const config = JSON.parse(content);
-
-      if (!config.hasCompletedOnboarding) {
-        watchUserClaudeConfig(user.uuid);
-      }
-    } catch (error) {
-      if (error.code === 'ENOENT') {
-        // File doesn't exist yet, watch for it
-        watchUserClaudeConfig(user.uuid);
-      }
-    }
-  }
-}
-```
-
-### Step 2: Commit
-
-```bash
-git add server/services/claude-config-watcher.js
-git commit -m "feat: add Claude config watcher service
-
-Watches for .claude.json creation and sets hasCompletedOnboarding=true."
-```
-
----
-
-## Task 4: Update Auth Routes for Multi-User
+## Task 3: Update Auth Routes for Multi-User
 
 **Files:**
 - Modify: `server/routes/auth.js`
@@ -353,8 +240,7 @@ Watches for .claude.json creation and sets hasCompletedOnboarding=true."
 
 ```javascript
 import { v4 as uuidv4 } from 'uuid';
-import { initUserDirectories, deleteUserDirectories } from '../services/user-directories.js';
-import { watchUserClaudeConfig } from '../services/claude-config-watcher.js';
+import { initUserDirectories } from '../services/user-directories.js';
 ```
 
 ### Step 2: Update register endpoint
@@ -391,11 +277,8 @@ router.post('/register', async (req, res) => {
       // Create user with full details
       const user = userDb.createUserFull(username, passwordHash, uuid, role);
 
-      // Initialize user directories
+      // Initialize user directories (creates .claude.json with hasCompletedOnboarding=true)
       await initUserDirectories(uuid);
-
-      // Start watching for .claude.json
-      watchUserClaudeConfig(uuid);
 
       // Generate token
       const token = generateToken(user);
@@ -509,7 +392,7 @@ git commit -m "feat: update auth routes for multi-user support
 
 ---
 
-## Task 5: Add Admin Routes
+## Task 4: Add Admin Routes
 
 **Files:**
 - Create: `server/routes/admin.js`
@@ -522,7 +405,6 @@ import express from 'express';
 import { userDb } from '../database/db.js';
 import { authenticateToken } from '../middleware/auth.js';
 import { deleteUserDirectories } from '../services/user-directories.js';
-import { stopWatcher } from '../services/claude-config-watcher.js';
 
 const router = express.Router();
 
@@ -595,11 +477,8 @@ router.delete('/users/:id', async (req, res) => {
     // Get full user info for uuid
     const fullUser = userDb.getUserByUuid(user.uuid);
 
-    // Stop config watcher
+    // Delete user directories
     if (fullUser?.uuid) {
-      stopWatcher(fullUser.uuid);
-
-      // Delete user directories
       await deleteUserDirectories(fullUser.uuid);
     }
 
@@ -641,7 +520,7 @@ git commit -m "feat: add admin routes for user management
 
 ---
 
-## Task 6: Update Auth Middleware for User Status Check
+## Task 5: Update Auth Middleware for User Status Check
 
 **Files:**
 - Modify: `server/middleware/auth.js`
@@ -712,7 +591,7 @@ git commit -m "feat: update auth middleware for multi-user
 
 ---
 
-## Task 7: Update Claude SDK for User Isolation
+## Task 6: Update Claude SDK for User Isolation
 
 **Files:**
 - Modify: `server/claude-sdk.js`
@@ -767,7 +646,7 @@ Set CLAUDE_CONFIG_DIR to user data directory (contains .claude folder)."
 
 ---
 
-## Task 8: Update Projects Module for User Isolation
+## Task 7: Update Projects Module for User Isolation
 
 **Files:**
 - Modify: `server/projects.js`
@@ -811,7 +690,7 @@ All project operations now support user-specific paths."
 
 ---
 
-## Task 9: Update Server WebSocket Handler for User Context
+## Task 8: Update Server WebSocket Handler for User Context
 
 **Files:**
 - Modify: `server/index.js`
@@ -854,7 +733,7 @@ User UUID is now passed to Claude SDK and project functions."
 
 ---
 
-## Task 10: Install uuid Package
+## Task 9: Install uuid Package
 
 **Files:**
 - Modify: `package.json`
@@ -872,7 +751,7 @@ git commit -m "chore: add uuid package for user ID generation"
 
 ---
 
-## Task 11: Frontend - Update AuthContext for Multi-User
+## Task 10: Frontend - Update AuthContext for Multi-User
 
 **Files:**
 - Modify: `src/contexts/AuthContext.jsx`
@@ -923,7 +802,7 @@ Include uuid and role in user state, add isAdmin helper."
 
 ---
 
-## Task 12: Frontend - Create UserManagement Component
+## Task 11: Frontend - Create UserManagement Component
 
 **Files:**
 - Create: `src/components/settings/UserManagement.jsx`
@@ -1097,7 +976,7 @@ Display user list with status toggle and delete actions."
 
 ---
 
-## Task 13: Frontend - Add User Management Tab to Settings
+## Task 12: Frontend - Add User Management Tab to Settings
 
 **Files:**
 - Modify: `src/components/Settings.jsx`
@@ -1155,7 +1034,7 @@ Admin users can now manage other users from Settings."
 
 ---
 
-## Task 14: Create data Directory and Add to .gitignore
+## Task 13: Create data Directory and Add to .gitignore
 
 **Files:**
 - Modify: `.gitignore`
@@ -1187,7 +1066,7 @@ User data will be stored in data/ directory."
 
 ---
 
-## Task 15: Integration Testing
+## Task 14: Integration Testing
 
 ### Step 1: Start the server
 
@@ -1223,7 +1102,7 @@ git commit -m "fix: integration testing fixes"
 
 ---
 
-## Task 16: Final Verification and Documentation
+## Task 15: Final Verification and Documentation
 
 ### Step 1: Run build
 
@@ -1247,8 +1126,7 @@ git push -u origin feature/multi-user
 
 **Backend:**
 - Database schema extended with uuid, role, status columns
-- User directories service for per-user data isolation
-- Claude config watcher for onboarding setup
+- User directories service for per-user data isolation (creates .claude.json with hasCompletedOnboarding=true on registration)
 - Admin routes for user management
 - Auth middleware checks user status
 - Claude SDK uses per-user config directories
@@ -1263,9 +1141,9 @@ git push -u origin feature/multi-user
 ```
 data/
 ├── user-data/{uuid}/
-│   ├── .claude/
-│   │   └── settings.json
-│   └── .claude.json
+│   └── .claude/
+│       ├── .claude.json
+│       └── settings.json
 └── user-projects/{uuid}/
     └── {project-name}/
 ```

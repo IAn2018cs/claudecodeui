@@ -2,7 +2,6 @@ import express from 'express';
 import { userDb } from '../database/db.js';
 import { authenticateToken } from '../middleware/auth.js';
 import { deleteUserDirectories } from '../services/user-directories.js';
-import { stopWatcher } from '../services/claude-config-watcher.js';
 
 const router = express.Router();
 
@@ -72,11 +71,8 @@ router.delete('/users/:id', async (req, res) => {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    // Stop config watcher
+    // Delete user directories
     if (user.uuid) {
-      stopWatcher(user.uuid);
-
-      // Delete user directories
       await deleteUserDirectories(user.uuid);
     }
 

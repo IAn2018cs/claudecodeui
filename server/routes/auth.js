@@ -4,7 +4,6 @@ import { v4 as uuidv4 } from 'uuid';
 import { userDb, db } from '../database/db.js';
 import { generateToken, authenticateToken } from '../middleware/auth.js';
 import { initUserDirectories } from '../services/user-directories.js';
-import { watchUserClaudeConfig } from '../services/claude-config-watcher.js';
 
 const router = express.Router();
 
@@ -49,11 +48,8 @@ router.post('/register', async (req, res) => {
     // Create user with full details
     const user = userDb.createUserFull(username, passwordHash, uuid, role);
 
-    // Initialize user directories
+    // Initialize user directories (creates .claude.json with hasCompletedOnboarding=true)
     await initUserDirectories(uuid);
-
-    // Start watching for .claude.json
-    watchUserClaudeConfig(uuid);
 
     // Generate token
     const token = generateToken(user);
