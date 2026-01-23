@@ -1051,6 +1051,21 @@ function handleShellConnection(ws, userData) {
                     console.log('Terminal resize requested:', data.cols, 'x', data.rows);
                     shellProcess.resize(data.cols, data.rows);
                 }
+            } else if (data.type === 'terminate') {
+                // Handle terminate request - kill the PTY process
+                console.log('🛑 Terminate request received for session:', ptySessionKey);
+                const session = ptySessionsMap.get(ptySessionKey);
+                if (session) {
+                    if (session.timeoutId) {
+                        clearTimeout(session.timeoutId);
+                    }
+                    if (session.pty && session.pty.kill) {
+                        session.pty.kill();
+                    }
+                    ptySessionsMap.delete(ptySessionKey);
+                    console.log('✅ PTY session terminated:', ptySessionKey);
+                }
+                shellProcess = null;
             }
         } catch (error) {
             console.error('[ERROR] Shell WebSocket error:', error.message);

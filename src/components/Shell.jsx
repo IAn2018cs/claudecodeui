@@ -153,6 +153,12 @@ function Shell({ selectedProject, selectedSession, initialCommand, isPlainShell 
 
   const disconnectFromShell = useCallback(() => {
     if (ws.current) {
+      // Send terminate message to kill the PTY process on server
+      if (ws.current.readyState === WebSocket.OPEN) {
+        ws.current.send(JSON.stringify({
+          type: 'terminate'
+        }));
+      }
       ws.current.close();
       ws.current = null;
     }
@@ -187,6 +193,12 @@ function Shell({ selectedProject, selectedSession, initialCommand, isPlainShell 
     setIsRestarting(true);
 
     if (ws.current) {
+      // Send terminate message to kill the PTY process on server
+      if (ws.current.readyState === WebSocket.OPEN) {
+        ws.current.send(JSON.stringify({
+          type: 'terminate'
+        }));
+      }
       ws.current.close();
       ws.current = null;
     }
