@@ -298,8 +298,12 @@ async function getProjects(userUuid) {
   }
 
   // Add manually configured projects that don't exist as folders yet
+  // We need to check by actual path (not just encoded project name) to avoid duplicates
+  // because Claude CLI may use a different encoding than addProjectManually
+  const existingPaths = new Set(projects.map(p => p.fullPath));
+
   for (const [projectName, projectConfig] of Object.entries(config)) {
-    if (!existingProjects.has(projectName) && projectConfig.manuallyAdded) {
+    if (projectConfig.manuallyAdded) {
       // Use the original path if available, otherwise extract from potential sessions
       let actualProjectDir = projectConfig.originalPath;
 
@@ -310,6 +314,17 @@ async function getProjects(userUuid) {
           // Fall back to decoded project name
           actualProjectDir = projectName.replace(/-/g, '/');
         }
+      }
+
+      // Check if this project already exists by comparing actual paths
+      // This prevents duplicates when Claude CLI creates a folder with a different encoded name
+      if (existingPaths.has(actualProjectDir)) {
+        continue;
+      }
+
+      // Also check if the encoded name already exists
+      if (existingProjects.has(projectName)) {
+        continue;
       }
 
       const project = {
