@@ -13,6 +13,7 @@ import { authenticatedFetch } from '../utils/api';
 import PermissionsContent from './settings/PermissionsContent';
 import McpServersContent from './settings/McpServersContent';
 import UserManagement from './settings/UserManagement';
+import UsageDashboard from './UsageDashboard';
 
 function Settings({ isOpen, onClose, projects = [], initialTab = 'agents' }) {
   const navigate = useNavigate();
@@ -54,6 +55,7 @@ function Settings({ isOpen, onClose, projects = [], initialTab = 'agents' }) {
   const [activeTab, setActiveTab] = useState(initialTab);
   const [jsonValidationError, setJsonValidationError] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('permissions'); // 'permissions' or 'mcp'
+  const [showUsageDashboard, setShowUsageDashboard] = useState(false);
 
   // Code Editor settings
   const [codeEditorTheme, setCodeEditorTheme] = useState(() =>
@@ -255,6 +257,7 @@ function Settings({ isOpen, onClose, projects = [], initialTab = 'agents' }) {
     if (isOpen) {
       loadSettings();
       setActiveTab(initialTab);
+      setShowUsageDashboard(false);
     }
   }, [isOpen, initialTab]);
 
@@ -884,7 +887,11 @@ function Settings({ isOpen, onClose, projects = [], initialTab = 'agents' }) {
             {/* Users Tab */}
             {activeTab === 'users' && isAdmin && (
               <div className="space-y-6 md:space-y-8">
-                <UserManagement />
+                {showUsageDashboard ? (
+                  <UsageDashboard onBack={() => setShowUsageDashboard(false)} />
+                ) : (
+                  <UserManagement onNavigateToUsage={() => setShowUsageDashboard(true)} />
+                )}
               </div>
             )}
 

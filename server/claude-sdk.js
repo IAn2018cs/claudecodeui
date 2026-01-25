@@ -20,6 +20,8 @@ import { promises as fs } from 'fs';
 import path from 'path';
 import { CLAUDE_MODELS } from '../shared/modelConstants.js';
 import { getUserPaths } from './services/user-directories.js';
+import { usageDb } from './database/db.js';
+import { calculateCost, normalizeModelName } from './services/pricing.js';
 
 // Session tracking: Map of session IDs to active query instances
 const activeSessions = new Map();
@@ -628,6 +630,61 @@ async function queryClaudeSDK(command, options = {}, ws) {
             type: 'token-budget',
             data: tokenBudget
           });
+        }
+
+        // Record usage to database for admin statistics
+        if (userUuid && message.modelUsage) {
+          try {
+            const modelKey = Object.keys(message.modelUsage)[0];
+            const modelData = message.modelUsage[modelKey];
+
+            if (modelData) {
+              const inputTokens = modelData.inputTokens || 0;
+              const outputTokens = modelData.outputTokens || 0;
+              const cacheReadTokens = modelData.cacheReadInputTokens || 0;
+              const cacheCreationTokens = modelData.cacheCreationInputTokens || 0;
+
+              const normalizedModel = normalizeModelName(modelKey);
+              const cost = calculateCost({
+                model: normalizedModel,
+                inputTokens,
+                outputTokens,
+                cacheReadTokens,
+                cacheCreationTokens
+              });
+
+              // Insert usage record
+              usageDb.insertRecord({
+                user_uuid: userUuid,
+                session_id: capturedSessionId,
+                model: normalizedModel,
+                input_tokens: inputTokens,
+                output_tokens: outputTokens,
+                cache_read_tokens: cacheReadTokens,
+                cache_creation_tokens: cacheCreationTokens,
+                cost_usd: cost,
+                source: 'sdk'
+              });
+
+              // Update daily summary
+              const today = new Date().toISOString().split('T')[0];
+              usageDb.upsertDailySummary({
+                user_uuid: userUuid,
+                date: today,
+                model: normalizedModel,
+                total_input_tokens: inputTokens,
+                total_output_tokens: outputTokens,
+                total_cost_usd: cost,
+                session_count: 0, // Session count updated separately
+                request_count: 1
+              });
+
+              console.log(`Recorded usage for user ${userUuid}: ${normalizedModel}, cost: $${cost.toFixed(6)}`);
+            }
+          } catch (usageError) {
+            console.error('Error recording usage:', usageError);
+            // Don't throw - usage recording failure shouldn't break the query
+          }
         }
       }
     }

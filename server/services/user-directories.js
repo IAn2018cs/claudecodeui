@@ -36,6 +36,10 @@ export async function initUserDirectories(userUuid) {
   await fs.mkdir(paths.claudeDir, { recursive: true });
   await fs.mkdir(paths.projectsDir, { recursive: true });
 
+  // Create projects directory for Claude session files
+  const projectsDir = path.join(paths.claudeDir, 'projects');
+  await fs.mkdir(projectsDir, { recursive: true });
+
   // Create .claude.json with hasCompletedOnboarding=true
   const claudeJsonPath = path.join(paths.claudeDir, '.claude.json');
   const claudeConfig = {
@@ -54,6 +58,15 @@ export async function initUserDirectories(userUuid) {
   };
   await fs.writeFile(destSettings, JSON.stringify(settingsConfig, null, 2));
   console.log(`Created settings.json for user ${userUuid}`);
+
+  // Create usage scan state file (tracks last scanned position)
+  const usageScanStatePath = path.join(paths.claudeDir, '.usage-scan-state.json');
+  const scanState = {
+    lastScanTime: null,
+    scannedSessions: {}
+  };
+  await fs.writeFile(usageScanStatePath, JSON.stringify(scanState, null, 2));
+  console.log(`Created .usage-scan-state.json for user ${userUuid}`);
 
   return paths;
 }

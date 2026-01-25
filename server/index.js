@@ -51,9 +51,11 @@ import mcpUtilsRoutes from './routes/mcp-utils.js';
 import commandsRoutes from './routes/commands.js';
 import projectsRoutes from './routes/projects.js';
 import adminRoutes from './routes/admin.js';
+import usageRoutes from './routes/usage.js';
 import { initializeDatabase } from './database/db.js';
 import { validateApiKey, authenticateToken, authenticateWebSocket } from './middleware/auth.js';
 import { getUserPaths } from './services/user-directories.js';
+import { startUsageScanner } from './services/usage-scanner.js';
 
 // File system watcher for projects folder - per user
 const userWatchers = new Map(); // Map<userUuid, { watcher, clients: Set<ws> }>
@@ -266,6 +268,9 @@ app.use('/api/commands', authenticateToken, commandsRoutes);
 
 // Admin API Routes (protected, admin only)
 app.use('/api/admin', adminRoutes);
+
+// Usage API Routes (protected, admin only)
+app.use('/api/admin/usage', usageRoutes);
 
 // Static files served after API routes
 // Add cache control: HTML files should not be cached, but assets can be cached
@@ -1716,6 +1721,9 @@ async function startServer() {
             console.log(`${c.info('[INFO]')} Installed at: ${c.dim(appInstallPath)}`);
             console.log(`${c.tip('[TIP]')}  Run "cloudcli status" for full configuration details`);
             console.log('');
+
+            // Start usage scanner service
+            startUsageScanner();
 
             // Projects watcher is now per-user, initialized when user connects via WebSocket
         });

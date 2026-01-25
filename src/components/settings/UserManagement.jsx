@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
-import { Trash2, UserCheck, UserX, Shield, User } from 'lucide-react';
+import { Trash2, UserCheck, UserX, Shield, User, BarChart3 } from 'lucide-react';
 import { authenticatedFetch } from '../../utils/api';
 
-function UserManagement() {
+function UserManagement({ onNavigateToUsage }) {
   const [users, setUsers] = useState([]);
+  const [usageData, setUsageData] = useState({});
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(null);
 
@@ -23,9 +24,37 @@ function UserManagement() {
     }
   };
 
+  const fetchUsageData = async () => {
+    try {
+      const response = await authenticatedFetch('/api/admin/usage/summary');
+      if (response.ok) {
+        const data = await response.json();
+        // Create a map of uuid to usage data
+        const usageMap = {};
+        for (const user of data.users) {
+          usageMap[user.user_uuid] = {
+            total_cost: user.total_cost || 0,
+            total_requests: user.total_requests || 0,
+            last_active: user.last_active
+          };
+        }
+        setUsageData(usageMap);
+      }
+    } catch (error) {
+      console.error('Error fetching usage data:', error);
+    }
+  };
+
   useEffect(() => {
     fetchUsers();
+    fetchUsageData();
   }, []);
+
+  const formatCost = (cost) => {
+    if (!cost || cost === 0) return '$0.00';
+    if (cost < 0.01) return `$${cost.toFixed(4)}`;
+    return `$${cost.toFixed(2)}`;
+  };
 
   const toggleStatus = async (userId, currentStatus) => {
     const newStatus = currentStatus === 'active' ? 'disabled' : 'active';
@@ -72,7 +101,20 @@ function UserManagement() {
 
   return (
     <div className="space-y-4">
-      <h3 className="text-lg font-semibold text-foreground">User Management</h3>
+      <div className="flex items-center justify-between">
+        <h3 className="text-lg font-semibold text-foreground">User Management</h3>
+        {onNavigateToUsage && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onNavigateToUsage}
+            className="flex items-center gap-2"
+          >
+            <BarChart3 className="w-4 h-4" />
+            Usage Dashboard
+          </Button>
+        )}
+      </div>
 
       <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
         <table className="w-full">
@@ -81,6 +123,7 @@ function UserManagement() {
               <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">User</th>
               <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Role</th>
               <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Status</th>
+              <th className="px-4 py-3 text-right text-sm font-medium text-muted-foreground">Cost</th>
               <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Created</th>
               <th className="px-4 py-3 text-right text-sm font-medium text-muted-foreground">Actions</th>
             </tr>
@@ -107,6 +150,11 @@ function UserManagement() {
                   <Badge variant={user.status === 'active' ? 'success' : 'destructive'}>
                     {user.status === 'active' ? 'Active' : 'Disabled'}
                   </Badge>
+                </td>
+                <td className="px-4 py-3 text-right">
+                  <span className="font-mono text-sm text-foreground">
+                    {formatCost(usageData[user.uuid]?.total_cost)}
+                  </span>
                 </td>
                 <td className="px-4 py-3 text-sm text-muted-foreground">
                   {new Date(user.created_at).toLocaleDateString()}
