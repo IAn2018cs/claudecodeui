@@ -77,7 +77,7 @@ function UserManagement({ onNavigateToUsage }) {
   };
 
   const deleteUser = async (userId, username) => {
-    if (!confirm(`Are you sure you want to delete user "${username}"? This will delete all their data.`)) {
+    if (!confirm(`确定要删除用户 "${username}"？这将删除其所有数据。`)) {
       return;
     }
     setActionLoading(userId);
@@ -96,13 +96,13 @@ function UserManagement({ onNavigateToUsage }) {
   };
 
   if (loading) {
-    return <div className="text-center py-8 text-muted-foreground">Loading users...</div>;
+    return <div className="text-center py-8 text-muted-foreground">正在加载用户...</div>;
   }
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold text-foreground">User Management</h3>
+        <h3 className="text-lg font-semibold text-foreground">用户管理</h3>
         {onNavigateToUsage && (
           <Button
             variant="outline"
@@ -111,7 +111,7 @@ function UserManagement({ onNavigateToUsage }) {
             className="flex items-center gap-2"
           >
             <BarChart3 className="w-4 h-4" />
-            Usage Dashboard
+            使用量统计
           </Button>
         )}
       </div>
@@ -120,12 +120,12 @@ function UserManagement({ onNavigateToUsage }) {
         <table className="w-full">
           <thead className="bg-gray-50 dark:bg-gray-900/50">
             <tr>
-              <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">User</th>
-              <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Role</th>
-              <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Status</th>
-              <th className="px-4 py-3 text-right text-sm font-medium text-muted-foreground">Cost</th>
-              <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Created</th>
-              <th className="px-4 py-3 text-right text-sm font-medium text-muted-foreground">Actions</th>
+              <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">用户</th>
+              <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">角色</th>
+              <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">状态</th>
+              <th className="px-4 py-3 text-right text-sm font-medium text-muted-foreground">费用</th>
+              <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">创建时间</th>
+              <th className="px-4 py-3 text-right text-sm font-medium text-muted-foreground">操作</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
@@ -143,12 +143,12 @@ function UserManagement({ onNavigateToUsage }) {
                 </td>
                 <td className="px-4 py-3">
                   <Badge variant={user.role === 'admin' ? 'default' : 'secondary'}>
-                    {user.role === 'admin' ? 'Admin' : 'User'}
+                    {user.role === 'admin' ? '管理员' : '用户'}
                   </Badge>
                 </td>
                 <td className="px-4 py-3">
                   <Badge variant={user.status === 'active' ? 'success' : 'destructive'}>
-                    {user.status === 'active' ? 'Active' : 'Disabled'}
+                    {user.status === 'active' ? '活跃' : '已禁用'}
                   </Badge>
                 </td>
                 <td className="px-4 py-3 text-right">
@@ -168,7 +168,7 @@ function UserManagement({ onNavigateToUsage }) {
                           size="sm"
                           onClick={() => toggleStatus(user.id, user.status)}
                           disabled={actionLoading === user.id}
-                          title={user.status === 'active' ? 'Disable user' : 'Enable user'}
+                          title={user.status === 'active' ? '禁用用户' : '启用用户'}
                         >
                           {user.status === 'active' ? (
                             <UserX className="w-4 h-4 text-orange-500" />
@@ -181,7 +181,7 @@ function UserManagement({ onNavigateToUsage }) {
                           size="sm"
                           onClick={() => deleteUser(user.id, user.username)}
                           disabled={actionLoading === user.id}
-                          title="Delete user"
+                          title="删除用户"
                         >
                           <Trash2 className="w-4 h-4 text-red-500" />
                         </Button>

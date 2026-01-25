@@ -47,7 +47,7 @@ const TodoList = ({ todos, isResult = false }) => {
     <div className="space-y-3">
       {isResult && (
         <div className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
-          Todo List ({todos.length} {todos.length === 1 ? 'item' : 'items'})
+          待办事项列表 ({todos.length} 项)
         </div>
       )}
       

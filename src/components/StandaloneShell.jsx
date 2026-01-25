@@ -52,8 +52,8 @@ function StandaloneShell({
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 002 2z" />
             </svg>
           </div>
-          <h3 className="text-lg font-semibold mb-2">No Project Selected</h3>
-          <p>A project is required to open a shell</p>
+          <h3 className="text-lg font-semibold mb-2">未选择项目</h3>
+          <p>打开 Shell 需要一个项目</p>
         </div>
       </div>
     );
@@ -68,14 +68,14 @@ function StandaloneShell({
             <div className="flex items-center space-x-2">
               <h3 className="text-sm font-medium text-gray-200">{title}</h3>
               {isCompleted && (
-                <span className="text-xs text-green-400">(Completed)</span>
+                <span className="text-xs text-green-400">（已完成）</span>
               )}
             </div>
             {onClose && (
               <button
                 onClick={onClose}
                 className="text-gray-400 hover:text-white"
-                title="Close"
+                title="关闭"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />

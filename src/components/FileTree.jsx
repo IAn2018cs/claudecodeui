@@ -273,7 +273,7 @@ function FileTree({ selectedProject }) {
               e.stopPropagation();
               setDeleteConfirm({ path: item.path, name: item.name, type: item.type });
             }}
-            title={`Delete ${item.type === 'directory' ? 'folder' : 'file'}`}
+            title={`删除${item.type === 'directory' ? '文件夹' : '文件'}`}
           >
             <Trash2 className="w-3.5 h-3.5 text-muted-foreground hover:text-destructive" />
           </Button>
@@ -376,7 +376,7 @@ function FileTree({ selectedProject }) {
                 e.stopPropagation();
                 setDeleteConfirm({ path: item.path, name: item.name, type: item.type });
               }}
-              title={`Delete ${item.type === 'directory' ? 'folder' : 'file'}`}
+              title={`删除${item.type === 'directory' ? '文件夹' : '文件'}`}
             >
               <Trash2 className="w-3.5 h-3.5 text-muted-foreground hover:text-destructive" />
             </Button>
@@ -449,7 +449,7 @@ function FileTree({ selectedProject }) {
                 e.stopPropagation();
                 setDeleteConfirm({ path: item.path, name: item.name, type: item.type });
               }}
-              title={`Delete ${item.type === 'directory' ? 'folder' : 'file'}`}
+              title={`删除${item.type === 'directory' ? '文件夹' : '文件'}`}
             >
               <Trash2 className="w-3.5 h-3.5 text-muted-foreground hover:text-destructive" />
             </Button>
@@ -468,7 +468,7 @@ function FileTree({ selectedProject }) {
     return (
       <div className="h-full flex items-center justify-center">
         <div className="text-gray-500 dark:text-gray-400">
-          Loading files...
+          加载文件中...
         </div>
       </div>
     );
@@ -481,21 +481,21 @@ function FileTree({ selectedProject }) {
       {/* Drag overlay */}
       {isDragActive && (
         <div className="absolute inset-0 bg-primary/10 flex items-center justify-center z-10 pointer-events-none">
-          <div className="text-primary font-medium">Drop files to upload</div>
+          <div className="text-primary font-medium">拖放文件以上传</div>
         </div>
       )}
 
       {/* Header with Search and View Mode Toggle */}
       <div className="p-4 border-b border-border space-y-3">
         <div className="flex items-center justify-between">
-          <h3 className="text-sm font-medium text-foreground">Files</h3>
+          <h3 className="text-sm font-medium text-foreground">文件</h3>
           <div className="flex gap-1">
             <Button
               variant="ghost"
               size="sm"
               className="h-8 w-8 p-0"
               onClick={() => setShowUploadModal(true)}
-              title="Upload files"
+              title="上传文件"
             >
               <Upload className="w-4 h-4" />
             </Button>
@@ -504,7 +504,7 @@ function FileTree({ selectedProject }) {
               size="sm"
               className="h-8 w-8 p-0"
               onClick={() => changeViewMode('simple')}
-              title="Simple view"
+              title="简单视图"
             >
               <List className="w-4 h-4" />
             </Button>
@@ -513,7 +513,7 @@ function FileTree({ selectedProject }) {
               size="sm"
               className="h-8 w-8 p-0"
               onClick={() => changeViewMode('compact')}
-              title="Compact view"
+              title="紧凑视图"
             >
               <Eye className="w-4 h-4" />
             </Button>
@@ -522,7 +522,7 @@ function FileTree({ selectedProject }) {
               size="sm"
               className="h-8 w-8 p-0"
               onClick={() => changeViewMode('detailed')}
-              title="Detailed view"
+              title="详细视图"
             >
               <TableProperties className="w-4 h-4" />
             </Button>
@@ -534,7 +534,7 @@ function FileTree({ selectedProject }) {
           <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
             type="text"
-            placeholder="Search files and folders..."
+            placeholder="搜索文件和文件夹..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="pl-8 pr-8 h-8 text-sm"
@@ -545,7 +545,7 @@ function FileTree({ selectedProject }) {
               size="sm"
               className="absolute right-1 top-1/2 transform -translate-y-1/2 h-6 w-6 p-0 hover:bg-accent"
               onClick={() => setSearchQuery('')}
-              title="Clear search"
+              title="清除搜索"
             >
               <X className="w-3 h-3" />
             </Button>
@@ -557,10 +557,10 @@ function FileTree({ selectedProject }) {
       {viewMode === 'detailed' && filteredFiles.length > 0 && (
         <div className="px-4 pt-2 pb-1 border-b border-border">
           <div className="grid grid-cols-12 gap-2 px-2 text-xs font-medium text-muted-foreground">
-            <div className="col-span-4">Name</div>
-            <div className="col-span-2">Size</div>
-            <div className="col-span-3">Modified</div>
-            <div className="col-span-2">Permissions</div>
+            <div className="col-span-4">名称</div>
+            <div className="col-span-2">大小</div>
+            <div className="col-span-3">修改时间</div>
+            <div className="col-span-2">权限</div>
             <div className="col-span-1"></div>
           </div>
         </div>
@@ -572,9 +572,9 @@ function FileTree({ selectedProject }) {
             <div className="w-12 h-12 bg-muted rounded-lg flex items-center justify-center mx-auto mb-3">
               <Folder className="w-6 h-6 text-muted-foreground" />
             </div>
-            <h4 className="font-medium text-foreground mb-1">No files found</h4>
+            <h4 className="font-medium text-foreground mb-1">未找到文件</h4>
             <p className="text-sm text-muted-foreground">
-              Check if the project path is accessible
+              检查项目路径是否可访问
             </p>
           </div>
         ) : filteredFiles.length === 0 && searchQuery ? (
@@ -582,9 +582,9 @@ function FileTree({ selectedProject }) {
             <div className="w-12 h-12 bg-muted rounded-lg flex items-center justify-center mx-auto mb-3">
               <Search className="w-6 h-6 text-muted-foreground" />
             </div>
-            <h4 className="font-medium text-foreground mb-1">No matches found</h4>
+            <h4 className="font-medium text-foreground mb-1">无匹配结果</h4>
             <p className="text-sm text-muted-foreground">
-              Try a different search term or clear the search
+              尝试不同的搜索条件或清除搜索
             </p>
           </div>
         ) : (
@@ -618,7 +618,7 @@ function FileTree({ selectedProject }) {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-card rounded-lg shadow-xl p-6 w-full max-w-md mx-4 border border-border">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-medium text-foreground">Upload Files</h3>
+              <h3 className="text-lg font-medium text-foreground">上传文件</h3>
               <Button
                 variant="ghost"
                 size="sm"
@@ -642,8 +642,8 @@ function FileTree({ selectedProject }) {
               )}
             >
               <Upload className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-              <p className="text-foreground">Drag files here or click to browse</p>
-              <p className="text-sm text-muted-foreground mt-1">Max 20 files per upload</p>
+              <p className="text-foreground">将文件拖到此处或点击浏览</p>
+              <p className="text-sm text-muted-foreground mt-1">每次上传最多 20 个文件</p>
             </div>
 
             {/* Upload progress */}
@@ -674,7 +674,7 @@ function FileTree({ selectedProject }) {
             {/* Upload button */}
             {isUploading && (
               <div className="mt-4 text-center text-sm text-muted-foreground">
-                Uploading...
+                上传中...
               </div>
             )}
           </div>
@@ -685,12 +685,12 @@ function FileTree({ selectedProject }) {
       {deleteConfirm && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-card rounded-lg shadow-xl p-6 w-full max-w-sm mx-4 border border-border">
-            <h3 className="text-lg font-medium text-foreground mb-2">Confirm Delete</h3>
+            <h3 className="text-lg font-medium text-foreground mb-2">确认删除</h3>
             <p className="text-sm text-muted-foreground mb-4">
-              Are you sure you want to delete {deleteConfirm.type === 'directory' ? 'folder' : 'file'}{' '}
-              <span className="font-medium text-foreground">"{deleteConfirm.name}"</span>?
+              确定要删除{deleteConfirm.type === 'directory' ? '文件夹' : '文件'}{' '}
+              <span className="font-medium text-foreground">"{deleteConfirm.name}"</span>？
               {deleteConfirm.type === 'directory' && (
-                <span className="block mt-1 text-destructive">This will delete all contents inside.</span>
+                <span className="block mt-1 text-destructive">这将删除内部的所有内容。</span>
               )}
             </p>
             <div className="flex justify-end gap-2">
@@ -699,14 +699,14 @@ function FileTree({ selectedProject }) {
                 size="sm"
                 onClick={() => setDeleteConfirm(null)}
               >
-                Cancel
+                取消
               </Button>
               <Button
                 variant="destructive"
                 size="sm"
                 onClick={() => handleDelete(deleteConfirm.path)}
               >
-                Delete
+                删除
               </Button>
             </div>
           </div>

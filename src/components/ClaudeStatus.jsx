@@ -44,7 +44,7 @@ function ClaudeStatus({ status, onAbort, isLoading, provider = 'claude' }) {
   if (!isLoading) return null;
   
   // Clever action words that cycle
-  const actionWords = ['Thinking', 'Processing', 'Analyzing', 'Working', 'Computing', 'Reasoning'];
+  const actionWords = ['思考中', '处理中', '分析中', '工作中', '计算中', '推理中'];
   const actionIndex = Math.floor(elapsedTime / 3) % actionWords.length;
   
   // Parse status data
@@ -81,7 +81,7 @@ function ClaudeStatus({ status, onAbort, isLoading, provider = 'claude' }) {
                   </>
                 )}
                 <span className="text-gray-500 hidden sm:inline">·</span>
-                <span className="text-gray-400 text-xs sm:text-sm hidden sm:inline">esc to stop</span>
+                <span className="text-gray-400 text-xs sm:text-sm hidden sm:inline">按 esc 停止</span>
               </div>
             </div>
           </div>
@@ -96,7 +96,7 @@ function ClaudeStatus({ status, onAbort, isLoading, provider = 'claude' }) {
             <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
-            <span className="hidden sm:inline">Stop</span>
+            <span className="hidden sm:inline">停止</span>
           </button>
         )}
       </div>

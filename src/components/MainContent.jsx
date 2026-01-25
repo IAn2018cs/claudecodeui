@@ -152,8 +152,8 @@ function MainContent({
                 }}
               />
             </div>
-            <h2 className="text-xl font-semibold mb-2">Loading Claude Code UI</h2>
-            <p>Setting up your workspace...</p>
+            <h2 className="text-xl font-semibold mb-2">正在加载 Claude Code UI</h2>
+            <p>正在设置您的工作区...</p>
           </div>
         </div>
       </div>
@@ -185,13 +185,13 @@ function MainContent({
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-5l-2-2H5a2 2 0 00-2 2z" />
               </svg>
             </div>
-            <h2 className="text-2xl font-semibold mb-3 text-gray-900 dark:text-white">Choose Your Project</h2>
+            <h2 className="text-2xl font-semibold mb-3 text-gray-900 dark:text-white">选择您的项目</h2>
             <p className="text-gray-600 dark:text-gray-300 mb-6 leading-relaxed">
-              Select a project from the sidebar to start coding with Claude. Each project contains your chat sessions and file history.
+              从侧边栏选择一个项目，开始与 Claude 进行编码。每个项目包含您的聊天会话和文件历史。
             </p>
             <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 border border-blue-200 dark:border-blue-800">
               <p className="text-sm text-blue-700 dark:text-blue-300">
-                💡 <strong>Tip:</strong> {isMobile ? 'Tap the menu button above to access projects' : 'Create a new project by clicking the folder icon in the sidebar'}
+                💡 <strong>提示：</strong> {isMobile ? '点击上方菜单按钮访问项目' : '点击侧边栏中的文件夹图标创建新项目'}
               </p>
             </div>
           </div>
@@ -232,7 +232,7 @@ function MainContent({
                 {activeTab === 'chat' && selectedSession ? (
                   <div className="min-w-0">
                     <h2 className="text-sm sm:text-base font-semibold text-gray-900 dark:text-white whitespace-nowrap overflow-x-auto scrollbar-hide">
-                      {selectedSession.summary || 'New Session'}
+                      {selectedSession.summary || '新会话'}
                     </h2>
                     <div className="text-xs text-gray-500 dark:text-gray-400 truncate">
                       {selectedProject.displayName}
@@ -241,7 +241,7 @@ function MainContent({
                 ) : activeTab === 'chat' && !selectedSession ? (
                   <div className="min-w-0">
                     <h2 className="text-sm sm:text-base font-semibold text-gray-900 dark:text-white">
-                      New Session
+                      新会话
                     </h2>
                     <div className="text-xs text-gray-500 dark:text-gray-400 truncate">
                       {selectedProject.displayName}
@@ -250,7 +250,7 @@ function MainContent({
                 ) : (
                   <div className="min-w-0">
                     <h2 className="text-sm sm:text-base font-semibold text-gray-900 dark:text-white">
-                      {activeTab === 'files' ? 'Project Files' : 'Project'}
+                      {activeTab === 'files' ? '项目文件' : '项目'}
                     </h2>
                     <div className="text-xs text-gray-500 dark:text-gray-400 truncate">
                       {selectedProject.displayName}

@@ -103,7 +103,7 @@ const CommandMenu = ({ commands = [], selectedIndex = -1, onSelect, onClose, pos
           textAlign: 'center'
         }}
       >
-        No commands available
+        暂无可用命令
       </div>
     );
   }
@@ -133,11 +133,11 @@ const CommandMenu = ({ commands = [], selectedIndex = -1, onSelect, onClose, pos
   const orderedNamespaces = namespaceOrder.filter(ns => groupedCommands[ns]);
 
   const namespaceLabels = {
-    frequent: '⭐ Frequently Used',
-    builtin: 'Built-in Commands',
-    project: 'Project Commands',
-    user: 'User Commands',
-    other: 'Other Commands'
+    frequent: '⭐ 常用命令',
+    builtin: '内置命令',
+    project: '项目命令',
+    user: '用户命令',
+    other: '其他命令'
   };
 
   // Calculate global index for each command

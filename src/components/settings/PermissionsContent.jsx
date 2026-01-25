@@ -78,7 +78,7 @@ function ClaudePermissions({
         <div className="flex items-center gap-3">
           <AlertTriangle className="w-5 h-5 text-orange-500" />
           <h3 className="text-lg font-medium text-foreground">
-            Permission Settings
+            权限设置
           </h3>
         </div>
         <div className="bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-lg p-4">
@@ -91,10 +91,10 @@ function ClaudePermissions({
             />
             <div>
               <div className="font-medium text-orange-900 dark:text-orange-100">
-                Skip permission prompts (use with caution)
+                跳过权限提示（请谨慎使用）
               </div>
               <div className="text-sm text-orange-700 dark:text-orange-300">
-                Equivalent to --dangerously-skip-permissions flag
+                等同于 --dangerously-skip-permissions 标志
               </div>
             </div>
           </label>
@@ -106,11 +106,11 @@ function ClaudePermissions({
         <div className="flex items-center gap-3">
           <Shield className="w-5 h-5 text-green-500" />
           <h3 className="text-lg font-medium text-foreground">
-            Allowed Tools
+            允许的工具
           </h3>
         </div>
         <p className="text-sm text-muted-foreground">
-          Tools that are automatically allowed without prompting for permission
+          自动允许而不提示权限的工具
         </p>
 
         <div className="flex flex-col sm:flex-row gap-2">
@@ -133,14 +133,14 @@ function ClaudePermissions({
             className="h-10 px-4"
           >
             <Plus className="w-4 h-4 mr-2 sm:mr-0" />
-            <span className="sm:hidden">Add</span>
+            <span className="sm:hidden">添加</span>
           </Button>
         </div>
 
         {/* Quick add buttons */}
         <div className="space-y-2">
           <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
-            Quick add common tools:
+            快速添加常用工具：
           </p>
           <div className="flex flex-wrap gap-2">
             {commonClaudeTools.map(tool => (
@@ -176,7 +176,7 @@ function ClaudePermissions({
           ))}
           {allowedTools.length === 0 && (
             <div className="text-center py-6 text-gray-500 dark:text-gray-400">
-              No allowed tools configured
+              未配置允许的工具
             </div>
           )}
         </div>
@@ -187,11 +187,11 @@ function ClaudePermissions({
         <div className="flex items-center gap-3">
           <AlertTriangle className="w-5 h-5 text-red-500" />
           <h3 className="text-lg font-medium text-foreground">
-            Blocked Tools
+            阻止的工具
           </h3>
         </div>
         <p className="text-sm text-muted-foreground">
-          Tools that are automatically blocked without prompting for permission
+          自动阻止而不提示权限的工具
         </p>
 
         <div className="flex flex-col sm:flex-row gap-2">
@@ -214,7 +214,7 @@ function ClaudePermissions({
             className="h-10 px-4"
           >
             <Plus className="w-4 h-4 mr-2 sm:mr-0" />
-            <span className="sm:hidden">Add</span>
+            <span className="sm:hidden">添加</span>
           </Button>
         </div>
 
@@ -236,7 +236,7 @@ function ClaudePermissions({
           ))}
           {disallowedTools.length === 0 && (
             <div className="text-center py-6 text-gray-500 dark:text-gray-400">
-              No blocked tools configured
+              未配置阻止的工具
             </div>
           )}
         </div>
@@ -245,13 +245,13 @@ function ClaudePermissions({
       {/* Help Section */}
       <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
         <h4 className="font-medium text-blue-900 dark:text-blue-100 mb-2">
-          Tool Pattern Examples:
+          工具模式示例：
         </h4>
         <ul className="text-sm text-blue-800 dark:text-blue-200 space-y-1">
-          <li><code className="bg-blue-100 dark:bg-blue-800 px-1 rounded">"Bash(git log:*)"</code> - Allow all git log commands</li>
-          <li><code className="bg-blue-100 dark:bg-blue-800 px-1 rounded">"Bash(git diff:*)"</code> - Allow all git diff commands</li>
-          <li><code className="bg-blue-100 dark:bg-blue-800 px-1 rounded">"Write"</code> - Allow all Write tool usage</li>
-          <li><code className="bg-blue-100 dark:bg-blue-800 px-1 rounded">"Bash(rm:*)"</code> - Block all rm commands (dangerous)</li>
+          <li><code className="bg-blue-100 dark:bg-blue-800 px-1 rounded">"Bash(git log:*)"</code> - 允许所有 git log 命令</li>
+          <li><code className="bg-blue-100 dark:bg-blue-800 px-1 rounded">"Bash(git diff:*)"</code> - 允许所有 git diff 命令</li>
+          <li><code className="bg-blue-100 dark:bg-blue-800 px-1 rounded">"Write"</code> - 允许所有 Write 工具使用</li>
+          <li><code className="bg-blue-100 dark:bg-blue-800 px-1 rounded">"Bash(rm:*)"</code> - 阻止所有 rm 命令（危险）</li>
         </ul>
       </div>
     </div>
@@ -300,7 +300,7 @@ function CursorPermissions({
         <div className="flex items-center gap-3">
           <AlertTriangle className="w-5 h-5 text-orange-500" />
           <h3 className="text-lg font-medium text-foreground">
-            Permission Settings
+            权限设置
           </h3>
         </div>
         <div className="bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-lg p-4">
@@ -313,10 +313,10 @@ function CursorPermissions({
             />
             <div>
               <div className="font-medium text-orange-900 dark:text-orange-100">
-                Skip permission prompts (use with caution)
+                跳过权限提示（请谨慎使用）
               </div>
               <div className="text-sm text-orange-700 dark:text-orange-300">
-                Equivalent to -f flag in Cursor CLI
+                等同于 Cursor CLI 中的 -f 标志
               </div>
             </div>
           </label>
@@ -328,11 +328,11 @@ function CursorPermissions({
         <div className="flex items-center gap-3">
           <Shield className="w-5 h-5 text-green-500" />
           <h3 className="text-lg font-medium text-foreground">
-            Allowed Shell Commands
+            允许的 Shell 命令
           </h3>
         </div>
         <p className="text-sm text-muted-foreground">
-          Shell commands that are automatically allowed without prompting
+          自动允许而不提示的 Shell 命令
         </p>
 
         <div className="flex flex-col sm:flex-row gap-2">
@@ -355,14 +355,14 @@ function CursorPermissions({
             className="h-10 px-4"
           >
             <Plus className="w-4 h-4 mr-2 sm:mr-0" />
-            <span className="sm:hidden">Add</span>
+            <span className="sm:hidden">添加</span>
           </Button>
         </div>
 
         {/* Quick add buttons */}
         <div className="space-y-2">
           <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
-            Quick add common commands:
+            快速添加常用命令：
           </p>
           <div className="flex flex-wrap gap-2">
             {commonCursorCommands.map(cmd => (
@@ -398,7 +398,7 @@ function CursorPermissions({
           ))}
           {allowedCommands.length === 0 && (
             <div className="text-center py-6 text-gray-500 dark:text-gray-400">
-              No allowed commands configured
+              未配置允许的命令
             </div>
           )}
         </div>
@@ -409,11 +409,11 @@ function CursorPermissions({
         <div className="flex items-center gap-3">
           <AlertTriangle className="w-5 h-5 text-red-500" />
           <h3 className="text-lg font-medium text-foreground">
-            Blocked Shell Commands
+            阻止的 Shell 命令
           </h3>
         </div>
         <p className="text-sm text-muted-foreground">
-          Shell commands that are automatically blocked
+          自动阻止的 Shell 命令
         </p>
 
         <div className="flex flex-col sm:flex-row gap-2">
@@ -436,7 +436,7 @@ function CursorPermissions({
             className="h-10 px-4"
           >
             <Plus className="w-4 h-4 mr-2 sm:mr-0" />
-            <span className="sm:hidden">Add</span>
+            <span className="sm:hidden">添加</span>
           </Button>
         </div>
 
@@ -458,7 +458,7 @@ function CursorPermissions({
           ))}
           {disallowedCommands.length === 0 && (
             <div className="text-center py-6 text-gray-500 dark:text-gray-400">
-              No blocked commands configured
+              未配置阻止的命令
             </div>
           )}
         </div>
@@ -467,13 +467,13 @@ function CursorPermissions({
       {/* Help Section */}
       <div className="bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-lg p-4">
         <h4 className="font-medium text-purple-900 dark:text-purple-100 mb-2">
-          Shell Command Examples:
+          Shell 命令示例：
         </h4>
         <ul className="text-sm text-purple-800 dark:text-purple-200 space-y-1">
-          <li><code className="bg-purple-100 dark:bg-purple-800 px-1 rounded">"Shell(ls)"</code> - Allow ls command</li>
-          <li><code className="bg-purple-100 dark:bg-purple-800 px-1 rounded">"Shell(git status)"</code> - Allow git status</li>
-          <li><code className="bg-purple-100 dark:bg-purple-800 px-1 rounded">"Shell(npm install)"</code> - Allow npm install</li>
-          <li><code className="bg-purple-100 dark:bg-purple-800 px-1 rounded">"Shell(rm -rf)"</code> - Block recursive delete</li>
+          <li><code className="bg-purple-100 dark:bg-purple-800 px-1 rounded">"Shell(ls)"</code> - 允许 ls 命令</li>
+          <li><code className="bg-purple-100 dark:bg-purple-800 px-1 rounded">"Shell(git status)"</code> - 允许 git status</li>
+          <li><code className="bg-purple-100 dark:bg-purple-800 px-1 rounded">"Shell(npm install)"</code> - 允许 npm install</li>
+          <li><code className="bg-purple-100 dark:bg-purple-800 px-1 rounded">"Shell(rm -rf)"</code> - 阻止递归删除</li>
         </ul>
       </div>
     </div>
@@ -488,11 +488,11 @@ function CodexPermissions({ permissionMode, setPermissionMode }) {
         <div className="flex items-center gap-3">
           <Shield className="w-5 h-5 text-green-500" />
           <h3 className="text-lg font-medium text-foreground">
-            Permission Mode
+            权限模式
           </h3>
         </div>
         <p className="text-sm text-muted-foreground">
-          Controls how Codex handles file modifications and command execution
+          控制 Codex 如何处理文件修改和命令执行
         </p>
 
         {/* Default Mode */}
@@ -513,10 +513,9 @@ function CodexPermissions({ permissionMode, setPermissionMode }) {
               className="mt-1 w-4 h-4 text-green-600"
             />
             <div>
-              <div className="font-medium text-foreground">Default</div>
+              <div className="font-medium text-foreground">默认</div>
               <div className="text-sm text-muted-foreground">
-                Only trusted commands (ls, cat, grep, git status, etc.) run automatically.
-                Other commands are skipped. Can write to workspace.
+                仅受信任的命令（ls、cat、grep、git status 等）会自动运行。其他命令将被跳过。可以写入工作区。
               </div>
             </div>
           </label>
@@ -540,10 +539,9 @@ function CodexPermissions({ permissionMode, setPermissionMode }) {
               className="mt-1 w-4 h-4 text-green-600"
             />
             <div>
-              <div className="font-medium text-green-900 dark:text-green-100">Accept Edits</div>
+              <div className="font-medium text-green-900 dark:text-green-100">接受编辑</div>
               <div className="text-sm text-green-700 dark:text-green-300">
-                All commands run automatically within the workspace.
-                Full auto mode with sandboxed execution.
+                所有命令在工作区内自动运行。沙盒执行的完全自动模式。
               </div>
             </div>
           </label>
@@ -568,12 +566,11 @@ function CodexPermissions({ permissionMode, setPermissionMode }) {
             />
             <div>
               <div className="font-medium text-orange-900 dark:text-orange-100 flex items-center gap-2">
-                Bypass Permissions
+                跳过权限
                 <AlertTriangle className="w-4 h-4" />
               </div>
               <div className="text-sm text-orange-700 dark:text-orange-300">
-                Full system access with no restrictions. All commands run automatically
-                with full disk and network access. Use with caution.
+                无限制的完全系统访问。所有命令自动运行，具有完全的磁盘和网络访问权限。请谨慎使用。
               </div>
             </div>
           </label>
@@ -582,13 +579,13 @@ function CodexPermissions({ permissionMode, setPermissionMode }) {
         {/* Technical Details */}
         <details className="text-sm">
           <summary className="cursor-pointer text-muted-foreground hover:text-foreground">
-            Technical details
+            技术详情
           </summary>
           <div className="mt-2 p-3 bg-gray-50 dark:bg-gray-900/50 rounded-lg text-xs text-muted-foreground space-y-2">
             <p><strong>Default:</strong> sandboxMode=workspace-write, approvalPolicy=untrusted. Trusted commands: cat, cd, grep, head, ls, pwd, tail, git status/log/diff/show, find (without -exec), etc.</p>
             <p><strong>Accept Edits:</strong> sandboxMode=workspace-write, approvalPolicy=never. All commands auto-execute within project directory.</p>
             <p><strong>Bypass Permissions:</strong> sandboxMode=danger-full-access, approvalPolicy=never. Full system access, use only in trusted environments.</p>
-            <p className="text-xs opacity-75">You can override this per-session using the mode button in the chat interface.</p>
+            <p className="text-xs opacity-75">您可以在聊天界面中使用模式按钮为每个会话覆盖此设置。</p>
           </div>
         </details>
       </div>

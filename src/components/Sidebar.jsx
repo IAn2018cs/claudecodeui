@@ -479,7 +479,7 @@ function Sidebar({
                 </div>
                 <div>
                   <h1 className="text-lg font-bold text-foreground">Claude Code UI</h1>
-                  <p className="text-sm text-muted-foreground">AI coding assistant interface</p>
+                  <p className="text-sm text-muted-foreground">AI 编程助手界面</p>
                 </div>
               </a>
             ) : (
@@ -489,7 +489,7 @@ function Sidebar({
                 </div>
                 <div>
                   <h1 className="text-lg font-bold text-foreground">Claude Code UI</h1>
-                  <p className="text-sm text-muted-foreground">AI coding assistant interface</p>
+                  <p className="text-sm text-muted-foreground">AI 编程助手界面</p>
                 </div>
               </div>
             )}
@@ -499,7 +499,7 @@ function Sidebar({
                 size="sm"
                 className="h-8 w-8 px-0 hover:bg-accent transition-colors duration-200"
                 onClick={onToggleSidebar}
-                title="Hide sidebar"
+                title="收起侧边栏"
               >
                 <svg
                   className="w-4 h-4"
@@ -530,7 +530,7 @@ function Sidebar({
                   </div>
                   <div>
                     <h1 className="text-lg font-semibold text-foreground">Claude Code UI</h1>
-                    <p className="text-sm text-muted-foreground">Projects</p>
+                    <p className="text-sm text-muted-foreground">项目</p>
                   </div>
                 </a>
               ) : (
@@ -540,7 +540,7 @@ function Sidebar({
                   </div>
                   <div>
                     <h1 className="text-lg font-semibold text-foreground">Claude Code UI</h1>
-                    <p className="text-sm text-muted-foreground">Projects</p>
+                    <p className="text-sm text-muted-foreground">项目</p>
                   </div>
                 </div>
               )}
@@ -579,10 +579,10 @@ function Sidebar({
                 size="sm"
                 className="flex-1 h-8 text-xs bg-primary hover:bg-primary/90 transition-all duration-200"
                 onClick={() => setShowNewProject(true)}
-                title="Create new project"
+                title="创建新项目"
               >
                 <FolderPlus className="w-3.5 h-3.5 mr-1.5" />
-                New Project
+                新建项目
               </Button>
               <Button
                 variant="outline"
@@ -597,7 +597,7 @@ function Sidebar({
                   }
                 }}
                 disabled={isRefreshing}
-                title="Refresh projects and sessions (Ctrl+R)"
+                title="刷新项目和会话 (Ctrl+R)"
               >
                 <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin' : ''} group-hover:rotate-180 transition-transform duration-300`} />
               </Button>
@@ -612,7 +612,7 @@ function Sidebar({
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input
                 type="text"
-                placeholder="Search projects..."
+                placeholder="搜索项目..."
                 value={searchFilter}
                 onChange={(e) => setSearchFilter(e.target.value)}
                 className="pl-9 h-9 text-sm bg-muted/50 border-0 focus:bg-background focus:ring-1 focus:ring-primary/20"
@@ -637,9 +637,9 @@ function Sidebar({
                 <div className="w-12 h-12 bg-muted rounded-lg flex items-center justify-center mx-auto mb-4 md:mb-3">
                   <div className="w-6 h-6 animate-spin rounded-full border-2 border-muted-foreground border-t-transparent" />
                 </div>
-                <h3 className="text-base font-medium text-foreground mb-2 md:mb-1">Loading projects...</h3>
+                <h3 className="text-base font-medium text-foreground mb-2 md:mb-1">加载项目中...</h3>
                 <p className="text-sm text-muted-foreground">
-                  Fetching your Claude projects and sessions
+                  正在获取您的 Claude 项目和会话
                 </p>
               </div>
             ) : projects.length === 0 ? (
@@ -647,9 +647,9 @@ function Sidebar({
                 <div className="w-12 h-12 bg-muted rounded-lg flex items-center justify-center mx-auto mb-4 md:mb-3">
                   <Folder className="w-6 h-6 text-muted-foreground" />
                 </div>
-                <h3 className="text-base font-medium text-foreground mb-2 md:mb-1">No projects found</h3>
+                <h3 className="text-base font-medium text-foreground mb-2 md:mb-1">未找到项目</h3>
                 <p className="text-sm text-muted-foreground">
-                  Run Claude CLI in a project directory to get started
+                  在项目目录中运行 Claude CLI 以开始使用
                 </p>
               </div>
             ) : filteredProjects.length === 0 ? (
@@ -657,9 +657,9 @@ function Sidebar({
                 <div className="w-12 h-12 bg-muted rounded-lg flex items-center justify-center mx-auto mb-4 md:mb-3">
                   <Search className="w-6 h-6 text-muted-foreground" />
                 </div>
-                <h3 className="text-base font-medium text-foreground mb-2 md:mb-1">No matching projects</h3>
+                <h3 className="text-base font-medium text-foreground mb-2 md:mb-1">无匹配的项目</h3>
                 <p className="text-sm text-muted-foreground">
-                  Try adjusting your search term
+                  尝试调整搜索条件
                 </p>
               </div>
             ) : (
@@ -705,7 +705,7 @@ function Sidebar({
                                     value={editingName}
                                     onChange={(e) => setEditingName(e.target.value)}
                                     className="w-full px-3 py-2 text-sm border-2 border-primary/40 focus:border-primary rounded-lg bg-background text-foreground shadow-sm focus:shadow-md transition-all duration-200 focus:outline-none"
-                                    placeholder="Project name"
+                                    placeholder="项目名称"
                                     autoFocus
                                     autoComplete="off"
                                     onClick={(e) => e.stopPropagation()}
@@ -731,7 +731,7 @@ function Sidebar({
                                         const sessionCount = getAllSessions(project).length;
                                         const hasMore = project.sessionMeta?.hasMore !== false;
                                         const count = hasMore && sessionCount >= 5 ? `${sessionCount}+` : sessionCount;
-                                        return `${count} session${count === 1 ? '' : 's'}`;
+                                        return `${count} 会话`;
                                       })()}
                                     </p>
                                   </>
@@ -775,7 +775,7 @@ function Sidebar({
                                       toggleStarProject(project.name);
                                     }}
                                     onTouchEnd={handleTouchClick(() => toggleStarProject(project.name))}
-                                    title={isStarred ? "Remove from favorites" : "Add to favorites"}
+                                    title={isStarred ? "从收藏中移除" : "添加到收藏"}
                                   >
                                     <Star className={cn(
                                       "w-4 h-4 transition-colors",
@@ -856,7 +856,7 @@ function Sidebar({
                                   value={editingName}
                                   onChange={(e) => setEditingName(e.target.value)}
                                   className="w-full px-2 py-1 text-sm border border-border rounded bg-background text-foreground focus:ring-2 focus:ring-primary/20"
-                                  placeholder="Project name"
+                                  placeholder="项目名称"
                                   autoFocus
                                   onKeyDown={(e) => {
                                     if (e.key === 'Enter') saveProjectName(project.name);
@@ -925,7 +925,7 @@ function Sidebar({
                                   e.stopPropagation();
                                   toggleStarProject(project.name);
                                 }}
-                                title={isStarred ? "Remove from favorites" : "Add to favorites"}
+                                title={isStarred ? "从收藏中移除" : "添加到收藏"}
                               >
                                 <Star className={cn(
                                   "w-3 h-3 transition-colors",
@@ -940,7 +940,7 @@ function Sidebar({
                                   e.stopPropagation();
                                   startEditing(project);
                                 }}
-                                title="Rename project (F2)"
+                                title="重命名项目 (F2)"
                               >
                                 <Edit3 className="w-3 h-3" />
                               </div>
@@ -951,7 +951,7 @@ function Sidebar({
                                     e.stopPropagation();
                                     deleteProject(project.name);
                                   }}
-                                  title="Delete empty project (Delete)"
+                                  title="删除空项目 (Delete)"
                                 >
                                   <Trash2 className="w-3 h-3 text-red-600 dark:text-red-400" />
                                 </div>
@@ -985,7 +985,7 @@ function Sidebar({
                           ))
                         ) : getAllSessions(project).length === 0 && !loadingSessions[project.name] ? (
                           <div className="py-2 px-3 text-left">
-                            <p className="text-xs text-muted-foreground">No sessions yet</p>
+                            <p className="text-xs text-muted-foreground">还没有会话</p>
                           </div>
                         ) : (
                           getAllSessions(project).map((session) => {
@@ -995,7 +995,7 @@ function Sidebar({
                             const isActive = diffInMinutes < 10;
 
                             // Get session display values
-                            const sessionName = session.summary || 'New Session';
+                            const sessionName = session.summary || '新会话';
                             const sessionTime = session.lastActivity;
                             const messageCount = session.messageCount || 0;
 
@@ -1147,9 +1147,9 @@ function Sidebar({
                                           onClick={(e) => {
                                             e.stopPropagation();
                                             setEditingSession(session.id);
-                                            setEditingSessionName(session.summary || 'New Session');
+                                            setEditingSessionName(session.summary || '新会话');
                                           }}
-                                          title="Manually edit session name"
+                                          title="手动编辑会话名称"
                                         >
                                           <Edit2 className="w-3 h-3 text-gray-600 dark:text-gray-400" />
                                         </button>
@@ -1159,7 +1159,7 @@ function Sidebar({
                                             e.stopPropagation();
                                             deleteSession(project.name, session.id);
                                           }}
-                                          title="Delete this session permanently"
+                                          title="永久删除此会话"
                                         >
                                           <Trash2 className="w-3 h-3 text-red-600 dark:text-red-400" />
                                         </button>
@@ -1184,12 +1184,12 @@ function Sidebar({
                             {loadingSessions[project.name] ? (
                               <>
                                 <div className="w-3 h-3 animate-spin rounded-full border border-muted-foreground border-t-transparent" />
-                                Loading...
-                              </>
+                                加载中...
+</>
                             ) : (
                               <>
                                 <ChevronDown className="w-3 h-3" />
-                                Show more sessions
+                                显示更多会话
                               </>
                             )}
                           </Button>
@@ -1205,7 +1205,7 @@ function Sidebar({
                             }}
                           >
                             <Plus className="w-3 h-3" />
-                            New Session
+                            新会话
                           </button>
                         </div>
 
@@ -1216,7 +1216,7 @@ function Sidebar({
                           onClick={() => onNewSession(project)}
                         >
                           <Plus className="w-3 h-3" />
-                          New Session
+                          新会话
                         </Button>
                       </div>
                     )}
@@ -1247,7 +1247,7 @@ function Sidebar({
                   <div className="text-sm font-medium text-blue-700 dark:text-blue-300">
                     {releaseInfo?.title || `Version ${latestVersion}`}
                   </div>
-                  <div className="text-xs text-blue-600 dark:text-blue-400">Update available</div>
+                  <div className="text-xs text-blue-600 dark:text-blue-400">有可用更新</div>
                 </div>
               </Button>
             </div>
@@ -1268,7 +1268,7 @@ function Sidebar({
                   <div className="text-sm font-medium text-blue-700 dark:text-blue-300">
                     {releaseInfo?.title || `Version ${latestVersion}`}
                   </div>
-                  <div className="text-xs text-blue-600 dark:text-blue-400">Update available</div>
+                  <div className="text-xs text-blue-600 dark:text-blue-400">有可用更新</div>
                 </div>
               </button>
             </div>
@@ -1286,7 +1286,7 @@ function Sidebar({
               <div className="w-10 h-10 rounded-2xl bg-background/80 flex items-center justify-center">
                 <Settings className="w-5 h-5 text-muted-foreground" />
               </div>
-              <span className="text-lg font-medium text-foreground">Settings</span>
+              <span className="text-lg font-medium text-foreground">设置</span>
             </button>
           </div>
 
@@ -1297,7 +1297,7 @@ function Sidebar({
             onClick={onShowSettings}
           >
             <Settings className="w-3 h-3" />
-            <span className="text-xs">Settings</span>
+            <span className="text-xs">设置</span>
           </Button>
         </div>
       </div>

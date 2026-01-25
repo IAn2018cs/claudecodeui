@@ -35,7 +35,7 @@ function ImageViewer({ file, onClose }) {
           return;
         }
         console.error('Error loading image:', err);
-        setError('Unable to load image');
+        setError('无法加载图像');
       } finally {
         setLoading(false);
       }
@@ -71,7 +71,7 @@ function ImageViewer({ file, onClose }) {
         <div className="p-4 flex justify-center items-center bg-gray-50 dark:bg-gray-900 min-h-[400px]">
           {loading && (
             <div className="text-center text-gray-500 dark:text-gray-400">
-              <p>Loading image…</p>
+              <p>加载图像中…</p>
             </div>
           )}
           {!loading && imageUrl && (
@@ -83,7 +83,7 @@ function ImageViewer({ file, onClose }) {
           )}
           {!loading && !imageUrl && (
             <div className="text-center text-gray-500 dark:text-gray-400">
-              <p>{error || 'Unable to load image'}</p>
+              <p>{error || '无法加载图像'}</p>
               <p className="text-sm mt-2 break-all">{file.path}</p>
             </div>
           )}

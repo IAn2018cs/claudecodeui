@@ -18,10 +18,10 @@ const ProjectCreationWizard = ({ onClose, onProjectCreated }) => {
 
   const validateProjectName = (name) => {
     if (!name.trim()) {
-      return 'Project name is required';
+      return '项目名称为必填项';
     }
     if (!PROJECT_NAME_REGEX.test(name.trim())) {
-      return 'Project name can only contain letters, numbers, hyphens, and underscores';
+      return '项目名称只能包含字母、数字、连字符和下划线';
     }
     return null;
   };
@@ -85,7 +85,7 @@ const ProjectCreationWizard = ({ onClose, onProjectCreated }) => {
               <FolderPlus className="w-4 h-4 text-blue-600 dark:text-blue-400" />
             </div>
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-              Create New Project
+              创建新项目
             </h3>
           </div>
           <button
@@ -112,7 +112,7 @@ const ProjectCreationWizard = ({ onClose, onProjectCreated }) => {
           {/* Project Name */}
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Project Name <span className="text-red-500">*</span>
+              项目名称 <span className="text-red-500">*</span>
             </label>
             <Input
               type="text"
@@ -124,14 +124,14 @@ const ProjectCreationWizard = ({ onClose, onProjectCreated }) => {
               autoFocus
             />
             <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-              Only letters, numbers, hyphens, and underscores are allowed
+              仅允许字母、数字、连字符和下划线
             </p>
           </div>
 
           {/* GitHub URL */}
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              GitHub URL (Optional)
+              GitHub 链接（可选）
             </label>
             <Input
               type="text"
@@ -142,7 +142,7 @@ const ProjectCreationWizard = ({ onClose, onProjectCreated }) => {
               className="w-full"
             />
             <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-              Leave empty to create an empty project, or enter a public repository URL to clone
+              留空以创建空项目，或输入公共仓库链接以克隆
             </p>
           </div>
         </div>
@@ -154,7 +154,7 @@ const ProjectCreationWizard = ({ onClose, onProjectCreated }) => {
             onClick={onClose}
             disabled={isCreating}
           >
-            Cancel
+            取消
           </Button>
 
           <Button
@@ -164,10 +164,10 @@ const ProjectCreationWizard = ({ onClose, onProjectCreated }) => {
             {isCreating ? (
               <>
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                Creating...
+                创建中...
               </>
             ) : (
-              'Create Project'
+              '创建项目'
             )}
           </Button>
         </div>

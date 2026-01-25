@@ -458,7 +458,7 @@ function Settings({ isOpen, onClose, projects = [], initialTab = 'agents' }) {
   };
 
   const handleMcpDelete = async (serverId, scope) => {
-    if (confirm('Are you sure you want to delete this MCP server?')) {
+    if (confirm('确定要删除此 MCP 服务器吗？')) {
       try {
         await deleteMcpServer(serverId, scope);
         setSaveStatus('success');
@@ -535,7 +535,7 @@ function Settings({ isOpen, onClose, projects = [], initialTab = 'agents' }) {
           <div className="flex items-center gap-3">
             <SettingsIcon className="w-5 h-5 md:w-6 md:h-6 text-blue-600" />
             <h2 className="text-lg md:text-xl font-semibold text-foreground">
-              Settings
+              设置
             </h2>
           </div>
           <Button
@@ -559,7 +559,7 @@ function Settings({ isOpen, onClose, projects = [], initialTab = 'agents' }) {
                   : 'border-transparent text-muted-foreground hover:text-foreground'
                   }`}
               >
-                Agents
+                代理
               </button>
               <button
                 onClick={() => setActiveTab('appearance')}
@@ -568,7 +568,7 @@ function Settings({ isOpen, onClose, projects = [], initialTab = 'agents' }) {
                   : 'border-transparent text-muted-foreground hover:text-foreground'
                   }`}
               >
-                Appearance
+                外观
               </button>
               {isAdmin && (
                 <button
@@ -579,7 +579,7 @@ function Settings({ isOpen, onClose, projects = [], initialTab = 'agents' }) {
                       : 'border-transparent text-muted-foreground hover:text-foreground'
                   }`}
                 >
-                  Users
+                  用户
                 </button>
               )}
               <button
@@ -590,7 +590,7 @@ function Settings({ isOpen, onClose, projects = [], initialTab = 'agents' }) {
                     : 'border-transparent text-muted-foreground hover:text-foreground'
                 }`}
               >
-                Account
+                账户
               </button>
             </div>
           </div>
@@ -608,10 +608,10 @@ function Settings({ isOpen, onClose, projects = [], initialTab = 'agents' }) {
                         <div className="flex items-center justify-between">
                           <div>
                             <div className="font-medium text-foreground">
-                              Dark Mode
+                              深色模式
                             </div>
                             <div className="text-sm text-muted-foreground">
-                              Toggle between light and dark themes
+                              切换浅色和深色主题
                             </div>
                           </div>
                           <button
@@ -643,10 +643,10 @@ function Settings({ isOpen, onClose, projects = [], initialTab = 'agents' }) {
                         <div className="flex items-center justify-between">
                           <div>
                             <div className="font-medium text-foreground">
-                              Project Sorting
+                              项目排序
                             </div>
                             <div className="text-sm text-muted-foreground">
-                              How projects are ordered in the sidebar
+                              侧边栏中项目的排序方式
                             </div>
                           </div>
                           <select
@@ -654,8 +654,8 @@ function Settings({ isOpen, onClose, projects = [], initialTab = 'agents' }) {
                             onChange={(e) => setProjectSortOrder(e.target.value)}
                             className="text-sm bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 rounded-lg focus:ring-blue-500 focus:border-blue-500 p-2 w-32"
                           >
-                            <option value="name">Alphabetical</option>
-                            <option value="date">Recent Activity</option>
+                            <option value="name">按字母顺序</option>
+                            <option value="date">按最近活动</option>
                           </select>
                         </div>
                       </div>
@@ -663,17 +663,17 @@ function Settings({ isOpen, onClose, projects = [], initialTab = 'agents' }) {
 
                     {/* Code Editor Settings */}
                     <div className="space-y-4">
-                      <h3 className="text-lg font-semibold text-foreground">Code Editor</h3>
+                      <h3 className="text-lg font-semibold text-foreground">代码编辑器</h3>
 
                       {/* Editor Theme */}
                       <div className="bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
                         <div className="flex items-center justify-between">
                           <div>
                             <div className="font-medium text-foreground">
-                              Editor Theme
+                              编辑器主题
                             </div>
                             <div className="text-sm text-muted-foreground">
-                              Default theme for the code editor
+                              代码编辑器的默认主题
                             </div>
                           </div>
                           <button
@@ -703,10 +703,10 @@ function Settings({ isOpen, onClose, projects = [], initialTab = 'agents' }) {
                         <div className="flex items-center justify-between">
                           <div>
                             <div className="font-medium text-foreground">
-                              Word Wrap
+                              自动换行
                             </div>
                             <div className="text-sm text-muted-foreground">
-                              Enable word wrapping by default in the editor
+                              在编辑器中默认启用自动换行
                             </div>
                           </div>
                           <button
@@ -730,10 +730,10 @@ function Settings({ isOpen, onClose, projects = [], initialTab = 'agents' }) {
                         <div className="flex items-center justify-between">
                           <div>
                             <div className="font-medium text-foreground">
-                              Show Minimap
+                              显示小地图
                             </div>
                             <div className="text-sm text-muted-foreground">
-                              Display a minimap for easier navigation in diff view
+                              在差异视图中显示小地图以便于导航
                             </div>
                           </div>
                           <button
@@ -757,10 +757,10 @@ function Settings({ isOpen, onClose, projects = [], initialTab = 'agents' }) {
                         <div className="flex items-center justify-between">
                           <div>
                             <div className="font-medium text-foreground">
-                              Show Line Numbers
+                              显示行号
                             </div>
                             <div className="text-sm text-muted-foreground">
-                              Display line numbers in the editor
+                              在编辑器中显示行号
                             </div>
                           </div>
                           <button
@@ -784,10 +784,10 @@ function Settings({ isOpen, onClose, projects = [], initialTab = 'agents' }) {
                         <div className="flex items-center justify-between">
                           <div>
                             <div className="font-medium text-foreground">
-                              Font Size
+                              字体大小
                             </div>
                             <div className="text-sm text-muted-foreground">
-                              Editor font size in pixels
+                              编辑器字体大小（像素）
                             </div>
                           </div>
                           <select
@@ -831,7 +831,7 @@ function Settings({ isOpen, onClose, projects = [], initialTab = 'agents' }) {
                           : 'border-transparent text-muted-foreground hover:text-foreground'
                           }`}
                       >
-                        Permissions
+                        权限
                       </button>
                       <button
                         onClick={() => setSelectedCategory('mcp')}
@@ -840,7 +840,7 @@ function Settings({ isOpen, onClose, projects = [], initialTab = 'agents' }) {
                           : 'border-transparent text-muted-foreground hover:text-foreground'
                           }`}
                       >
-                        MCP Servers
+                        MCP 服务器
                       </button>
                     </div>
                   </div>
@@ -899,7 +899,7 @@ function Settings({ isOpen, onClose, projects = [], initialTab = 'agents' }) {
             {activeTab === 'account' && (
               <div className="space-y-6 md:space-y-8">
                 <div className="space-y-4">
-                  <h3 className="text-lg font-semibold text-foreground">Account</h3>
+                  <h3 className="text-lg font-semibold text-foreground">账户</h3>
 
                   {/* Current User Info */}
                   <div className="bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
@@ -914,7 +914,7 @@ function Settings({ isOpen, onClose, projects = [], initialTab = 'agents' }) {
                           {user?.username}
                         </div>
                         <div className="text-sm text-muted-foreground">
-                          {user?.role === 'admin' ? 'Administrator' : 'User'}
+                          {user?.role === 'admin' ? '管理员' : '用户'}
                         </div>
                       </div>
                     </div>
@@ -925,17 +925,17 @@ function Settings({ isOpen, onClose, projects = [], initialTab = 'agents' }) {
                     <div className="flex items-center justify-between">
                       <div>
                         <div className="font-medium text-foreground">
-                          Sign Out
+                          退出登录
                         </div>
                         <div className="text-sm text-muted-foreground">
-                          End your current session
+                          结束当前会话
                         </div>
                       </div>
                       <Button
                         variant="outline"
                         className="gap-2 text-red-600 dark:text-red-400 border-red-200 dark:border-red-800 hover:bg-red-50 dark:hover:bg-red-900/20"
                         onClick={() => {
-                          if (confirm('Are you sure you want to log out?')) {
+                          if (confirm('确定要退出登录吗？')) {
                             onClose();
                             navigate('/');
                             logout();
@@ -943,7 +943,7 @@ function Settings({ isOpen, onClose, projects = [], initialTab = 'agents' }) {
                         }}
                       >
                         <LogOut className="w-4 h-4" />
-                        Log Out
+                        退出
                       </Button>
                     </div>
                   </div>
@@ -957,7 +957,7 @@ function Settings({ isOpen, onClose, projects = [], initialTab = 'agents' }) {
                 <div className="bg-background border border-border rounded-lg w-full max-w-2xl max-h-[90vh] overflow-y-auto">
                   <div className="flex items-center justify-between p-4 border-b border-border">
                     <h3 className="text-lg font-medium text-foreground">
-                      {editingMcpServer ? 'Edit MCP Server' : 'Add MCP Server'}
+                      {editingMcpServer ? '编辑 MCP 服务器' : '添加 MCP 服务器'}
                     </h3>
                     <Button variant="ghost" size="sm" onClick={resetMcpForm}>
                       <X className="w-4 h-4" />
@@ -976,7 +976,7 @@ function Settings({ isOpen, onClose, projects = [], initialTab = 'agents' }) {
                             : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
                             }`}
                         >
-                          Form Input
+                          表单输入
                         </button>
                         <button
                           type="button"
@@ -986,7 +986,7 @@ function Settings({ isOpen, onClose, projects = [], initialTab = 'agents' }) {
                             : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
                             }`}
                         >
-                          JSON Import
+                          JSON 导入
                         </button>
                       </div>
                     )}
@@ -995,12 +995,12 @@ function Settings({ isOpen, onClose, projects = [], initialTab = 'agents' }) {
                     {mcpFormData.importMode === 'form' && editingMcpServer && (
                       <div className="bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 rounded-lg p-3">
                         <label className="block text-sm font-medium text-foreground mb-2">
-                          Scope
+                          作用域
                         </label>
                         <div className="flex items-center gap-2">
                           {mcpFormData.scope === 'user' ? <Globe className="w-4 h-4" /> : <FolderOpen className="w-4 h-4" />}
                           <span className="text-sm">
-                            {mcpFormData.scope === 'user' ? 'User (Global)' : 'Project (Local)'}
+                            {mcpFormData.scope === 'user' ? '用户（全局）' : '项目（本地）'}
                           </span>
                           {mcpFormData.scope === 'local' && mcpFormData.projectPath && (
                             <span className="text-xs text-muted-foreground">
@@ -1009,7 +1009,7 @@ function Settings({ isOpen, onClose, projects = [], initialTab = 'agents' }) {
                           )}
                         </div>
                         <p className="text-xs text-muted-foreground mt-2">
-                          Scope cannot be changed when editing an existing server
+                          编辑现有服务器时无法更改作用域
                         </p>
                       </div>
                     )}
@@ -1019,7 +1019,7 @@ function Settings({ isOpen, onClose, projects = [], initialTab = 'agents' }) {
                       <div className="space-y-4">
                         <div>
                           <label className="block text-sm font-medium text-foreground mb-2">
-                            Scope *
+                            作用域 *
                           </label>
                           <div className="flex gap-2">
                             <button
@@ -1032,7 +1032,7 @@ function Settings({ isOpen, onClose, projects = [], initialTab = 'agents' }) {
                             >
                               <div className="flex items-center justify-center gap-2">
                                 <Globe className="w-4 h-4" />
-                                <span>User (Global)</span>
+                                <span>用户（全局）</span>
                               </div>
                             </button>
                             <button
@@ -1045,14 +1045,14 @@ function Settings({ isOpen, onClose, projects = [], initialTab = 'agents' }) {
                             >
                               <div className="flex items-center justify-center gap-2">
                                 <FolderOpen className="w-4 h-4" />
-                                <span>Project (Local)</span>
+                                <span>项目（本地）</span>
                               </div>
                             </button>
                           </div>
                           <p className="text-xs text-muted-foreground mt-2">
                             {mcpFormData.scope === 'user'
-                              ? 'User scope: Available across all projects on your machine'
-                              : 'Local scope: Only available in the selected project'
+                              ? '用户作用域：在您机器上的所有项目中可用'
+                              : '本地作用域：仅在选定的项目中可用'
                             }
                           </p>
                         </div>
@@ -1061,7 +1061,7 @@ function Settings({ isOpen, onClose, projects = [], initialTab = 'agents' }) {
                         {mcpFormData.scope === 'local' && !editingMcpServer && (
                           <div>
                             <label className="block text-sm font-medium text-foreground mb-2">
-                              Project *
+                              项目 *
                             </label>
                             <select
                               value={mcpFormData.projectPath}
@@ -1069,7 +1069,7 @@ function Settings({ isOpen, onClose, projects = [], initialTab = 'agents' }) {
                               className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-lg focus:ring-blue-500 focus:border-blue-500"
                               required={mcpFormData.scope === 'local'}
                             >
-                              <option value="">Select a project...</option>
+                              <option value="">选择项目...</option>
                               {projects.map(project => (
                                 <option key={project.name} value={project.path || project.fullPath}>
                                   {project.displayName || project.name}
@@ -1090,7 +1090,7 @@ function Settings({ isOpen, onClose, projects = [], initialTab = 'agents' }) {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className={mcpFormData.importMode === 'json' ? 'md:col-span-2' : ''}>
                         <label className="block text-sm font-medium text-foreground mb-2">
-                          Server Name *
+                          服务器名称 *
                         </label>
                         <Input
                           value={mcpFormData.name}
@@ -1105,7 +1105,7 @@ function Settings({ isOpen, onClose, projects = [], initialTab = 'agents' }) {
                       {mcpFormData.importMode === 'form' && (
                         <div>
                           <label className="block text-sm font-medium text-foreground mb-2">
-                            Transport Type *
+                            传输类型 *
                           </label>
                           <select
                             value={mcpFormData.type}
@@ -1127,7 +1127,7 @@ function Settings({ isOpen, onClose, projects = [], initialTab = 'agents' }) {
                     {editingMcpServer && mcpFormData.raw && mcpFormData.importMode === 'form' && (
                       <div className="bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
                         <h4 className="text-sm font-medium text-foreground mb-2">
-                          Configuration Details (from {editingMcpServer.scope === 'global' ? '~/.claude.json' : 'project config'})
+                          配置详情 (from {editingMcpServer.scope === 'global' ? '~/.claude.json' : 'project config'})
                         </h4>
                         <pre className="text-xs bg-gray-100 dark:bg-gray-800 p-3 rounded overflow-x-auto">
                           {JSON.stringify(mcpFormData.raw, null, 2)}
@@ -1140,7 +1140,7 @@ function Settings({ isOpen, onClose, projects = [], initialTab = 'agents' }) {
                       <div className="space-y-4">
                         <div>
                           <label className="block text-sm font-medium text-foreground mb-2">
-                            JSON Configuration *
+                            JSON 配置 *
                           </label>
                           <textarea
                             value={mcpFormData.jsonInput}
@@ -1152,18 +1152,18 @@ function Settings({ isOpen, onClose, projects = [], initialTab = 'agents' }) {
                                   const parsed = JSON.parse(e.target.value);
                                   // Basic validation
                                   if (!parsed.type) {
-                                    setJsonValidationError('Missing required field: type');
+                                    setJsonValidationError('缺少必填字段：type');
                                   } else if (parsed.type === 'stdio' && !parsed.command) {
-                                    setJsonValidationError('stdio type requires a command field');
+                                    setJsonValidationError('stdio 类型需要 command 字段');
                                   } else if ((parsed.type === 'http' || parsed.type === 'sse') && !parsed.url) {
-                                    setJsonValidationError(`${parsed.type} type requires a url field`);
+                                    setJsonValidationError(`${parsed.type} 类型需要 url 字段`);
                                   } else {
                                     setJsonValidationError('');
                                   }
                                 }
                               } catch (err) {
                                 if (e.target.value.trim()) {
-                                  setJsonValidationError('Invalid JSON format');
+                                  setJsonValidationError('无效的 JSON 格式');
                                 } else {
                                   setJsonValidationError('');
                                 }
@@ -1178,7 +1178,7 @@ function Settings({ isOpen, onClose, projects = [], initialTab = 'agents' }) {
                             <p className="text-xs text-red-500 mt-1">{jsonValidationError}</p>
                           )}
                           <p className="text-xs text-muted-foreground mt-2">
-                            Paste your MCP server configuration in JSON format. Example formats:
+                            以 JSON 格式粘贴您的 MCP 服务器配置。示例格式：
                             <br />• stdio: {`{"type":"stdio","command":"npx","args":["@upstash/context7-mcp"]}`}
                             <br />• http/sse: {`{"type":"http","url":"https://api.example.com/mcp"}`}
                           </p>
@@ -1191,7 +1191,7 @@ function Settings({ isOpen, onClose, projects = [], initialTab = 'agents' }) {
                       <div className="space-y-4">
                         <div>
                           <label className="block text-sm font-medium text-foreground mb-2">
-                            Command *
+                            命令 *
                           </label>
                           <Input
                             value={mcpFormData.config.command}
@@ -1203,7 +1203,7 @@ function Settings({ isOpen, onClose, projects = [], initialTab = 'agents' }) {
 
                         <div>
                           <label className="block text-sm font-medium text-foreground mb-2">
-                            Arguments (one per line)
+                            参数（每行一个）
                           </label>
                           <textarea
                             value={Array.isArray(mcpFormData.config.args) ? mcpFormData.config.args.join('\n') : ''}
@@ -1235,7 +1235,7 @@ function Settings({ isOpen, onClose, projects = [], initialTab = 'agents' }) {
                     {mcpFormData.importMode === 'form' && (
                       <div>
                         <label className="block text-sm font-medium text-foreground mb-2">
-                          Environment Variables (KEY=value, one per line)
+                          环境变量（KEY=value，每行一个）
                         </label>
                         <textarea
                           value={Object.entries(mcpFormData.config.env || {}).map(([k, v]) => `${k}=${v}`).join('\n')}
@@ -1259,7 +1259,7 @@ function Settings({ isOpen, onClose, projects = [], initialTab = 'agents' }) {
                     {mcpFormData.importMode === 'form' && (mcpFormData.type === 'sse' || mcpFormData.type === 'http') && (
                       <div>
                         <label className="block text-sm font-medium text-foreground mb-2">
-                          Headers (KEY=value, one per line)
+                          请求头（KEY=value，每行一个）
                         </label>
                         <textarea
                           value={Object.entries(mcpFormData.config.headers || {}).map(([k, v]) => `${k}=${v}`).join('\n')}
@@ -1283,14 +1283,14 @@ function Settings({ isOpen, onClose, projects = [], initialTab = 'agents' }) {
 
                     <div className="flex justify-end gap-2 pt-4">
                       <Button type="button" variant="outline" onClick={resetMcpForm}>
-                        Cancel
+                        取消
                       </Button>
                       <Button
                         type="submit"
                         disabled={mcpLoading}
                         className="bg-purple-600 hover:bg-purple-700 disabled:opacity-50"
                       >
-                        {mcpLoading ? 'Saving...' : (editingMcpServer ? 'Update Server' : 'Add Server')}
+                        {mcpLoading ? '保存中...' : (editingMcpServer ? '更新服务器' : '添加服务器')}
                       </Button>
                     </div>
                   </form>
@@ -1307,7 +1307,7 @@ function Settings({ isOpen, onClose, projects = [], initialTab = 'agents' }) {
                 <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                 </svg>
-                Settings saved successfully!
+                设置保存成功！
               </div>
             )}
             {saveStatus === 'error' && (
@@ -1315,7 +1315,7 @@ function Settings({ isOpen, onClose, projects = [], initialTab = 'agents' }) {
                 <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
                 </svg>
-                Failed to save settings
+                保存设置失败
               </div>
             )}
           </div>
@@ -1326,7 +1326,7 @@ function Settings({ isOpen, onClose, projects = [], initialTab = 'agents' }) {
               disabled={isSaving}
               className="flex-1 sm:flex-none h-10 touch-manipulation"
             >
-              Cancel
+              取消
             </Button>
             <Button
               onClick={saveSettings}
@@ -1336,10 +1336,10 @@ function Settings({ isOpen, onClose, projects = [], initialTab = 'agents' }) {
               {isSaving ? (
                 <div className="flex items-center gap-2">
                   <div className="w-4 h-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                  Saving...
+                  保存中...
                 </div>
               ) : (
-                'Save Settings'
+                '保存设置'
               )}
             </Button>
           </div>

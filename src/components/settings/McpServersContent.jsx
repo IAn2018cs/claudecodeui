@@ -30,11 +30,11 @@ function ClaudeMcpServers({
       <div className="flex items-center gap-3">
         <Server className="w-5 h-5 text-purple-500" />
         <h3 className="text-lg font-medium text-foreground">
-          MCP Servers
+          MCP 服务器
         </h3>
       </div>
       <p className="text-sm text-muted-foreground">
-        Model Context Protocol servers provide additional tools and data sources to Claude
+        Model Context Protocol 服务器为 Claude 提供额外的工具和数据源
       </p>
 
       <div className="flex justify-between items-center">
@@ -44,7 +44,7 @@ function ClaudeMcpServers({
           size="sm"
         >
           <Plus className="w-4 h-4 mr-2" />
-          Add MCP Server
+          添加 MCP 服务器
         </Button>
       </div>
 
@@ -66,13 +66,13 @@ function ClaudeMcpServers({
 
                 <div className="text-sm text-muted-foreground space-y-1">
                   {server.type === 'stdio' && server.config?.command && (
-                    <div>Command: <code className="bg-gray-100 dark:bg-gray-800 px-1 rounded text-xs">{server.config.command}</code></div>
+                    <div>命令：<code className="bg-gray-100 dark:bg-gray-800 px-1 rounded text-xs">{server.config.command}</code></div>
                   )}
                   {(server.type === 'sse' || server.type === 'http') && server.config?.url && (
-                    <div>URL: <code className="bg-gray-100 dark:bg-gray-800 px-1 rounded text-xs">{server.config.url}</code></div>
+                    <div>URL：<code className="bg-gray-100 dark:bg-gray-800 px-1 rounded text-xs">{server.config.url}</code></div>
                   )}
                   {server.config?.args && server.config.args.length > 0 && (
-                    <div>Args: <code className="bg-gray-100 dark:bg-gray-800 px-1 rounded text-xs">{server.config.args.join(' ')}</code></div>
+                    <div>参数：<code className="bg-gray-100 dark:bg-gray-800 px-1 rounded text-xs">{server.config.args.join(' ')}</code></div>
                   )}
                 </div>
 
@@ -90,13 +90,13 @@ function ClaudeMcpServers({
                 {/* Tools Discovery Results */}
                 {serverTools?.[server.id] && serverTools[server.id].tools?.length > 0 && (
                   <div className="mt-2 p-2 rounded text-xs bg-blue-50 dark:bg-blue-900/20 text-blue-800 dark:text-blue-200">
-                    <div className="font-medium">Tools ({serverTools[server.id].tools.length}):</div>
+                    <div className="font-medium">工具（{serverTools[server.id].tools.length}）：</div>
                     <div className="flex flex-wrap gap-1 mt-1">
                       {serverTools[server.id].tools.slice(0, 5).map((tool, i) => (
                         <code key={i} className="bg-blue-100 dark:bg-blue-800 px-1 rounded">{tool.name}</code>
                       ))}
                       {serverTools[server.id].tools.length > 5 && (
-                        <span className="text-xs opacity-75">+{serverTools[server.id].tools.length - 5} more</span>
+                        <span className="text-xs opacity-75">+{serverTools[server.id].tools.length - 5} 更多</span>
                       )}
                     </div>
                   </div>
@@ -109,7 +109,7 @@ function ClaudeMcpServers({
                   variant="ghost"
                   size="sm"
                   className="text-gray-600 hover:text-gray-700"
-                  title="Edit server"
+                  title="编辑服务器"
                 >
                   <Edit3 className="w-4 h-4" />
                 </Button>
@@ -118,7 +118,7 @@ function ClaudeMcpServers({
                   variant="ghost"
                   size="sm"
                   className="text-red-600 hover:text-red-700"
-                  title="Delete server"
+                  title="删除服务器"
                 >
                   <Trash2 className="w-4 h-4" />
                 </Button>
@@ -128,7 +128,7 @@ function ClaudeMcpServers({
         ))}
         {servers.length === 0 && (
           <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-            No MCP servers configured
+            未配置 MCP 服务器
           </div>
         )}
       </div>
@@ -143,11 +143,11 @@ function CursorMcpServers({ servers, onAdd, onEdit, onDelete }) {
       <div className="flex items-center gap-3">
         <Server className="w-5 h-5 text-purple-500" />
         <h3 className="text-lg font-medium text-foreground">
-          MCP Servers
+          MCP 服务器
         </h3>
       </div>
       <p className="text-sm text-muted-foreground">
-        Model Context Protocol servers provide additional tools and data sources to Cursor
+        Model Context Protocol 服务器为 Cursor 提供额外的工具和数据源
       </p>
 
       <div className="flex justify-between items-center">
@@ -157,7 +157,7 @@ function CursorMcpServers({ servers, onAdd, onEdit, onDelete }) {
           size="sm"
         >
           <Plus className="w-4 h-4 mr-2" />
-          Add MCP Server
+          添加 MCP 服务器
         </Button>
       </div>
 
@@ -173,7 +173,7 @@ function CursorMcpServers({ servers, onAdd, onEdit, onDelete }) {
                 </div>
                 <div className="text-sm text-muted-foreground">
                   {server.config?.command && (
-                    <div>Command: <code className="bg-gray-100 dark:bg-gray-800 px-1 rounded text-xs">{server.config.command}</code></div>
+                    <div>命令：<code className="bg-gray-100 dark:bg-gray-800 px-1 rounded text-xs">{server.config.command}</code></div>
                   )}
                 </div>
               </div>
@@ -200,7 +200,7 @@ function CursorMcpServers({ servers, onAdd, onEdit, onDelete }) {
         ))}
         {servers.length === 0 && (
           <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-            No MCP servers configured
+            未配置 MCP 服务器
           </div>
         )}
       </div>
@@ -215,11 +215,11 @@ function CodexMcpServers({ servers, onAdd, onEdit, onDelete }) {
       <div className="flex items-center gap-3">
         <Server className="w-5 h-5 text-gray-700 dark:text-gray-300" />
         <h3 className="text-lg font-medium text-foreground">
-          MCP Servers
+          MCP 服务器
         </h3>
       </div>
       <p className="text-sm text-muted-foreground">
-        Model Context Protocol servers provide additional tools and data sources to Codex
+        Model Context Protocol 服务器为 Codex 提供额外的工具和数据源
       </p>
 
       <div className="flex justify-between items-center">
@@ -229,7 +229,7 @@ function CodexMcpServers({ servers, onAdd, onEdit, onDelete }) {
           size="sm"
         >
           <Plus className="w-4 h-4 mr-2" />
-          Add MCP Server
+          添加 MCP 服务器
         </Button>
       </div>
 
@@ -246,13 +246,13 @@ function CodexMcpServers({ servers, onAdd, onEdit, onDelete }) {
 
                 <div className="text-sm text-muted-foreground space-y-1">
                   {server.config?.command && (
-                    <div>Command: <code className="bg-gray-100 dark:bg-gray-800 px-1 rounded text-xs">{server.config.command}</code></div>
+                    <div>命令：<code className="bg-gray-100 dark:bg-gray-800 px-1 rounded text-xs">{server.config.command}</code></div>
                   )}
                   {server.config?.args && server.config.args.length > 0 && (
-                    <div>Args: <code className="bg-gray-100 dark:bg-gray-800 px-1 rounded text-xs">{server.config.args.join(' ')}</code></div>
+                    <div>参数：<code className="bg-gray-100 dark:bg-gray-800 px-1 rounded text-xs">{server.config.args.join(' ')}</code></div>
                   )}
                   {server.config?.env && Object.keys(server.config.env).length > 0 && (
-                    <div>Environment: <code className="bg-gray-100 dark:bg-gray-800 px-1 rounded text-xs">{Object.entries(server.config.env).map(([k, v]) => `${k}=${v}`).join(', ')}</code></div>
+                    <div>环境变量：<code className="bg-gray-100 dark:bg-gray-800 px-1 rounded text-xs">{Object.entries(server.config.env).map(([k, v]) => `${k}=${v}`).join(', ')}</code></div>
                   )}
                 </div>
               </div>
@@ -263,7 +263,7 @@ function CodexMcpServers({ servers, onAdd, onEdit, onDelete }) {
                   variant="ghost"
                   size="sm"
                   className="text-gray-600 hover:text-gray-700"
-                  title="Edit server"
+                  title="编辑服务器"
                 >
                   <Edit3 className="w-4 h-4" />
                 </Button>
@@ -272,7 +272,7 @@ function CodexMcpServers({ servers, onAdd, onEdit, onDelete }) {
                   variant="ghost"
                   size="sm"
                   className="text-red-600 hover:text-red-700"
-                  title="Delete server"
+                  title="删除服务器"
                 >
                   <Trash2 className="w-4 h-4" />
                 </Button>
@@ -282,17 +282,16 @@ function CodexMcpServers({ servers, onAdd, onEdit, onDelete }) {
         ))}
         {servers.length === 0 && (
           <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-            No MCP servers configured
+            未配置 MCP 服务器
           </div>
         )}
       </div>
 
       {/* Help Section */}
       <div className="bg-gray-100 dark:bg-gray-800/50 border border-gray-300 dark:border-gray-600 rounded-lg p-4">
-        <h4 className="font-medium text-gray-900 dark:text-gray-100 mb-2">About Codex MCP</h4>
+        <h4 className="font-medium text-gray-900 dark:text-gray-100 mb-2">关于 Codex MCP</h4>
         <p className="text-sm text-gray-700 dark:text-gray-300">
-          Codex supports stdio-based MCP servers. You can add servers that extend Codex's capabilities
-          with additional tools and resources.
+          Codex 支持基于 stdio 的 MCP 服务器。您可以添加扩展 Codex 功能的服务器，提供额外的工具和资源。
         </p>
       </div>
     </div>

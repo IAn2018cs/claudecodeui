@@ -18,7 +18,7 @@ const LoadingScreen = () => (
         <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
         <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
       </div>
-      <p className="text-muted-foreground mt-2">Loading...</p>
+      <p className="text-muted-foreground mt-2">加载中...</p>
     </div>
   </div>
 );

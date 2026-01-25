@@ -62,7 +62,7 @@ function UsageDashboard({ onBack }) {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="text-muted-foreground">Loading dashboard...</div>
+        <div className="text-muted-foreground">加载仪表板中...</div>
       </div>
     );
   }
@@ -77,10 +77,10 @@ function UsageDashboard({ onBack }) {
           {onBack && (
             <Button variant="ghost" size="sm" onClick={onBack}>
               <ArrowLeft className="w-4 h-4 mr-2" />
-              Back
+              返回
             </Button>
           )}
-          <h2 className="text-2xl font-bold text-foreground">Usage Dashboard</h2>
+          <h2 className="text-2xl font-bold text-foreground">使用情况仪表板</h2>
         </div>
         <div className="flex items-center gap-2">
           <div className="flex items-center border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
@@ -94,7 +94,7 @@ function UsageDashboard({ onBack }) {
                     : 'bg-background text-foreground hover:bg-muted'
                 }`}
               >
-                {p === 'week' ? 'Week' : 'Month'}
+                {p === 'week' ? '周' : '月'}
               </button>
             ))}
           </div>
@@ -103,7 +103,7 @@ function UsageDashboard({ onBack }) {
             size="sm"
             onClick={triggerScan}
             disabled={refreshing}
-            title="Scan for new usage data"
+            title="扫描新的使用数据"
           >
             <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
           </Button>
@@ -118,7 +118,7 @@ function UsageDashboard({ onBack }) {
               <DollarSign className="w-5 h-5 text-green-600 dark:text-green-400" />
             </div>
             <div>
-              <p className="text-sm text-muted-foreground">Total Cost</p>
+              <p className="text-sm text-muted-foreground">总成本</p>
               <p className="text-2xl font-bold text-foreground">{formatCost(totals?.totalCost)}</p>
             </div>
           </div>
@@ -130,7 +130,7 @@ function UsageDashboard({ onBack }) {
               <Users className="w-5 h-5 text-blue-600 dark:text-blue-400" />
             </div>
             <div>
-              <p className="text-sm text-muted-foreground">Active Users</p>
+              <p className="text-sm text-muted-foreground">活跃用户</p>
               <p className="text-2xl font-bold text-foreground">
                 {totals?.activeUsers || 0} / {totals?.totalUsers || 0}
               </p>
@@ -144,7 +144,7 @@ function UsageDashboard({ onBack }) {
               <MessageSquare className="w-5 h-5 text-purple-600 dark:text-purple-400" />
             </div>
             <div>
-              <p className="text-sm text-muted-foreground">Total Requests</p>
+              <p className="text-sm text-muted-foreground">总请求数</p>
               <p className="text-2xl font-bold text-foreground">{formatNumber(totals?.totalRequests)}</p>
             </div>
           </div>
@@ -156,7 +156,7 @@ function UsageDashboard({ onBack }) {
               <TrendingUp className="w-5 h-5 text-orange-600 dark:text-orange-400" />
             </div>
             <div>
-              <p className="text-sm text-muted-foreground">Sessions</p>
+              <p className="text-sm text-muted-foreground">会话数</p>
               <p className="text-2xl font-bold text-foreground">{formatNumber(totals?.totalSessions)}</p>
             </div>
           </div>
@@ -167,7 +167,7 @@ function UsageDashboard({ onBack }) {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Daily Trend */}
         <div className="bg-card border border-gray-200 dark:border-gray-700 rounded-lg p-4">
-          <h3 className="text-lg font-semibold text-foreground mb-4">Daily Cost Trend</h3>
+          <h3 className="text-lg font-semibold text-foreground mb-4">每日成本趋势</h3>
           {dailyTrend && dailyTrend.length > 0 ? (
             <div className="space-y-2">
               {dailyTrend.map((day) => {
@@ -192,13 +192,13 @@ function UsageDashboard({ onBack }) {
               })}
             </div>
           ) : (
-            <div className="text-center py-8 text-muted-foreground">No data available</div>
+            <div className="text-center py-8 text-muted-foreground">无可用的使用数据</div>
           )}
         </div>
 
         {/* Model Distribution */}
         <div className="bg-card border border-gray-200 dark:border-gray-700 rounded-lg p-4">
-          <h3 className="text-lg font-semibold text-foreground mb-4">Model Distribution</h3>
+          <h3 className="text-lg font-semibold text-foreground mb-4">模型成本</h3>
           {modelDistribution && modelDistribution.length > 0 ? (
             <div className="space-y-3">
               {modelDistribution.map((model) => {
@@ -216,7 +216,7 @@ function UsageDashboard({ onBack }) {
                       <div className="flex items-center gap-2">
                         <Badge variant="secondary" className="capitalize">{model.model}</Badge>
                         <span className="text-sm text-muted-foreground">
-                          {formatNumber(model.requests)} requests
+                          {formatNumber(model.requests)} 请求
                         </span>
                       </div>
                       <span className="text-sm font-mono text-foreground">{formatCost(model.cost)}</span>
@@ -232,23 +232,23 @@ function UsageDashboard({ onBack }) {
               })}
             </div>
           ) : (
-            <div className="text-center py-8 text-muted-foreground">No data available</div>
+            <div className="text-center py-8 text-muted-foreground">无可用的使用数据</div>
           )}
         </div>
       </div>
 
       {/* Top Users */}
       <div className="bg-card border border-gray-200 dark:border-gray-700 rounded-lg p-4">
-        <h3 className="text-lg font-semibold text-foreground mb-4">Top Users by Cost</h3>
+        <h3 className="text-lg font-semibold text-foreground mb-4">用户成本</h3>
         {topUsers && topUsers.length > 0 ? (
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
                 <tr className="border-b border-gray-200 dark:border-gray-700">
-                  <th className="text-left py-2 text-sm font-medium text-muted-foreground">Rank</th>
-                  <th className="text-left py-2 text-sm font-medium text-muted-foreground">Username</th>
-                  <th className="text-right py-2 text-sm font-medium text-muted-foreground">Requests</th>
-                  <th className="text-right py-2 text-sm font-medium text-muted-foreground">Cost</th>
+                  <th className="text-left py-2 text-sm font-medium text-muted-foreground">排名</th>
+                  <th className="text-left py-2 text-sm font-medium text-muted-foreground">用户名</th>
+                  <th className="text-right py-2 text-sm font-medium text-muted-foreground">请求数</th>
+                  <th className="text-right py-2 text-sm font-medium text-muted-foreground">成本</th>
                 </tr>
               </thead>
               <tbody>
@@ -268,7 +268,7 @@ function UsageDashboard({ onBack }) {
             </table>
           </div>
         ) : (
-          <div className="text-center py-8 text-muted-foreground">No data available</div>
+          <div className="text-center py-8 text-muted-foreground">无可用的使用数据</div>
         )}
       </div>
     </div>
