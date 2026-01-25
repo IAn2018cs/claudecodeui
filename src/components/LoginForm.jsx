@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { MessageSquare } from 'lucide-react';
 
-const LoginForm = () => {
+const LoginForm = ({ onSwitchToRegister }) => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -101,6 +101,21 @@ const LoginForm = () => {
               Enter your credentials to access Claude Code UI
             </p>
           </div>
+
+          {onSwitchToRegister && (
+            <div className="text-center">
+              <p className="text-sm text-muted-foreground">
+                Don't have an account?{' '}
+                <button
+                  type="button"
+                  onClick={onSwitchToRegister}
+                  className="text-blue-500 hover:text-blue-600 font-medium"
+                >
+                  Sign up
+                </button>
+              </p>
+            </div>
+          )}
         </div>
       </div>
     </div>

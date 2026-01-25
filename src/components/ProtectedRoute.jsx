@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import SetupForm from './SetupForm';
 import LoginForm from './LoginForm';
@@ -25,6 +25,7 @@ const LoadingScreen = () => (
 
 const ProtectedRoute = ({ children }) => {
   const { user, isLoading, needsSetup } = useAuth();
+  const [showRegister, setShowRegister] = useState(false);
 
   if (import.meta.env.VITE_IS_PLATFORM === 'true') {
     if (isLoading) {
@@ -43,7 +44,10 @@ const ProtectedRoute = ({ children }) => {
   }
 
   if (!user) {
-    return <LoginForm />;
+    if (showRegister) {
+      return <SetupForm onSwitchToLogin={() => setShowRegister(false)} />;
+    }
+    return <LoginForm onSwitchToRegister={() => setShowRegister(true)} />;
   }
 
   return children;

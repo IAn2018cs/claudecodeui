@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import ClaudeLogo from './ClaudeLogo';
 
-const SetupForm = () => {
+const SetupForm = ({ onSwitchToLogin }) => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -123,9 +123,24 @@ const SetupForm = () => {
 
           <div className="text-center">
             <p className="text-sm text-muted-foreground">
-              This is a single-user system. Only one account can be created.
+              Create an account to start using Claude Code UI
             </p>
           </div>
+
+          {onSwitchToLogin && (
+            <div className="text-center">
+              <p className="text-sm text-muted-foreground">
+                Already have an account?{' '}
+                <button
+                  type="button"
+                  onClick={onSwitchToLogin}
+                  className="text-blue-500 hover:text-blue-600 font-medium"
+                >
+                  Sign in
+                </button>
+              </p>
+            </div>
+          )}
         </div>
       </div>
     </div>

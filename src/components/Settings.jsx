@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Badge } from './ui/badge';
-import { X, Plus, Settings as SettingsIcon, Shield, AlertTriangle, Moon, Sun, Server, Edit3, Trash2, Globe, Terminal, Zap, FolderOpen, Check } from 'lucide-react';
+import { X, Plus, Settings as SettingsIcon, Shield, AlertTriangle, Moon, Sun, Server, Edit3, Trash2, Globe, Terminal, Zap, FolderOpen, Check, LogOut } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
 import ClaudeLogo from './ClaudeLogo';
@@ -15,7 +15,7 @@ import UserManagement from './settings/UserManagement';
 
 function Settings({ isOpen, onClose, projects = [], initialTab = 'agents' }) {
   const { isDarkMode, toggleDarkMode } = useTheme();
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const isAdmin = user?.role === 'admin';
   const [allowedTools, setAllowedTools] = useState([]);
   const [disallowedTools, setDisallowedTools] = useState([]);
@@ -577,6 +577,16 @@ function Settings({ isOpen, onClose, projects = [], initialTab = 'agents' }) {
                   Users
                 </button>
               )}
+              <button
+                onClick={() => setActiveTab('account')}
+                className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
+                  activeTab === 'account'
+                    ? 'border-blue-600 text-blue-600 dark:text-blue-400'
+                    : 'border-transparent text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                Account
+              </button>
             </div>
           </div>
 
@@ -873,6 +883,61 @@ function Settings({ isOpen, onClose, projects = [], initialTab = 'agents' }) {
             {activeTab === 'users' && isAdmin && (
               <div className="space-y-6 md:space-y-8">
                 <UserManagement />
+              </div>
+            )}
+
+            {/* Account Tab */}
+            {activeTab === 'account' && (
+              <div className="space-y-6 md:space-y-8">
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold text-foreground">Account</h3>
+
+                  {/* Current User Info */}
+                  <div className="bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
+                        <span className="text-lg font-semibold text-primary">
+                          {user?.username?.charAt(0).toUpperCase()}
+                        </span>
+                      </div>
+                      <div>
+                        <div className="font-medium text-foreground">
+                          {user?.username}
+                        </div>
+                        <div className="text-sm text-muted-foreground">
+                          {user?.role === 'admin' ? 'Administrator' : 'User'}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Logout Button */}
+                  <div className="bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="font-medium text-foreground">
+                          Sign Out
+                        </div>
+                        <div className="text-sm text-muted-foreground">
+                          End your current session
+                        </div>
+                      </div>
+                      <Button
+                        variant="outline"
+                        className="gap-2 text-red-600 dark:text-red-400 border-red-200 dark:border-red-800 hover:bg-red-50 dark:hover:bg-red-900/20"
+                        onClick={() => {
+                          if (confirm('Are you sure you want to log out?')) {
+                            logout();
+                            onClose();
+                          }
+                        }}
+                      >
+                        <LogOut className="w-4 h-4" />
+                        Log Out
+                      </Button>
+                    </div>
+                  </div>
+                </div>
               </div>
             )}
 
