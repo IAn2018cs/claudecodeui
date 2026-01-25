@@ -74,7 +74,10 @@ function loadEnvFile() {
 // Get the database path (same logic as db.js)
 function getDatabasePath() {
     loadEnvFile();
-    return process.env.DATABASE_PATH || path.join(__dirname, 'database', 'auth.db');
+    // Resolve relative paths from project root (one level up from server/)
+    return process.env.DATABASE_PATH
+        ? path.resolve(path.join(__dirname, '..'), process.env.DATABASE_PATH)
+        : path.join(__dirname, 'database', 'auth.db');
 }
 
 // Get the installation directory

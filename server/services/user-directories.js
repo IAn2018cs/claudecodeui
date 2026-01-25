@@ -1,6 +1,5 @@
 import { promises as fs } from 'fs';
 import path from 'path';
-import os from 'os';
 
 // Base data directory (configurable via env)
 const DATA_DIR = process.env.DATA_DIR || path.join(process.cwd(), 'data');
@@ -45,20 +44,16 @@ export async function initUserDirectories(userUuid) {
   await fs.writeFile(claudeJsonPath, JSON.stringify(claudeConfig, null, 2));
   console.log(`Created .claude.json for user ${userUuid}`);
 
-  // Copy settings.json from ~/.claude if exists
-  const sourceSettings = path.join(os.homedir(), '.claude', 'settings.json');
+  // Create settings.json with proxy configuration
   const destSettings = path.join(paths.claudeDir, 'settings.json');
-
-  try {
-    await fs.access(sourceSettings);
-    await fs.copyFile(sourceSettings, destSettings);
-    console.log(`Copied settings.json for user ${userUuid}`);
-  } catch (error) {
-    if (error.code !== 'ENOENT') {
-      console.error('Error copying settings.json:', error);
+  const settingsConfig = {
+    env: {
+      ANTHROPIC_AUTH_TOKEN: process.env.ANTHROPIC_AUTH_TOKEN || '',
+      ANTHROPIC_BASE_URL: process.env.ANTHROPIC_BASE_URL || ''
     }
-    // If source doesn't exist, that's fine - user will use defaults
-  }
+  };
+  await fs.writeFile(destSettings, JSON.stringify(settingsConfig, null, 2));
+  console.log(`Created settings.json for user ${userUuid}`);
 
   return paths;
 }

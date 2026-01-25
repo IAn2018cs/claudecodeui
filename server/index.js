@@ -1,5 +1,7 @@
 #!/usr/bin/env node
-// Load environment variables from .env file
+// Load environment variables FIRST - before any other imports
+import './load-env.js';
+
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -27,22 +29,6 @@ const c = {
     bright: (text) => `${colors.bright}${text}${colors.reset}`,
     dim: (text) => `${colors.dim}${text}${colors.reset}`,
 };
-
-try {
-    const envPath = path.join(__dirname, '../.env');
-    const envFile = fs.readFileSync(envPath, 'utf8');
-    envFile.split('\n').forEach(line => {
-        const trimmedLine = line.trim();
-        if (trimmedLine && !trimmedLine.startsWith('#')) {
-            const [key, ...valueParts] = trimmedLine.split('=');
-            if (key && valueParts.length > 0 && !process.env[key]) {
-                process.env[key] = valueParts.join('=').trim();
-            }
-        }
-    });
-} catch (e) {
-    console.log('No .env file found or error reading it:', e.message);
-}
 
 console.log('PORT from env:', process.env.PORT);
 

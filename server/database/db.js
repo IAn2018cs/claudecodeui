@@ -22,7 +22,10 @@ const c = {
 };
 
 // Use DATABASE_PATH environment variable if set, otherwise use default location
-const DB_PATH = process.env.DATABASE_PATH || path.join(__dirname, 'auth.db');
+// Resolve relative paths from project root (one level up from server/)
+const DB_PATH = process.env.DATABASE_PATH
+  ? path.resolve(path.join(__dirname, '../..'), process.env.DATABASE_PATH)
+  : path.join(__dirname, 'auth.db');
 const INIT_SQL_PATH = path.join(__dirname, 'init.sql');
 
 // Ensure database directory exists if custom path is provided
