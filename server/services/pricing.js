@@ -6,13 +6,38 @@
  */
 
 // Pricing per million tokens
+// Reference: https://platform.claude.com/docs/en/about-claude/pricing
+// Cache pricing: read = 0.1x base, write (5min) = 1.25x base, write (1h) = 2x base
 const PRICING_PER_MILLION = {
-  // Claude Sonnet 4
-  'claude-sonnet-4-20250514': {
+  // ============ Latest Models ============
+  // Claude Opus 4.5 (latest flagship)
+  'claude-opus-4-5-20251101': {
+    input: 5.00,
+    output: 25.00,
+    cacheRead: 0.50,
+    cacheCreate: 6.25
+  },
+  // Claude Sonnet 4.5
+  'claude-sonnet-4-5-20250929': {
     input: 3.00,
     output: 15.00,
     cacheRead: 0.30,
     cacheCreate: 3.75
+  },
+  // Claude Haiku 4.5
+  'claude-haiku-4-5-20251001': {
+    input: 1.00,
+    output: 5.00,
+    cacheRead: 0.10,
+    cacheCreate: 1.25
+  },
+  // ============ Legacy Models ============
+  // Claude Opus 4.1
+  'claude-opus-4-1-20250805': {
+    input: 15.00,
+    output: 75.00,
+    cacheRead: 1.50,
+    cacheCreate: 18.75
   },
   // Claude Opus 4
   'claude-opus-4-20250514': {
@@ -21,14 +46,36 @@ const PRICING_PER_MILLION = {
     cacheRead: 1.50,
     cacheCreate: 18.75
   },
+  // Claude Sonnet 4
+  'claude-sonnet-4-20250514': {
+    input: 3.00,
+    output: 15.00,
+    cacheRead: 0.30,
+    cacheCreate: 3.75
+  },
+  // Claude Sonnet 3.7
+  'claude-3-7-sonnet-20250219': {
+    input: 3.00,
+    output: 15.00,
+    cacheRead: 0.30,
+    cacheCreate: 3.75
+  },
   // Claude Haiku 3.5
-  'claude-haiku-3-5-20241022': {
+  'claude-3-5-haiku-20241022': {
     input: 0.80,
     output: 4.00,
     cacheRead: 0.08,
     cacheCreate: 1.00
   },
-  // Aliases for simplified model names
+  // Claude Haiku 3
+  'claude-3-haiku-20240307': {
+    input: 0.25,
+    output: 1.25,
+    cacheRead: 0.03,
+    cacheCreate: 0.30
+  },
+  // ============ Aliases ============
+  // Aliases for simplified model names (pointing to latest versions)
   'sonnet': {
     input: 3.00,
     output: 15.00,
@@ -36,16 +83,16 @@ const PRICING_PER_MILLION = {
     cacheCreate: 3.75
   },
   'opus': {
-    input: 15.00,
-    output: 75.00,
-    cacheRead: 1.50,
-    cacheCreate: 18.75
+    input: 5.00,
+    output: 25.00,
+    cacheRead: 0.50,
+    cacheCreate: 6.25
   },
   'haiku': {
-    input: 0.80,
-    output: 4.00,
-    cacheRead: 0.08,
-    cacheCreate: 1.00
+    input: 1.00,
+    output: 5.00,
+    cacheRead: 0.10,
+    cacheCreate: 1.25
   }
 };
 
