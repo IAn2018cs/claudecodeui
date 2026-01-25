@@ -2038,7 +2038,7 @@ function ChatInterface({ selectedProject, selectedSession, ws, sendMessage, mess
       case 'help':
         // Show help content
         setChatMessages(prev => [...prev, {
-          role: 'assistant',
+          type: 'assistant',
           content: data.content,
           timestamp: Date.now()
         }]);
@@ -2047,34 +2047,39 @@ function ChatInterface({ selectedProject, selectedSession, ws, sendMessage, mess
       case 'model':
         // Show model information
         setChatMessages(prev => [...prev, {
-          role: 'assistant',
+          type: 'assistant',
           content: `**Current Model**: ${data.current.model}\n\n**Available Models**: ${data.available.claude.join(', ')}`,
           timestamp: Date.now()
         }]);
         break;
 
       case 'cost': {
-        const costMessage = `**Token Usage**: ${data.tokenUsage.used.toLocaleString()} / ${data.tokenUsage.total.toLocaleString()} (${data.tokenUsage.percentage}%)\n\n**Estimated Cost**:\n- Input: $${data.cost.input}\n- Output: $${data.cost.output}\n- **Total**: $${data.cost.total}\n\n**Model**: ${data.model}`;
-        setChatMessages(prev => [...prev, { role: 'assistant', content: costMessage, timestamp: Date.now() }]);
+        let costMessage;
+        if (data.usage) {
+          costMessage = `**Token Usage**: ${data.usage.used.toLocaleString()} / ${data.usage.total.toLocaleString()} (${data.usage.percentage}%)\n\n**Remaining**: ${data.usage.remaining.toLocaleString()} tokens`;
+        } else {
+          costMessage = data.message || 'No token usage data available.';
+        }
+        setChatMessages(prev => [...prev, { type: 'assistant', content: costMessage, timestamp: Date.now() }]);
         break;
       }
 
       case 'status': {
         const statusMessage = `**System Status**\n\n- Version: ${data.version}\n- Uptime: ${data.uptime}\n- Model: ${data.model}\n- Provider: ${data.provider}\n- Node.js: ${data.nodeVersion}\n- Platform: ${data.platform}`;
-        setChatMessages(prev => [...prev, { role: 'assistant', content: statusMessage, timestamp: Date.now() }]);
+        setChatMessages(prev => [...prev, { type: 'assistant', content: statusMessage, timestamp: Date.now() }]);
         break;
       }
       case 'memory':
         // Show memory file info
         if (data.error) {
           setChatMessages(prev => [...prev, {
-            role: 'assistant',
+            type: 'assistant',
             content: `⚠️ ${data.message}`,
             timestamp: Date.now()
           }]);
         } else {
           setChatMessages(prev => [...prev, {
-            role: 'assistant',
+            type: 'assistant',
             content: `📝 ${data.message}\n\nPath: \`${data.path}\``,
             timestamp: Date.now()
           }]);
@@ -2096,7 +2101,7 @@ function ChatInterface({ selectedProject, selectedSession, ws, sendMessage, mess
         // Rewind conversation
         if (data.error) {
           setChatMessages(prev => [...prev, {
-            role: 'assistant',
+            type: 'assistant',
             content: `⚠️ ${data.message}`,
             timestamp: Date.now()
           }]);
@@ -2104,7 +2109,7 @@ function ChatInterface({ selectedProject, selectedSession, ws, sendMessage, mess
           // Remove last N messages
           setChatMessages(prev => prev.slice(0, -data.steps * 2)); // Remove user + assistant pairs
           setChatMessages(prev => [...prev, {
-            role: 'assistant',
+            type: 'assistant',
             content: `⏪ ${data.message}`,
             timestamp: Date.now()
           }]);
@@ -2130,7 +2135,7 @@ function ChatInterface({ selectedProject, selectedSession, ws, sendMessage, mess
       );
       if (!confirmed) {
         setChatMessages(prev => [...prev, {
-          role: 'assistant',
+          type: 'assistant',
           content: '❌ Command execution cancelled',
           timestamp: Date.now()
         }]);
@@ -2209,7 +2214,7 @@ function ChatInterface({ selectedProject, selectedSession, ws, sendMessage, mess
       console.error('Error executing command:', error);
       // Show error message to user
       setChatMessages(prev => [...prev, {
-        role: 'assistant',
+        type: 'assistant',
         content: `Error executing command: ${error.message}`,
         timestamp: Date.now()
       }]);
