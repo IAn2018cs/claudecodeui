@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Badge } from './ui/badge';
@@ -14,6 +15,7 @@ import McpServersContent from './settings/McpServersContent';
 import UserManagement from './settings/UserManagement';
 
 function Settings({ isOpen, onClose, projects = [], initialTab = 'agents' }) {
+  const navigate = useNavigate();
   const { isDarkMode, toggleDarkMode } = useTheme();
   const { user, logout } = useAuth();
   const isAdmin = user?.role === 'admin';
@@ -927,8 +929,9 @@ function Settings({ isOpen, onClose, projects = [], initialTab = 'agents' }) {
                         className="gap-2 text-red-600 dark:text-red-400 border-red-200 dark:border-red-800 hover:bg-red-50 dark:hover:bg-red-900/20"
                         onClick={() => {
                           if (confirm('Are you sure you want to log out?')) {
-                            logout();
                             onClose();
+                            navigate('/');
+                            logout();
                           }
                         }}
                       >
