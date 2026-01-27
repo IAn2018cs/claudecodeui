@@ -1,6 +1,6 @@
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
-import { Shield, AlertTriangle, Plus, X } from 'lucide-react';
+import { Shield, AlertTriangle, Plus, X, Info } from 'lucide-react';
 
 // Common tool patterns for Claude
 const commonClaudeTools = [
@@ -73,6 +73,16 @@ function ClaudePermissions({
 
   return (
     <div className="space-y-6">
+      {/* Scope Notice */}
+      <div className="bg-sky-50 dark:bg-sky-900/20 border border-sky-200 dark:border-sky-800 rounded-lg p-4">
+        <div className="flex items-start gap-3">
+          <Info className="w-5 h-5 text-sky-500 flex-shrink-0 mt-0.5" />
+          <div className="text-sm text-sky-800 dark:text-sky-200">
+            <span className="font-medium">提示：</span>此权限设置仅对 <span className="font-medium">Chat（聊天）</span> 中的 Claude Agent 生效，对 <span className="font-medium">Shell（终端）</span> 无效。Shell 是直接的系统终端，不受此权限控制。
+          </div>
+        </div>
+      </div>
+
       {/* Skip Permissions */}
       <div className="space-y-4">
         <div className="flex items-center gap-3">
