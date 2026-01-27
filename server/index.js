@@ -52,6 +52,7 @@ import commandsRoutes from './routes/commands.js';
 import projectsRoutes from './routes/projects.js';
 import adminRoutes from './routes/admin.js';
 import usageRoutes from './routes/usage.js';
+import skillsRoutes from './routes/skills.js';
 import { initializeDatabase } from './database/db.js';
 import { validateApiKey, authenticateToken, authenticateWebSocket } from './middleware/auth.js';
 import { getUserPaths } from './services/user-directories.js';
@@ -271,6 +272,9 @@ app.use('/api/admin', adminRoutes);
 
 // Usage API Routes (protected, admin only)
 app.use('/api/admin/usage', usageRoutes);
+
+// Skills API Routes (protected)
+app.use('/api/skills', authenticateToken, skillsRoutes);
 
 // Static files served after API routes
 // Add cache control: HTML files should not be cached, but assets can be cached

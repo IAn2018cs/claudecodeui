@@ -14,6 +14,7 @@ import PermissionsContent from './settings/PermissionsContent';
 import McpServersContent from './settings/McpServersContent';
 import UserManagement from './settings/UserManagement';
 import UsageDashboard from './UsageDashboard';
+import SkillsContent from './settings/SkillsContent';
 
 function Settings({ isOpen, onClose, projects = [], initialTab = 'agents' }) {
   const navigate = useNavigate();
@@ -842,6 +843,15 @@ function Settings({ isOpen, onClose, projects = [], initialTab = 'agents' }) {
                       >
                         MCP 服务器
                       </button>
+                      <button
+                        onClick={() => setSelectedCategory('skills')}
+                        className={`px-3 md:px-4 py-2 md:py-3 text-xs md:text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${selectedCategory === 'skills'
+                          ? 'border-amber-600 text-amber-600 dark:text-amber-400'
+                          : 'border-transparent text-muted-foreground hover:text-foreground'
+                          }`}
+                      >
+                        技能
+                      </button>
                     </div>
                   </div>
 
@@ -878,6 +888,11 @@ function Settings({ isOpen, onClose, projects = [], initialTab = 'agents' }) {
                         serverTools={mcpServerTools}
                         toolsLoading={mcpToolsLoading}
                       />
+                    )}
+
+                    {/* Skills Category */}
+                    {selectedCategory === 'skills' && (
+                      <SkillsContent />
                     )}
                   </div>
                 </div>

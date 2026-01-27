@@ -22,6 +22,19 @@ export function getUserPaths(userUuid) {
     configDir: path.join(DATA_DIR, 'user-data', userUuid),
     claudeDir: path.join(DATA_DIR, 'user-data', userUuid, '.claude'),
     projectsDir: path.join(DATA_DIR, 'user-projects', userUuid),
+    skillsDir: path.join(DATA_DIR, 'user-data', userUuid, '.claude', 'skills'),
+    skillsImportDir: path.join(DATA_DIR, 'user-data', userUuid, 'skills-import'),
+    skillsRepoDir: path.join(DATA_DIR, 'user-data', userUuid, 'skills-repo'),
+  };
+}
+
+/**
+ * Get public paths (shared across all users)
+ */
+export function getPublicPaths() {
+  return {
+    skillsDir: path.join(DATA_DIR, 'skills'),
+    skillsRepoDir: path.join(DATA_DIR, 'skills-repo'),
   };
 }
 
@@ -39,6 +52,11 @@ export async function initUserDirectories(userUuid) {
   // Create projects directory for Claude session files
   const projectsDir = path.join(paths.claudeDir, 'projects');
   await fs.mkdir(projectsDir, { recursive: true });
+
+  // Create skills directories
+  await fs.mkdir(paths.skillsDir, { recursive: true });
+  await fs.mkdir(paths.skillsImportDir, { recursive: true });
+  await fs.mkdir(paths.skillsRepoDir, { recursive: true });
 
   // Create .claude.json with hasCompletedOnboarding=true
   const claudeJsonPath = path.join(paths.claudeDir, '.claude.json');
