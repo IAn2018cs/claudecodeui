@@ -2353,6 +2353,11 @@ function ChatInterface({ selectedProject, selectedSession, ws, sendMessage, mess
 
     // Second pass: process messages and attach tool results to tool uses
     for (const msg of rawMessages) {
+      // Skip meta messages (e.g., skill/command loading messages)
+      if (msg.isMeta) {
+        continue;
+      }
+
       // Handle user messages
       if (msg.message?.role === 'user' && msg.message?.content) {
         let content = '';
@@ -2376,10 +2381,14 @@ function ChatInterface({ selectedProject, selectedSession, ws, sendMessage, mess
           content = decodeHtmlEntities(String(msg.message.content));
         }
 
-        // Skip command messages, system messages, and empty content
+        // Extract command name if present (e.g., <command-name>/pdf</command-name>)
+        const commandNameMatch = content.match(/<command-name>(\/[^<]+)<\/command-name>/);
+        if (commandNameMatch) {
+          content = commandNameMatch[1]; // Use the command name as content
+        }
+
+        // Skip system messages and empty content (but not command messages which are already extracted)
         const shouldSkip = !content ||
-          content.startsWith('<command-name>') ||
-          content.startsWith('<command-message>') ||
           content.startsWith('<command-args>') ||
           content.startsWith('<local-command-stdout>') ||
           content.startsWith('<system-reminder>') ||

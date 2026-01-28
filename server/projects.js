@@ -499,6 +499,14 @@ async function parseJsonlSessions(filePath) {
           }
 
           if (entry.sessionId) {
+            // Skip meta messages (e.g., skill/command loading messages)
+            if (entry.isMeta) {
+              continue;
+            }
+
+            // Check if this is an actual message (user or assistant)
+            const isMessage = entry.type === 'user' || entry.type === 'assistant';
+
             if (!sessions.has(entry.sessionId)) {
               sessions.set(entry.sessionId, {
                 id: entry.sessionId,
@@ -581,7 +589,10 @@ async function parseJsonlSessions(filePath) {
               }
             }
 
-            session.messageCount++;
+            // Only count actual messages (user or assistant), not queue-operation, summary, etc.
+            if (isMessage) {
+              session.messageCount++;
+            }
 
             if (entry.timestamp) {
               session.lastActivity = new Date(entry.timestamp);
