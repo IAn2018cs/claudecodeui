@@ -1,9 +1,9 @@
 <div align="center">
-  <img src="public/logo.svg" alt="Claude Code UI" width="64" height="64">
-  <h1>Claude Code UI</h1>
+  <img src="public/logo.svg" alt="AgentHub" width="64" height="64">
+  <h1>AgentHub</h1>
 </div>
 
-A desktop and mobile Web UI for [Claude Code](https://docs.anthropic.com/en/docs/claude-code). You can use it locally or remotely to view your active projects and sessions in Claude Code and make changes to them from everywhere (mobile or desktop). This gives you a proper interface that works everywhere. 
+A desktop and mobile Web UI for AI Agents. You can use it locally or remotely to manage your AI agent sessions and interact with them from everywhere (mobile or desktop). This gives you a proper interface that works everywhere. 
 
 ## Screenshots
 
@@ -32,13 +32,13 @@ A desktop and mobile Web UI for [Claude Code](https://docs.anthropic.com/en/docs
 
 ## Features
 
-- **Responsive Design** - Works seamlessly across desktop, tablet, and mobile so you can also use Claude Code from mobile
-- **Interactive Chat Interface** - Built-in chat interface for seamless communication with Claude Code
-- **Integrated Shell Terminal** - Direct access to Claude Code through built-in shell functionality
+- **Responsive Design** - Works seamlessly across desktop, tablet, and mobile
+- **Interactive Chat Interface** - Built-in chat interface for seamless communication with AI agents
+- **Integrated Shell Terminal** - Direct access to AI agents through built-in shell functionality
 - **File Explorer** - Interactive file tree with syntax highlighting and live editing
 - **Session Management** - Resume conversations, manage multiple sessions, and track history
 - **MCP Server Support** - Add your own MCP servers through the UI
-- **Model Compatibility** - Works with Claude Sonnet 4.5 and Opus 4.5 
+- **Model Compatibility** - Works with various AI models 
 
 
 ## Quick Start
@@ -53,7 +53,7 @@ A desktop and mobile Web UI for [Claude Code](https://docs.anthropic.com/en/docs
 No installation required, direct operation:
 
 ```bash
-npx @siteboon/claude-code-ui
+npx agenthub
 ```
 
 The server will start and be accessible at `http://localhost:3001` (or your configured PORT).
@@ -64,13 +64,13 @@ The server will start and be accessible at `http://localhost:3001` (or your conf
 For frequent use, install globally once:
 
 ```bash
-npm install -g @siteboon/claude-code-ui
+npm install -g agenthub
 ```
 
 Then start with a simple command:
 
 ```bash
-claude-code-ui
+agenthub
 ```
 
 
@@ -78,34 +78,34 @@ claude-code-ui
 
 **To update**:
 ```bash
-cloudcli update
+agenthub update
 ```
 
 ### CLI Usage
 
-After global installation, you have access to both `claude-code-ui` and `cloudcli` commands:
+After global installation, you have access to `agenthub` command:
 
 | Command / Option | Short | Description |
 |------------------|-------|-------------|
-| `cloudcli` or `claude-code-ui` | | Start the server (default) |
-| `cloudcli start` | | Start the server explicitly |
-| `cloudcli status` | | Show configuration and data locations |
-| `cloudcli update` | | Update to the latest version |
-| `cloudcli help` | | Show help information |
-| `cloudcli version` | | Show version information |
+| `agenthub` | | Start the server (default) |
+| `agenthub start` | | Start the server explicitly |
+| `agenthub status` | | Show configuration and data locations |
+| `agenthub update` | | Update to the latest version |
+| `agenthub help` | | Show help information |
+| `agenthub version` | | Show version information |
 | `--port <port>` | `-p` | Set server port (default: 3001) |
 | `--database-path <path>` | | Set custom database location |
 
 **Examples:**
 ```bash
-cloudcli                          # Start with defaults
-cloudcli -p 8080              # Start on custom port
-cloudcli status                   # Show current configuration
+agenthub                          # Start with defaults
+agenthub -p 8080              # Start on custom port
+agenthub status                   # Show current configuration
 ```
 
 ### Run as Background Service (Recommended for Production)
 
-For production use, run Claude Code UI as a background service using PM2 (Process Manager 2):
+For production use, run AgentHub as a background service using PM2 (Process Manager 2):
 
 #### Install PM2
 
@@ -117,19 +117,19 @@ npm install -g pm2
 
 ```bash
 # Start the server in background
-pm2 start claude-code-ui --name "claude-code-ui"
+pm2 start agenthub --name "agenthub"
 
 # Or using the shorter alias
-pm2 start cloudcli --name "claude-code-ui"
+pm2 start agenthub --name "agenthub"
 
 # Start on a custom port
-pm2 start cloudcli --name "claude-code-ui" -- --port 8080
+pm2 start agenthub --name "agenthub" -- --port 8080
 ```
 
 
 #### Auto-Start on System Boot
 
-To make Claude Code UI start automatically when your system boots:
+To make AgentHub start automatically when your system boots:
 
 ```bash
 # Generate startup script for your platform
@@ -144,7 +144,7 @@ pm2 save
 
 1. **Clone the repository:**
 ```bash
-git clone https://github.com/siteboon/claudecodeui.git
+git clone https://github.com/IAn2018cs/claudecodeui.git
 cd claudecodeui
 ```
 
@@ -172,11 +172,11 @@ The application will start at the port you specified in your .env
 
 ## Security & Tools Configuration
 
-**🔒 Important Notice**: All Claude Code tools are **disabled by default**. This prevents potentially harmful operations from running automatically.
+**🔒 Important Notice**: All agent tools are **disabled by default**. This prevents potentially harmful operations from running automatically.
 
 ### Enabling Tools
 
-To use Claude Code's full functionality, you'll need to manually enable tools:
+To use full functionality, you'll need to manually enable tools:
 
 1. **Open Tools Settings** - Click the gear icon in the sidebar
 3. **Enable Selectively** - Turn on only the tools you need
@@ -196,15 +196,15 @@ To use Claude Code's full functionality, you'll need to manually enable tools:
 ### Core Features
 
 #### Project Management
-It automatically discovers Claude Code sessions and groups them together into projects
+It automatically discovers agent sessions and groups them together into projects
 session counts
 - **Project Actions** - Rename, delete, and organize projects
 - **Smart Navigation** - Quick access to recent projects and sessions
 - **MCP support** - Add your own MCP servers through the UI
 
 #### Chat Interface
-- **Use responsive chat or Claude Code CLI** - You can either use the adapted chat interface or use the shell button to connect to Claude Code CLI.
-- **Real-time Communication** - Stream responses from Claude Code with WebSocket connection
+- **Use responsive chat or CLI** - You can either use the adapted chat interface or use the shell button to connect to CLI.
+- **Real-time Communication** - Stream responses from AI agents with WebSocket connection
 - **Session Management** - Resume previous conversations or start fresh sessions
 - **Message History** - Complete conversation history with timestamps and metadata
 - **Multi-format Support** - Text, code blocks, and file references
@@ -243,7 +243,7 @@ session counts
 ### Backend (Node.js + Express)
 - **Express Server** - RESTful API with static file serving
 - **WebSocket Server** - Communication for chats and project refresh
-- **Claude Code Integration** - Process spawning and management
+- **Agent Integration** - Process spawning and management
 - **File System API** - Exposing file browser for projects
 
 ### Frontend (React + Vite)
@@ -287,11 +287,10 @@ We welcome contributions! Please follow these guidelines:
 ### Common Issues & Solutions
 
 
-#### "No Claude projects found"
+#### "No projects found"
 **Problem**: The UI shows no projects or empty project list
 **Solutions**:
-- Ensure [Claude Code](https://docs.anthropic.com/en/docs/claude-code) is properly installed
-- Run `claude` command in at least one project directory to initialize
+- Ensure you have initialized at least one project
 - Verify `~/.claude/projects/` directory exists and has proper permissions
 
 #### File Explorer Issues
@@ -312,7 +311,6 @@ This project is open source and free to use, modify, and distribute under the GP
 ## Acknowledgments
 
 ### Built With
-- **[Claude Code](https://docs.anthropic.com/en/docs/claude-code)** - Anthropic's official CLI
 - **[React](https://react.dev/)** - User interface library
 - **[Vite](https://vitejs.dev/)** - Fast build tool and dev server
 - **[Tailwind CSS](https://tailwindcss.com/)** - Utility-first CSS framework
@@ -325,10 +323,8 @@ This project is open source and free to use, modify, and distribute under the GP
 - **Watch** for updates and new releases
 - **Follow** the project for announcements
 
-### Sponsors
-- [Siteboon - AI powered website builder](https://siteboon.ai)
 ---
 
 <div align="center">
-  <strong>Made with care for the Claude Code community.</strong>
+  <strong>Made with care for the AI community.</strong>
 </div>

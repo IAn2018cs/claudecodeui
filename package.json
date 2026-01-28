@@ -1,12 +1,11 @@
 {
-  "name": "@siteboon/claude-code-ui",
-  "version": "1.13.6",
-  "description": "A web-based UI for Claude Code CLI",
+  "name": "agenthub",
+  "version": "0.0.1",
+  "description": "A web-based UI for AI Agents",
   "type": "module",
   "main": "server/index.js",
   "bin": {
-    "claude-code-ui": "server/cli.js",
-    "cloudcli": "server/cli.js"
+    "agenthub": "server/cli.js"
   },
   "files": [
     "server/",
@@ -14,13 +13,13 @@
     "dist/",
     "README.md"
   ],
-  "homepage": "https://claudecodeui.siteboon.ai",
+  "homepage": "https://github.com/IAn2018cs/claudecodeui",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/siteboon/claudecodeui.git"
+    "url": "git+https://github.com/IAn2018cs/claudecodeui.git"
   },
   "bugs": {
-    "url": "https://github.com/siteboon/claudecodeui/issues"
+    "url": "https://github.com/IAn2018cs/claudecodeui/issues"
   },
   "scripts": {
     "dev": "concurrently --kill-others \"npm run server\" \"npm run client\"",

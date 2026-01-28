@@ -43,7 +43,7 @@ const LoginForm = ({ onSwitchToRegister }) => {
             </div>
             <h1 className="text-2xl font-bold text-foreground">欢迎回来</h1>
             <p className="text-muted-foreground mt-2">
-              登录您的 Claude Code UI 账户
+              登录您的 AgentHub 账户
             </p>
           </div>
 
@@ -98,7 +98,7 @@ const LoginForm = ({ onSwitchToRegister }) => {
 
           <div className="text-center">
             <p className="text-sm text-muted-foreground">
-              输入您的凭据以访问 Claude Code UI
+              输入您的凭据以访问 AgentHub
             </p>
           </div>
 

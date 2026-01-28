@@ -152,7 +152,7 @@ function MainContent({
                 }}
               />
             </div>
-            <h2 className="text-xl font-semibold mb-2">正在加载 Claude Code UI</h2>
+            <h2 className="text-xl font-semibold mb-2">正在加载 AgentHub</h2>
             <p>正在设置您的工作区...</p>
           </div>
         </div>

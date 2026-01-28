@@ -1,7 +1,7 @@
 {
-  "name": "Claude Code UI",
-  "short_name": "Claude UI",
-  "description": "Claude Code UI web application",
+  "name": "AgentHub",
+  "short_name": "AgentHub",
+  "description": "AgentHub web application",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",

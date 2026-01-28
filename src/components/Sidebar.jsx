@@ -473,8 +473,8 @@ function Sidebar({
                   <MessageSquare className="w-4 h-4 text-primary-foreground" />
                 </div>
                 <div>
-                  <h1 className="text-lg font-bold text-foreground">Claude Code UI</h1>
-                  <p className="text-sm text-muted-foreground">AI 编程助手界面</p>
+                  <h1 className="text-lg font-bold text-foreground">AgentHub</h1>
+                  <p className="text-sm text-muted-foreground">你的 AI 助手</p>
                 </div>
               </a>
             ) : (
@@ -483,8 +483,8 @@ function Sidebar({
                   <MessageSquare className="w-4 h-4 text-primary-foreground" />
                 </div>
                 <div>
-                  <h1 className="text-lg font-bold text-foreground">Claude Code UI</h1>
-                  <p className="text-sm text-muted-foreground">AI 编程助手界面</p>
+                  <h1 className="text-lg font-bold text-foreground">AgentHub</h1>
+                  <p className="text-sm text-muted-foreground">你的 AI 助手</p>
                 </div>
               </div>
             )}
@@ -524,7 +524,7 @@ function Sidebar({
                     <MessageSquare className="w-4 h-4 text-primary-foreground" />
                   </div>
                   <div>
-                    <h1 className="text-lg font-semibold text-foreground">Claude Code UI</h1>
+                    <h1 className="text-lg font-semibold text-foreground">AgentHub</h1>
                     <p className="text-sm text-muted-foreground">项目</p>
                   </div>
                 </a>
@@ -534,7 +534,7 @@ function Sidebar({
                     <MessageSquare className="w-4 h-4 text-primary-foreground" />
                   </div>
                   <div>
-                    <h1 className="text-lg font-semibold text-foreground">Claude Code UI</h1>
+                    <h1 className="text-lg font-semibold text-foreground">AgentHub</h1>
                     <p className="text-sm text-muted-foreground">项目</p>
                   </div>
                 </div>

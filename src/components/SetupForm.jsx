@@ -50,7 +50,7 @@ const SetupForm = ({ onSwitchToLogin }) => {
             <div className="flex justify-center mb-4">
               <ClaudeLogo size={64} />
             </div>
-            <h1 className="text-2xl font-bold text-foreground">欢迎使用 Claude Code UI</h1>
+            <h1 className="text-2xl font-bold text-foreground">欢迎使用 AgentHub</h1>
             <p className="text-muted-foreground mt-2">
               创建账户以开始使用
             </p>
@@ -123,7 +123,7 @@ const SetupForm = ({ onSwitchToLogin }) => {
 
           <div className="text-center">
             <p className="text-sm text-muted-foreground">
-              创建账户以开始使用 Claude Code UI
+              创建账户以开始使用 AgentHub
             </p>
           </div>
 
