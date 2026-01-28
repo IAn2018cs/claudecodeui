@@ -1824,8 +1824,10 @@ function ChatInterface({ selectedProject, selectedSession, ws, sendMessage, mess
   const [attachedImages, setAttachedImages] = useState([]);
   const [uploadingImages, setUploadingImages] = useState(new Map());
   const [imageErrors, setImageErrors] = useState(new Map());
+  const [isUploadingFile, setIsUploadingFile] = useState(false);
   const messagesEndRef = useRef(null);
   const textareaRef = useRef(null);
+  const fileInputRef = useRef(null);
   const inputContainerRef = useRef(null);
   const scrollContainerRef = useRef(null);
   const isLoadingSessionRef = useRef(false); // Track session loading to prevent multiple scrolls
@@ -2699,11 +2701,12 @@ function ChatInterface({ selectedProject, selectedSession, ws, sendMessage, mess
   }, [externalMessageUpdate, selectedSession, selectedProject, loadSessionMessages, isNearBottom, autoScrollToBottom, scrollToBottom]);
 
   // Update chatMessages when convertedMessages changes
+  // Only update when not loading to prevent overwriting optimistic updates
   useEffect(() => {
-    if (sessionMessages.length > 0) {
+    if (sessionMessages.length > 0 && !isLoading) {
       setChatMessages(convertedMessages);
     }
-  }, [convertedMessages, sessionMessages]);
+  }, [convertedMessages, sessionMessages, isLoading]);
 
   // Notify parent when input focus changes
   useEffect(() => {
@@ -3470,6 +3473,50 @@ function ChatInterface({ selectedProject, selectedSession, ws, sendMessage, mess
     }
   }, []);
 
+  // Handle file upload for @ reference
+  const handleFileUpload = useCallback(async (e) => {
+    const files = e.target.files;
+    if (!files || files.length === 0 || !selectedProject) return;
+
+    setIsUploadingFile(true);
+
+    try {
+      const formData = new FormData();
+      Array.from(files).forEach(file => {
+        formData.append('files', file);
+      });
+
+      const response = await api.uploadFiles(selectedProject.name, formData);
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || '上传失败');
+      }
+
+      const result = await response.json();
+
+      // 在输入框中插入 @ 引用
+      if (result.files && result.files.length > 0) {
+        const fileRefs = result.files.map(f => `@${f.name}`).join(' ');
+        const newInput = input ? `${input} ${fileRefs} ` : `${fileRefs} `;
+        setInput(newInput);
+
+        // 聚焦输入框
+        if (textareaRef.current) {
+          textareaRef.current.focus();
+        }
+      }
+    } catch (error) {
+      console.error('File upload failed:', error);
+    } finally {
+      setIsUploadingFile(false);
+      // 重置 input 以便可以重复上传同一文件
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  }, [selectedProject, input]);
+
   // Handle clipboard paste for images
   const handlePaste = useCallback(async (e) => {
     const items = Array.from(e.clipboardData.items);
@@ -4077,10 +4124,12 @@ function ChatInterface({ selectedProject, selectedSession, ws, sendMessage, mess
 
               {visibleMessages.map((message, index) => {
                 const prevMessage = index > 0 ? visibleMessages[index - 1] : null;
+                // Use stable key based on message id or timestamp to prevent unnecessary re-renders
+                const messageKey = message.id || `${message.type}-${message.timestamp?.getTime?.() || index}-${index}`;
 
                 return (
                   <MessageComponent
-                    key={index}
+                    key={messageKey}
                     message={message}
                     index={index}
                     prevMessage={prevMessage}
@@ -4476,7 +4525,7 @@ function ChatInterface({ selectedProject, selectedSession, ws, sendMessage, mess
                 }}
                 placeholder="输入 / 使用命令，@ 引用文件，或向 Claude 提问..."
                 disabled={isLoading}
-                className="chat-input-placeholder block w-full pl-12 pr-20 sm:pr-40 py-1.5 sm:py-4 bg-transparent rounded-2xl focus:outline-none text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 disabled:opacity-50 resize-none min-h-[50px] sm:min-h-[80px] max-h-[40vh] sm:max-h-[300px] overflow-y-auto text-sm sm:text-base leading-[21px] sm:leading-6 transition-all duration-200"
+                className="chat-input-placeholder block w-full pl-20 pr-20 sm:pr-40 py-1.5 sm:py-4 bg-transparent rounded-2xl focus:outline-none text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 disabled:opacity-50 resize-none min-h-[50px] sm:min-h-[80px] max-h-[40vh] sm:max-h-[300px] overflow-y-auto text-sm sm:text-base leading-[21px] sm:leading-6 transition-all duration-200"
                 style={{ height: '50px' }}
               />
               {/* Image upload button */}
@@ -4489,6 +4538,33 @@ function ChatInterface({ selectedProject, selectedSession, ws, sendMessage, mess
                 <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                 </svg>
+              </button>
+
+              {/* File upload button */}
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleFileUpload}
+                className="hidden"
+                multiple
+              />
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isUploadingFile || !selectedProject}
+                className="absolute left-10 top-1/2 transform -translate-y-1/2 p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors disabled:opacity-50"
+                title="上传文件并引用"
+              >
+                {isUploadingFile ? (
+                  <svg className="w-5 h-5 text-gray-500 animate-spin" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                ) : (
+                  <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+                  </svg>
+                )}
               </button>
 
               {/* Mic button - HIDDEN */}
@@ -4529,7 +4605,7 @@ function ChatInterface({ selectedProject, selectedSession, ws, sendMessage, mess
               </button>
 
               {/* Hint text inside input box at bottom - Desktop only */}
-              <div className={`absolute bottom-1 left-12 right-14 sm:right-40 text-xs text-gray-400 dark:text-gray-500 pointer-events-none hidden sm:block transition-opacity duration-200 ${input.trim() ? 'opacity-0' : 'opacity-100'
+              <div className={`absolute bottom-1 left-20 right-14 sm:right-40 text-xs text-gray-400 dark:text-gray-500 pointer-events-none hidden sm:block transition-opacity duration-200 ${input.trim() ? 'opacity-0' : 'opacity-100'
                 }`}>
                 {sendByCtrlEnter
                   ? "Ctrl+Enter 发送 • Shift+Enter 换行 • Tab 切换模式 • / 使用命令"

@@ -1304,8 +1304,10 @@ app.post('/api/projects/:projectName/upload-files', authenticateToken, async (re
                 }
             },
             filename: (req, file, cb) => {
+                // Decode filename from Latin1 to UTF-8 (multer uses Latin1 by default)
+                const decodedName = Buffer.from(file.originalname, 'latin1').toString('utf8');
                 // Sanitize filename but preserve original name
-                const sanitizedName = file.originalname
+                const sanitizedName = decodedName
                     .replace(/[<>:"/\\|?*\x00-\x1f]/g, '_') // Remove invalid chars
                     .replace(/^\.+/, '_'); // Don't allow leading dots (hidden files)
                 cb(null, sanitizedName);
@@ -1315,7 +1317,8 @@ app.post('/api/projects/:projectName/upload-files', authenticateToken, async (re
         // File filter - block dangerous file types
         const fileFilter = (req, file, cb) => {
             const dangerousExtensions = ['.exe', '.bat', '.cmd', '.sh', '.ps1', '.dll', '.so'];
-            const ext = path.extname(file.originalname).toLowerCase();
+            const decodedName = Buffer.from(file.originalname, 'latin1').toString('utf8');
+            const ext = path.extname(decodedName).toLowerCase();
 
             if (dangerousExtensions.includes(ext)) {
                 return cb(new Error(`File type ${ext} is not allowed`));
@@ -1348,7 +1351,7 @@ app.post('/api/projects/:projectName/upload-files', authenticateToken, async (re
             // Return list of uploaded files
             const uploadedFiles = req.files.map(file => ({
                 name: file.filename,
-                originalName: file.originalname,
+                originalName: Buffer.from(file.originalname, 'latin1').toString('utf8'),
                 path: file.path,
                 size: file.size,
                 mimeType: file.mimetype
