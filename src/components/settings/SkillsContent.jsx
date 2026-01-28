@@ -106,12 +106,6 @@ function SkillsContent() {
             导入
           </Badge>
         );
-      case 'public':
-        return (
-          <Badge variant="outline" className="text-xs bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300">
-            公共
-          </Badge>
-        );
       default:
         return (
           <Badge variant="outline" className="text-xs">

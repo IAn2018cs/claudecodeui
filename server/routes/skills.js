@@ -238,8 +238,6 @@ router.get('/', async (req, res) => {
             if (repoMatch) {
               repository = `${repoMatch[1]}/${repoMatch[2]}`;
             }
-          } else if (realPath.includes('/skills/')) {
-            source = 'public';
           }
         }
 
@@ -637,25 +635,13 @@ router.post('/install/:name', async (req, res) => {
     }
 
     const userPaths = getUserPaths(userUuid);
-    const publicPaths = getPublicPaths();
 
     // Verify skill exists
     if (!await isValidSkill(skillPath)) {
       return res.status(404).json({ error: 'Skill not found or invalid' });
     }
 
-    // Create symlink in public skills directory if not exists
-    const publicSkillPath = path.join(publicPaths.skillsDir, name);
-    await fs.mkdir(publicPaths.skillsDir, { recursive: true });
-
-    try {
-      await fs.access(publicSkillPath);
-    } catch {
-      // Create symlink to repo skill
-      await fs.symlink(skillPath, publicSkillPath);
-    }
-
-    // Create symlink in user's skills directory
+    // Create symlink directly from user's skills directory to skill in repo
     const userSkillLink = path.join(userPaths.skillsDir, name);
 
     try {
@@ -664,7 +650,7 @@ router.post('/install/:name', async (req, res) => {
       // Ignore
     }
 
-    await fs.symlink(publicSkillPath, userSkillLink);
+    await fs.symlink(skillPath, userSkillLink);
 
     const metadata = await parseSkillMetadata(skillPath);
 

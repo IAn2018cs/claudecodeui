@@ -33,7 +33,6 @@ export function getUserPaths(userUuid) {
  */
 export function getPublicPaths() {
   return {
-    skillsDir: path.join(DATA_DIR, 'skills'),
     skillsRepoDir: path.join(DATA_DIR, 'skills-repo'),
   };
 }
