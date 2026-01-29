@@ -39,6 +39,9 @@
   ],
   "author": "Claude Code UI Contributors",
   "license": "MIT",
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org"
+  },
   "dependencies": {
     "@anthropic-ai/claude-agent-sdk": "^0.2.22",
     "@codemirror/lang-css": "^6.3.1",
