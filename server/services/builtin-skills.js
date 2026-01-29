@@ -24,16 +24,30 @@ export async function getBuiltinSkills() {
     for (const entry of entries) {
       if (entry.isDirectory() && !entry.name.startsWith('.')) {
         const skillPath = path.join(BUILTIN_SKILLS_DIR, entry.name);
+
+        // Check for SKILLS.md or SKILL.md
         const skillsFile = path.join(skillPath, 'SKILLS.md');
+        const skillFile = path.join(skillPath, 'SKILL.md');
 
         try {
-          await fs.access(skillsFile);
-          skills.push({
-            name: entry.name,
-            path: skillPath
-          });
+          // Try SKILLS.md first, then SKILL.md
+          let found = false;
+          try {
+            await fs.access(skillsFile);
+            found = true;
+          } catch {
+            await fs.access(skillFile);
+            found = true;
+          }
+
+          if (found) {
+            skills.push({
+              name: entry.name,
+              path: skillPath
+            });
+          }
         } catch {
-          // Skip if no SKILLS.md
+          // Skip if neither file exists
         }
       }
     }
