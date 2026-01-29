@@ -5,6 +5,7 @@ import { spawn } from 'child_process';
 import multer from 'multer';
 import AdmZip from 'adm-zip';
 import { getUserPaths, getPublicPaths, DATA_DIR } from '../services/user-directories.js';
+import { markBuiltinSkillRemoved, isBuiltinSkillPath } from '../services/builtin-skills.js';
 
 const router = express.Router();
 
@@ -238,6 +239,8 @@ router.get('/', async (req, res) => {
             if (repoMatch) {
               repository = `${repoMatch[1]}/${repoMatch[2]}`;
             }
+          } else if (realPath.includes('/builtin-skills/')) {
+            source = 'builtin';
           }
         }
 
@@ -374,12 +377,14 @@ router.delete('/:name', async (req, res) => {
     // Check the symlink target to determine source
     let realPath = null;
     let isImported = false;
+    let isBuiltin = false;
 
     try {
       const stat = await fs.lstat(linkPath);
       if (stat.isSymbolicLink()) {
         realPath = await fs.realpath(linkPath);
         isImported = realPath.includes('/skills-import/');
+        isBuiltin = isBuiltinSkillPath(realPath);
       }
     } catch (err) {
       return res.status(404).json({ error: 'Skill not found' });
@@ -395,6 +400,9 @@ router.delete('/:name', async (req, res) => {
       } catch (err) {
         console.error('Error removing imported skill files:', err);
       }
+    } else if (isBuiltin) {
+      // Mark as removed so it won't be re-added on next sync
+      await markBuiltinSkillRemoved(userUuid, name);
     }
 
     res.json({ success: true, message: 'Skill deleted' });

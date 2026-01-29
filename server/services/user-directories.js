@@ -1,5 +1,6 @@
 import { promises as fs } from 'fs';
 import path from 'path';
+import { initBuiltinSkills } from './builtin-skills.js';
 
 // Base data directory (configurable via env)
 const DATA_DIR = process.env.DATA_DIR || path.join(process.cwd(), 'data');
@@ -84,6 +85,9 @@ export async function initUserDirectories(userUuid) {
   };
   await fs.writeFile(usageScanStatePath, JSON.stringify(scanState, null, 2));
   console.log(`Created .usage-scan-state.json for user ${userUuid}`);
+
+  // Initialize built-in skills
+  await initBuiltinSkills(userUuid);
 
   return paths;
 }
