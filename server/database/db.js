@@ -21,25 +21,25 @@ const c = {
     dim: (text) => `${colors.dim}${text}${colors.reset}`,
 };
 
-// Use DATABASE_PATH environment variable if set, otherwise use default location
-// Resolve relative paths from project root (one level up from server/)
+// Use DATABASE_PATH environment variable if set, otherwise use DATA_DIR/auth.db
+// DATA_DIR defaults to ./data relative to project root
+const PROJECT_ROOT = path.join(__dirname, '../..');
+const DATA_DIR = process.env.DATA_DIR || path.join(PROJECT_ROOT, 'data');
 const DB_PATH = process.env.DATABASE_PATH
-  ? path.resolve(path.join(__dirname, '../..'), process.env.DATABASE_PATH)
-  : path.join(__dirname, 'auth.db');
+  ? path.resolve(PROJECT_ROOT, process.env.DATABASE_PATH)
+  : path.join(DATA_DIR, 'auth.db');
 const INIT_SQL_PATH = path.join(__dirname, 'init.sql');
 
-// Ensure database directory exists if custom path is provided
-if (process.env.DATABASE_PATH) {
-  const dbDir = path.dirname(DB_PATH);
-  try {
-    if (!fs.existsSync(dbDir)) {
-      fs.mkdirSync(dbDir, { recursive: true });
-      console.log(`Created database directory: ${dbDir}`);
-    }
-  } catch (error) {
-    console.error(`Failed to create database directory ${dbDir}:`, error.message);
-    throw error;
+// Ensure database directory exists
+const dbDir = path.dirname(DB_PATH);
+try {
+  if (!fs.existsSync(dbDir)) {
+    fs.mkdirSync(dbDir, { recursive: true });
+    console.log(`Created database directory: ${dbDir}`);
   }
+} catch (error) {
+  console.error(`Failed to create database directory ${dbDir}:`, error.message);
+  throw error;
 }
 
 // Create database connection
@@ -50,6 +50,7 @@ const appInstallPath = path.join(__dirname, '../..');
 console.log('');
 console.log(c.dim('═'.repeat(60)));
 console.log(`${c.info('[INFO]')} App Installation: ${c.bright(appInstallPath)}`);
+console.log(`${c.info('[INFO]')} Data Directory: ${c.dim(path.relative(appInstallPath, DATA_DIR))}`);
 console.log(`${c.info('[INFO]')} Database: ${c.dim(path.relative(appInstallPath, DB_PATH))}`);
 if (process.env.DATABASE_PATH) {
   console.log(`       ${c.dim('(Using custom DATABASE_PATH from environment)')}`);
