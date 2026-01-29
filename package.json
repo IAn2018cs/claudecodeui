@@ -1,5 +1,5 @@
 {
-  "name": "agenthub",
+  "name": "@ian2018cs/agenthub",
   "version": "0.0.1",
   "description": "A web-based UI for AI Agents",
   "type": "module",
@@ -40,7 +40,8 @@
   "author": "Claude Code UI Contributors",
   "license": "MIT",
   "publishConfig": {
-    "registry": "https://registry.npmjs.org"
+    "registry": "https://registry.npmjs.org",
+    "access": "public"
   },
   "dependencies": {
     "@anthropic-ai/claude-agent-sdk": "^0.2.22",
