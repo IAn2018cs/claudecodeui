@@ -159,10 +159,10 @@ router.get('/dashboard', (req, res) => {
     const stats = usageDb.getDashboardStats(startDate, endDate);
     const users = userDb.getAllUsers();
 
-    // Create username map
+    // Create username map (prefer username, fallback to email)
     const usernameMap = {};
     for (const user of users) {
-      usernameMap[user.uuid] = user.username;
+      usernameMap[user.uuid] = user.username || user.email;
     }
 
     // Enrich top users with usernames
