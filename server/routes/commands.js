@@ -98,12 +98,6 @@ const builtInCommands = [
     metadata: { type: 'builtin' }
   },
   {
-    name: '/cost',
-    description: 'Display token usage and cost information',
-    namespace: 'builtin',
-    metadata: { type: 'builtin' }
-  },
-  {
     name: '/memory',
     description: 'Open CLAUDE.md memory file for editing',
     namespace: 'builtin',
@@ -314,39 +308,8 @@ Custom commands can be created in:
         message: `Rewinding conversation by ${steps} step${steps > 1 ? 's' : ''}...`
       }
     };
-  },
-
-  '/cost': async (args, context) => {
-    const tokenUsage = context?.tokenUsage;
-
-    if (!tokenUsage) {
-      return {
-        type: 'builtin',
-        action: 'cost',
-        data: {
-          message: 'No token usage data available for this session.',
-          usage: null
-        }
-      };
-    }
-
-    const { used = 0, total = 160000 } = tokenUsage;
-    const percentage = total > 0 ? ((used / total) * 100).toFixed(1) : 0;
-
-    return {
-      type: 'builtin',
-      action: 'cost',
-      data: {
-        usage: {
-          used,
-          total,
-          percentage: parseFloat(percentage),
-          remaining: total - used
-        },
-        message: `Token usage: ${used.toLocaleString()} / ${total.toLocaleString()} (${percentage}%)`
-      }
-    };
   }
+
 };
 
 /**
