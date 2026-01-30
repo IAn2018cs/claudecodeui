@@ -4,8 +4,52 @@
 # 用法: ./pm2.sh [start|stop|restart|logs|status]
 
 APP_NAME="agenthub"
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-ENV_FILE="$SCRIPT_DIR/.env"
+# 当前工作目录（用于读取 .env 和存储数据）
+WORK_DIR="$(pwd)"
+ENV_FILE="$WORK_DIR/.env"
+
+# 查找 agenthub 全局安装路径
+find_agenthub_path() {
+    # 方法1: 通过 npm root -g 查找
+    local npm_global_root
+    npm_global_root="$(npm root -g 2>/dev/null)"
+    if [ -n "$npm_global_root" ]; then
+        local pkg_path="$npm_global_root/@ian2018cs/agenthub"
+        if [ -d "$pkg_path" ] && [ -f "$pkg_path/server/index.js" ]; then
+            echo "$pkg_path"
+            return 0
+        fi
+    fi
+
+    # 方法2: 通过 which agenthub 解析符号链接
+    local bin_path
+    bin_path="$(which agenthub 2>/dev/null)"
+    if [ -n "$bin_path" ]; then
+        # 解析符号链接获取真实路径
+        local real_path
+        real_path="$(readlink -f "$bin_path" 2>/dev/null || realpath "$bin_path" 2>/dev/null)"
+        if [ -n "$real_path" ]; then
+            # bin 文件在 server/cli.js，向上两级是包根目录
+            local pkg_path="$(dirname "$(dirname "$real_path")")"
+            if [ -f "$pkg_path/server/index.js" ]; then
+                echo "$pkg_path"
+                return 0
+            fi
+        fi
+    fi
+
+    # 方法3: 检查脚本所在目录（开发模式）
+    local script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    if [ -f "$script_dir/server/index.js" ]; then
+        echo "$script_dir"
+        return 0
+    fi
+
+    return 1
+}
+
+# 获取 agenthub 安装路径
+AGENTHUB_PATH="$(find_agenthub_path)"
 
 # 颜色定义
 RED='\033[0;31m'
@@ -26,6 +70,20 @@ check_pm2() {
         error "pm2 未安装，请先安装: npm install -g pm2"
         exit 1
     fi
+}
+
+# 检查 agenthub 是否安装
+check_agenthub() {
+    if [ -z "$AGENTHUB_PATH" ]; then
+        error "未找到 agenthub 安装路径"
+        echo ""
+        echo "请确保已全局安装 agenthub:"
+        echo "  npm install -g @ian2018cs/agenthub"
+        echo ""
+        echo "或在开发模式下将此脚本放在项目根目录运行"
+        exit 1
+    fi
+    info "agenthub 路径: $AGENTHUB_PATH"
 }
 
 # 加载 .env 文件并导出环境变量
@@ -64,7 +122,7 @@ generate_ecosystem() {
     # 构建环境变量 JSON
     ENV_JSON="{"
     ENV_JSON+="\"PORT\": \"${PORT:-3001}\","
-    ENV_JSON+="\"DATA_DIR\": \"${DATA_DIR:-$SCRIPT_DIR/data}\","
+    ENV_JSON+="\"DATA_DIR\": \"${DATA_DIR:-$WORK_DIR/data}\","
 
     [ -n "$DATABASE_PATH" ] && ENV_JSON+="\"DATABASE_PATH\": \"$DATABASE_PATH\","
     [ -n "$CLAUDE_CLI_PATH" ] && ENV_JSON+="\"CLAUDE_CLI_PATH\": \"$CLAUDE_CLI_PATH\","
@@ -75,38 +133,39 @@ generate_ecosystem() {
     # 移除最后一个逗号并闭合
     ENV_JSON="${ENV_JSON%,}}"
 
-    cat > "$SCRIPT_DIR/ecosystem.config.cjs" << EOF
+    cat > "$WORK_DIR/ecosystem.config.cjs" << EOF
 module.exports = {
   apps: [{
     name: '$APP_NAME',
-    script: '$SCRIPT_DIR/server/index.js',
-    cwd: '$SCRIPT_DIR',
+    script: '$AGENTHUB_PATH/server/index.js',
+    cwd: '$AGENTHUB_PATH',
     env: $ENV_JSON,
     instances: 1,
     autorestart: true,
     watch: false,
     max_memory_restart: '1G',
     log_date_format: 'YYYY-MM-DD HH:mm:ss',
-    error_file: '$SCRIPT_DIR/logs/error.log',
-    out_file: '$SCRIPT_DIR/logs/out.log',
+    error_file: '$WORK_DIR/logs/error.log',
+    out_file: '$WORK_DIR/logs/out.log',
     merge_logs: true
   }]
 };
 EOF
 
     # 确保 logs 目录存在
-    mkdir -p "$SCRIPT_DIR/logs"
+    mkdir -p "$WORK_DIR/logs"
 
-    success "PM2 配置已生成: ecosystem.config.cjs"
+    success "PM2 配置已生成: $WORK_DIR/ecosystem.config.cjs"
 }
 
 # 启动服务
 start() {
     check_pm2
+    check_agenthub
     generate_ecosystem
 
     info "启动 $APP_NAME..."
-    pm2 start "$SCRIPT_DIR/ecosystem.config.cjs"
+    pm2 start "$WORK_DIR/ecosystem.config.cjs"
 
     if [ $? -eq 0 ]; then
         success "$APP_NAME 启动成功"
@@ -133,12 +192,13 @@ stop() {
 # 重启服务
 restart() {
     check_pm2
+    check_agenthub
 
     # 检查是否在运行
     if pm2 list | grep -q "$APP_NAME"; then
         info "重启 $APP_NAME..."
         generate_ecosystem
-        pm2 restart "$SCRIPT_DIR/ecosystem.config.cjs"
+        pm2 restart "$WORK_DIR/ecosystem.config.cjs"
         success "$APP_NAME 已重启"
     else
         warn "$APP_NAME 未在运行，执行启动..."
