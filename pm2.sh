@@ -183,9 +183,24 @@ start() {
 stop() {
     check_pm2
     info "停止 $APP_NAME..."
-    pm2 stop "$APP_NAME" 2>/dev/null
-    pm2 delete "$APP_NAME" 2>/dev/null
+    pm2 stop "$APP_NAME" 2>/dev/null || true
     success "$APP_NAME 已停止"
+}
+
+# 移除服务（停止并从 pm2 中删除）
+remove() {
+    check_pm2
+    info "移除 $APP_NAME..."
+    pm2 stop "$APP_NAME" 2>/dev/null || true
+    pm2 delete "$APP_NAME" 2>/dev/null || true
+
+    # 清理生成的配置文件
+    if [ -f "$WORK_DIR/ecosystem.config.cjs" ]; then
+        rm -f "$WORK_DIR/ecosystem.config.cjs"
+        info "已删除配置文件: ecosystem.config.cjs"
+    fi
+
+    success "$APP_NAME 已从 PM2 中移除"
 }
 
 # 重启服务
@@ -231,6 +246,7 @@ show_help() {
     echo "  start     启动服务"
     echo "  stop      停止服务"
     echo "  restart   重启服务"
+    echo "  remove    移除服务（停止并从 PM2 删除）"
     echo "  logs      查看日志"
     echo "  status    查看状态"
     echo "  help      显示帮助"
@@ -249,6 +265,9 @@ case "${1:-help}" in
         ;;
     stop)
         stop
+        ;;
+    remove)
+        remove
         ;;
     restart)
         restart
