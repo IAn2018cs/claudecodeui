@@ -7,6 +7,28 @@ description: 将生成的 HTML 或前端页面部署到 Docker nginx 容器。�
 
 将前端项目部署到共享的 nginx Docker 容器，通过不同端口和配置文件实现项目隔离。
 
+## 快速开始
+
+```bash
+# 1. 确保你有一个包含 index.html 的目录
+mkdir my-project
+echo "<h1>Hello World</h1>" > my-project/index.html
+
+# 2. 使用 python3 部署（注意：是目录，不是文件）
+python3 /path/to/deploy-frontend/scripts/deploy.py my-project
+
+# 3. 访问输出的 URL，例如 http://10.0.1.133:8080
+```
+
+## 常见错误
+
+| 错误 | 原因 | 解决方案 |
+|------|------|----------|
+| `python: command not found` | 使用了 `python` 而不是 `python3` | 使用 `python3` 命令 |
+| `NotADirectoryError` | 传入了单个文件而不是目录 | 传入包含 index.html 的目录路径 |
+| `404 Not Found` | 主文件不叫 index.html | 将主 HTML 文件重命名为 index.html |
+| 本地能访问，其他设备不能 | IP 地址或网络问题 | 使用内网 IP，检查防火墙 |
+
 ## 配置
 
 默认 nginx 目录已配置为：`/home/xubuntu001/AI/nginx`
@@ -27,8 +49,14 @@ description: 将生成的 HTML 或前端页面部署到 Docker nginx 容器。�
 使用 `scripts/deploy.py` 部署项目：
 
 ```bash
-python scripts/deploy.py <前端项目目录>
+python3 scripts/deploy.py <前端项目目录>
 ```
+
+**重要说明：**
+- 必须使用 `python3` 命令（不是 `python`）
+- `<前端项目目录>`：必须是一个**目录**（不能是单个文件）
+- 目录中必须包含 `index.html` 作为入口文件（nginx 默认查找 index.html）
+- 如果你的 HTML 文件不叫 `index.html`，需要先重命名
 
 **参数说明：**
 - `<前端项目目录>`：包含 index.html 等前端文件的目录（必需）
@@ -47,7 +75,14 @@ python scripts/deploy.py <前端项目目录>
 **示例：**
 ```bash
 # 部署前端项目（使用默认 nginx 目录）
-python .claude/skills/deploy-frontend/scripts/deploy.py ./my-frontend-app
+python3 .claude/skills/deploy-frontend/scripts/deploy.py ./my-frontend-app
+
+# 错误示例 - 不要这样做：
+# python3 deploy.py ./my-app/index.html  ❌ 不能传单个文件
+# python deploy.py ./my-app              ❌ 必须使用 python3
+
+# 正确示例：
+# python3 deploy.py ./my-app             ✅ 传目录，使用 python3
 ```
 
 **输出示例：**
@@ -67,13 +102,13 @@ HTML 目录: /path/to/nginx/html/project-1738151234
 ### 列出所有部署
 
 ```bash
-python scripts/cleanup.py list
+python3 scripts/cleanup.py list
 ```
 
 ### 清理指定项目
 
 ```bash
-python scripts/cleanup.py <project_id>
+python3 scripts/cleanup.py <project_id>
 ```
 
 会删除：
@@ -86,7 +121,7 @@ python scripts/cleanup.py <project_id>
 ### 清理所有项目
 
 ```bash
-python scripts/cleanup.py all
+python3 scripts/cleanup.py all
 ```
 
 ## 目录结构
@@ -124,9 +159,9 @@ nginx-base/
    import subprocess
 
    result = subprocess.run([
-       "python",
+       "python3",  # 必须使用 python3
        str(Path.home() / ".claude/skills/deploy-frontend/scripts/deploy.py"),
-       "./frontend-output"
+       "./frontend-output"  # 必须是目录，不能是单个文件
    ], capture_output=True, text=True)
 
    print(result.stdout)
@@ -139,7 +174,7 @@ nginx-base/
 当用户要求生成前端页面时：
 
 1. 生成前端代码（HTML/CSS/JS 等）
-2. 将文件写入临时目录
+2. 将文件写入目录（确保主文件命名为 index.html）
 3. 调用 deploy.py 部署
 4. 将访问 URL 返回给用户
 
@@ -149,14 +184,14 @@ nginx-base/
 output_dir = Path("/tmp/frontend-{timestamp}")
 output_dir.mkdir(parents=True, exist_ok=True)
 
-# 2. 写入前端文件
-(output_dir / "index.html").write_text(html_content)
+# 2. 写入前端文件（重要：主文件必须命名为 index.html）
+(output_dir / "index.html").write_text(html_content)  # ✅ 使用 index.html
 (output_dir / "style.css").write_text(css_content)
 
-# 3. 部署
+# 3. 部署（使用 python3，传目录而不是文件）
 deploy_script = Path.home() / ".claude/skills/deploy-frontend/scripts/deploy.py"
 result = subprocess.run(
-    ["python", str(deploy_script), str(output_dir)],
+    ["python3", str(deploy_script), str(output_dir)],  # ✅ python3 + 目录路径
     capture_output=True,
     text=True
 )
@@ -190,6 +225,13 @@ newgrp docker
 
 ## 更新日志
 
+### v1.2 (2026-01-30)
+- ✅ 更新文档：明确必须使用 `python3` 而不是 `python`
+- ✅ 更新文档：强调必须传入目录而不是单个文件
+- ✅ 更新文档：说明主文件必须命名为 `index.html`
+- ✅ 添加常见错误示例和最佳实践
+- ✅ 新增部署后文件重命名的故障排查说明
+
 ### v1.1 (2026-01-30)
 - ✅ 修复正则表达式转义警告
 - ✅ 添加自动 Docker 权限处理（`run_docker_command` 函数）
@@ -207,6 +249,36 @@ newgrp docker
 
 **权限问题**：脚本会自动使用 `sg docker -c` 处理权限问题
 
+**找不到 python 命令**：
+```bash
+# 错误：python: command not found
+# 解决：使用 python3
+python3 scripts/deploy.py ./my-app
+```
+
+**传入单个文件报错**：
+```bash
+# 错误：NotADirectoryError
+# 原因：传入的是文件而不是目录
+# 解决：传入包含 index.html 的目录
+python3 scripts/deploy.py ./my-app/  # 正确
+# 而不是
+python3 scripts/deploy.py ./my-app/index.html  # 错误
+```
+
+**页面无法访问（404 Not Found）**：
+```bash
+# 检查是否存在 index.html
+ls /home/xubuntu001/AI/nginx/html/project-*/
+
+# 如果文件名不是 index.html，重命名它：
+cd /home/xubuntu001/AI/nginx/html/project-xxxxxxxxxx/
+mv yourfile.html index.html
+
+# 重新加载 nginx
+sg docker -c "docker exec nginx-web nginx -s reload"
+```
+
 **配置未生效**：手动重新加载 nginx：
 ```bash
 docker exec nginx-web nginx -s reload
@@ -218,3 +290,9 @@ sg docker -c "docker exec nginx-web nginx -s reload"
 ```bash
 docker logs nginx-web
 ```
+
+**本地能访问，其他设备访问不了**：
+- 检查防火墙设置
+- 确认设备在同一网络
+- 使用正确的内网 IP（不要用 localhost）
+- 确认路由器没有阻止端口
