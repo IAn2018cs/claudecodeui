@@ -123,8 +123,7 @@ generate_ecosystem() {
     ENV_JSON="{"
     ENV_JSON+="\"PORT\": \"${PORT:-3001}\","
     ENV_JSON+="\"DATA_DIR\": \"${DATA_DIR:-$WORK_DIR/data}\","
-
-    [ -n "$DATABASE_PATH" ] && ENV_JSON+="\"DATABASE_PATH\": \"$DATABASE_PATH\","
+    ENV_JSON+="\"DATABASE_PATH\": \"${DATABASE_PATH:-$WORK_DIR/data/auth.db}\","
     [ -n "$CLAUDE_CLI_PATH" ] && ENV_JSON+="\"CLAUDE_CLI_PATH\": \"$CLAUDE_CLI_PATH\","
     [ -n "$CONTEXT_WINDOW" ] && ENV_JSON+="\"CONTEXT_WINDOW\": \"$CONTEXT_WINDOW\","
     [ -n "$ANTHROPIC_AUTH_TOKEN" ] && ENV_JSON+="\"ANTHROPIC_AUTH_TOKEN\": \"$ANTHROPIC_AUTH_TOKEN\","
