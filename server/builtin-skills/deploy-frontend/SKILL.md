@@ -175,15 +175,43 @@ for line in result.stdout.split('\n'):
 - docker-compose.yml 使用 `network_mode: host`
 - Python 3.6+
 
+## Docker 权限处理
+
+脚本已内置自动权限处理机制：
+
+1. **自动检测权限**：脚本会首先尝试直接运行 docker 命令
+2. **自动降级处理**：如果遇到权限错误，会自动使用 `sg docker -c` 运行
+3. **无需手动干预**：用户无需关心是否在 docker 组中
+
+**注意**：如果您刚刚被添加到 docker 组，可能需要重新登录或使用以下命令激活组权限：
+```bash
+newgrp docker
+```
+
+## 更新日志
+
+### v1.1 (2026-01-30)
+- ✅ 修复正则表达式转义警告
+- ✅ 添加自动 Docker 权限处理（`run_docker_command` 函数）
+- ✅ 使用 `docker compose` 替代旧版 `docker-compose` 命令
+- ✅ deploy.py 和 cleanup.py 都支持自动权限处理
+
+### v1.0
+- 初始版本：支持多项目部署和端口隔离
+
 ## 故障排查
 
-**容器未启动**：脚本会自动执行 `docker-compose up -d`
+**容器未启动**：脚本会自动执行 `docker compose up -d`
 
 **端口冲突**：脚本会自动查找可用端口（8080-8179 范围）
+
+**权限问题**：脚本会自动使用 `sg docker -c` 处理权限问题
 
 **配置未生效**：手动重新加载 nginx：
 ```bash
 docker exec nginx-web nginx -s reload
+# 或如果有权限问题：
+sg docker -c "docker exec nginx-web nginx -s reload"
 ```
 
 **查看 nginx 日志**：

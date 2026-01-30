@@ -11,6 +11,31 @@ import json
 # 默认 nginx 基础目录（与 deploy.py 保持一致）
 DEFAULT_NGINX_BASE_DIR = "/home/xubuntu001/AI/nginx"
 
+def run_docker_command(cmd, **kwargs):
+    """
+    运行 docker 命令，自动处理权限问题
+
+    Args:
+        cmd: 命令列表
+        **kwargs: 传递给 subprocess.run 的其他参数
+
+    Returns:
+        subprocess.CompletedProcess 对象
+    """
+    try:
+        # 首先尝试直接运行
+        return subprocess.run(cmd, **kwargs)
+    except (subprocess.CalledProcessError, PermissionError) as e:
+        # 如果失败，尝试使用 sg docker -c 运行
+        if 'check' in kwargs:
+            del kwargs['check']  # sg 会处理 check
+
+        # 将命令转换为 sg docker -c 格式
+        cmd_str = ' '.join(str(arg) for arg in cmd)
+        sg_cmd = ['sg', 'docker', '-c', cmd_str]
+
+        return subprocess.run(sg_cmd, **kwargs)
+
 def cleanup_deployment(project_id, nginx_base_dir=None):
     """
     清理指定部署
@@ -49,7 +74,7 @@ def cleanup_deployment(project_id, nginx_base_dir=None):
 
         # 重新加载 nginx
         print("重新加载 nginx 配置...")
-        subprocess.run(
+        run_docker_command(
             ["docker", "exec", "nginx-web", "nginx", "-s", "reload"],
             check=True
         )

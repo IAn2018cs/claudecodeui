@@ -14,6 +14,31 @@ import time
 # 默认 nginx 基础目录（可在这里修改）
 DEFAULT_NGINX_BASE_DIR = "/home/xubuntu001/AI/nginx"
 
+def run_docker_command(cmd, **kwargs):
+    """
+    运行 docker 命令，自动处理权限问题
+
+    Args:
+        cmd: 命令列表
+        **kwargs: 传递给 subprocess.run 的其他参数
+
+    Returns:
+        subprocess.CompletedProcess 对象
+    """
+    try:
+        # 首先尝试直接运行
+        return subprocess.run(cmd, **kwargs)
+    except (subprocess.CalledProcessError, PermissionError) as e:
+        # 如果失败，尝试使用 sg docker -c 运行
+        if 'check' in kwargs:
+            del kwargs['check']  # sg 会处理 check
+
+        # 将命令转换为 sg docker -c 格式
+        cmd_str = ' '.join(str(arg) for arg in cmd)
+        sg_cmd = ['sg', 'docker', '-c', cmd_str]
+
+        return subprocess.run(sg_cmd, **kwargs)
+
 def find_available_port(start_port=8080, max_attempts=100):
     """查找可用端口"""
     for port in range(start_port, start_port + max_attempts):
@@ -58,7 +83,7 @@ def create_nginx_conf(project_id, port, nginx_base_dir):
     gzip_types text/plain text/css application/json application/javascript text/xml application/xml text/javascript;
 
     # 缓存静态资源
-    location ~* \.(jpg|jpeg|png|gif|ico|css|js|svg|woff|woff2|ttf|eot)$ {{
+    location ~* \\.(jpg|jpeg|png|gif|ico|css|js|svg|woff|woff2|ttf|eot)$ {{
         expires 1y;
         add_header Cache-Control "public, immutable";
     }}
@@ -78,7 +103,7 @@ def reload_nginx(nginx_base_dir):
         raise RuntimeError(f"docker-compose.yml 不存在: {compose_file}")
 
     # 检查容器是否运行
-    result = subprocess.run(
+    result = run_docker_command(
         ["docker", "ps", "--filter", "name=nginx-web", "--format", "{{.Names}}"],
         capture_output=True,
         text=True,
@@ -88,15 +113,15 @@ def reload_nginx(nginx_base_dir):
     if "nginx-web" not in result.stdout:
         # 容器未运行，启动它
         print("启动 nginx 容器...")
-        subprocess.run(
-            ["docker-compose", "up", "-d"],
+        run_docker_command(
+            ["docker", "compose", "up", "-d"],
             cwd=nginx_base_dir,
             check=True
         )
     else:
         # 重新加载配置
         print("重新加载 nginx 配置...")
-        subprocess.run(
+        run_docker_command(
             ["docker", "exec", "nginx-web", "nginx", "-s", "reload"],
             check=True
         )
