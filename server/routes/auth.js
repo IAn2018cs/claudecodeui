@@ -1,9 +1,10 @@
 import express from 'express';
 import bcrypt from 'bcrypt';
 import { v4 as uuidv4 } from 'uuid';
-import { userDb, db } from '../database/db.js';
+import { userDb, verificationDb, domainWhitelistDb } from '../database/db.js';
 import { generateToken, authenticateToken } from '../middleware/auth.js';
 import { initUserDirectories } from '../services/user-directories.js';
+import { sendVerificationCode, isSmtpConfigured } from '../services/email.js';
 
 const router = express.Router();
 
@@ -11,9 +12,10 @@ const router = express.Router();
 router.get('/status', async (req, res) => {
   try {
     const hasUsers = await userDb.hasUsers();
-    res.json({ 
+    res.json({
       needsSetup: !hasUsers,
-      isAuthenticated: false // Will be overridden by frontend if token exists
+      isAuthenticated: false, // Will be overridden by frontend if token exists
+      smtpConfigured: isSmtpConfigured()
     });
   } catch (error) {
     console.error('Auth status error:', error);
@@ -21,37 +23,106 @@ router.get('/status', async (req, res) => {
   }
 });
 
-// User registration - first user becomes admin
-router.post('/register', async (req, res) => {
+// Send verification code to email
+router.post('/send-code', async (req, res) => {
   try {
-    const { username, password } = req.body;
+    const { email } = req.body;
+    const ipAddress = req.ip || req.socket?.remoteAddress;
 
-    if (!username || !password) {
-      return res.status(400).json({ error: 'Username and password are required' });
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!email || !emailRegex.test(email)) {
+      return res.status(400).json({ error: '请输入有效的邮箱地址' });
     }
 
-    if (username.length < 3 || password.length < 6) {
-      return res.status(400).json({
-        error: 'Username must be at least 3 characters, password at least 6 characters'
-      });
+    // Check if SMTP is configured
+    if (!isSmtpConfigured()) {
+      return res.status(500).json({ error: 'SMTP 未配置，请联系管理员' });
     }
 
-    // Check if this is the first user (becomes admin)
-    const userCount = userDb.getUserCount();
-    const role = userCount === 0 ? 'admin' : 'user';
-    const uuid = uuidv4();
+    // Check rate limit
+    const rateCheck = verificationDb.canSendCode(email);
+    if (!rateCheck.allowed) {
+      if (rateCheck.error === 'rate_limit_email') {
+        return res.status(429).json({
+          error: '发送过于频繁，请稍后再试',
+          waitSeconds: rateCheck.waitSeconds
+        });
+      }
+      return res.status(429).json({ error: '今日发送次数已达上限' });
+    }
 
-    // Hash password
-    const saltRounds = 12;
-    const passwordHash = await bcrypt.hash(password, saltRounds);
+    // Determine if this is login or registration
+    const existingUser = userDb.getUserByEmail(email);
+    const type = existingUser ? 'login' : 'register';
 
-    // Create user with full details
-    const user = userDb.createUserFull(username, passwordHash, uuid, role);
+    // For new registrations, check domain whitelist
+    if (type === 'register') {
+      if (!domainWhitelistDb.isEmailAllowed(email)) {
+        return res.status(403).json({ error: '该邮箱域名不在允许注册的列表中' });
+      }
+    }
 
-    // Initialize user directories (creates .claude.json with hasCompletedOnboarding=true)
-    await initUserDirectories(uuid);
+    // Generate and store code
+    const { code } = verificationDb.createCode(email, type, ipAddress);
 
-    // Generate token
+    // Send email
+    await sendVerificationCode(email, code);
+
+    res.json({
+      success: true,
+      type, // 'login' or 'register' - frontend can show appropriate message
+      message: '验证码已发送'
+    });
+
+  } catch (error) {
+    console.error('Send code error:', error);
+    res.status(500).json({ error: '发送验证码失败，请稍后再试' });
+  }
+});
+
+// Verify code and login/register
+router.post('/verify-code', async (req, res) => {
+  try {
+    const { email, code } = req.body;
+
+    if (!email || !code) {
+      return res.status(400).json({ error: '邮箱和验证码不能为空' });
+    }
+
+    // Verify the code
+    const verification = verificationDb.verifyCode(email, code);
+
+    if (!verification.valid) {
+      // Increment attempts for failed verification
+      verificationDb.incrementAttempts(email, code);
+
+      if (verification.error === 'max_attempts') {
+        return res.status(429).json({ error: '验证码尝试次数过多，请重新获取' });
+      }
+      return res.status(401).json({ error: '验证码无效或已过期' });
+    }
+
+    let user = userDb.getUserByEmail(email);
+
+    // If user doesn't exist, create new user (registration)
+    if (!user) {
+      const userCount = userDb.getUserCount();
+      const role = userCount === 0 ? 'admin' : 'user';
+      const uuid = uuidv4();
+
+      user = userDb.createUserWithEmail(email, uuid, role);
+
+      // Initialize user directories
+      await initUserDirectories(uuid);
+    }
+
+    // Check if user is disabled
+    if (user.status === 'disabled') {
+      return res.status(403).json({ error: '账户已被禁用' });
+    }
+
+    // Generate token with 30-day expiration
     const token = generateToken(user);
 
     // Update last login
@@ -61,7 +132,8 @@ router.post('/register', async (req, res) => {
       success: true,
       user: {
         id: user.id,
-        username: user.username,
+        email: user.email,
+        username: user.username || user.email,
         uuid: user.uuid,
         role: user.role
       },
@@ -69,37 +141,38 @@ router.post('/register', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Registration error:', error);
-    if (error.code === 'SQLITE_CONSTRAINT_UNIQUE') {
-      res.status(409).json({ error: 'Username already exists' });
-    } else {
-      res.status(500).json({ error: 'Internal server error' });
-    }
+    console.error('Verify code error:', error);
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
 
-// User login
+// User login with username/password (for admin-created accounts)
 router.post('/login', async (req, res) => {
   try {
     const { username, password } = req.body;
 
     if (!username || !password) {
-      return res.status(400).json({ error: 'Username and password are required' });
+      return res.status(400).json({ error: '用户名和密码不能为空' });
     }
 
     const user = userDb.getUserByUsername(username);
     if (!user) {
-      return res.status(401).json({ error: 'Invalid username or password' });
+      return res.status(401).json({ error: '用户名或密码错误' });
+    }
+
+    // Check if user has a password (admin-created account)
+    if (!user.password_hash) {
+      return res.status(401).json({ error: '此账户不支持密码登录' });
     }
 
     // Check if user is disabled
     if (user.status === 'disabled') {
-      return res.status(403).json({ error: 'Account has been disabled' });
+      return res.status(403).json({ error: '账户已被禁用' });
     }
 
     const isValidPassword = await bcrypt.compare(password, user.password_hash);
     if (!isValidPassword) {
-      return res.status(401).json({ error: 'Invalid username or password' });
+      return res.status(401).json({ error: '用户名或密码错误' });
     }
 
     const token = generateToken(user);
@@ -110,6 +183,7 @@ router.post('/login', async (req, res) => {
       user: {
         id: user.id,
         username: user.username,
+        email: user.email,
         uuid: user.uuid,
         role: user.role
       },
@@ -127,7 +201,8 @@ router.get('/user', authenticateToken, (req, res) => {
   res.json({
     user: {
       id: req.user.id,
-      username: req.user.username,
+      username: req.user.username || req.user.email,
+      email: req.user.email,
       uuid: req.user.uuid,
       role: req.user.role
     }

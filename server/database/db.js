@@ -63,6 +63,23 @@ const runMigrations = () => {
     const tableInfo = db.prepare("PRAGMA table_info(users)").all();
     const columnNames = tableInfo.map(col => col.name);
 
+    // Create verification_codes table for email login
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS verification_codes (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        email TEXT NOT NULL,
+        code TEXT NOT NULL,
+        type TEXT DEFAULT 'login' CHECK(type IN ('login', 'register')),
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        expires_at DATETIME NOT NULL,
+        attempts INTEGER DEFAULT 0,
+        used BOOLEAN DEFAULT 0,
+        ip_address TEXT
+      )
+    `);
+    db.exec('CREATE INDEX IF NOT EXISTS idx_verification_codes_email ON verification_codes(email)');
+    db.exec('CREATE INDEX IF NOT EXISTS idx_verification_codes_expires ON verification_codes(expires_at)');
+
     // Create usage_records table for tracking token usage
     db.exec(`
       CREATE TABLE IF NOT EXISTS usage_records (
@@ -137,6 +154,25 @@ const runMigrations = () => {
     }
     // Create index for status (safe to run even if already exists)
     db.exec('CREATE INDEX IF NOT EXISTS idx_users_status ON users(status)');
+
+    // Add email column if not exists (for email verification login)
+    if (!columnNames.includes('email')) {
+      console.log('Running migration: Adding email column');
+      db.exec('ALTER TABLE users ADD COLUMN email TEXT');
+    }
+    db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_users_email ON users(email)');
+
+    // Create email domain whitelist table
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS email_domain_whitelist (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        domain TEXT UNIQUE NOT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        created_by INTEGER,
+        FOREIGN KEY (created_by) REFERENCES users(id)
+      )
+    `);
+    db.exec('CREATE INDEX IF NOT EXISTS idx_email_domain_whitelist_domain ON email_domain_whitelist(domain)');
 
     console.log('Database migrations completed successfully');
   } catch (error) {
@@ -282,7 +318,7 @@ const userDb = {
   getAllUsers: () => {
     try {
       return db.prepare(
-        'SELECT id, username, uuid, role, status, created_at, last_login FROM users ORDER BY created_at DESC'
+        'SELECT id, username, email, uuid, role, status, created_at, last_login FROM users ORDER BY created_at DESC'
       ).all();
     } catch (err) {
       throw err;
@@ -311,6 +347,142 @@ const userDb = {
   getUserByUuid: (uuid) => {
     try {
       return db.prepare('SELECT * FROM users WHERE uuid = ?').get(uuid);
+    } catch (err) {
+      throw err;
+    }
+  },
+
+  // Get user by email
+  getUserByEmail: (email) => {
+    try {
+      return db.prepare('SELECT * FROM users WHERE email = ? AND is_active = 1').get(email);
+    } catch (err) {
+      throw err;
+    }
+  },
+
+  // Create user with email (for email verification login)
+  createUserWithEmail: (email, uuid, role) => {
+    try {
+      const stmt = db.prepare(
+        'INSERT INTO users (email, uuid, role) VALUES (?, ?, ?)'
+      );
+      const result = stmt.run(email, uuid, role);
+      return { id: result.lastInsertRowid, email, uuid, role };
+    } catch (err) {
+      throw err;
+    }
+  },
+
+  // Check if email exists
+  emailExists: (email) => {
+    try {
+      const row = db.prepare('SELECT COUNT(*) as count FROM users WHERE email = ?').get(email);
+      return row.count > 0;
+    } catch (err) {
+      throw err;
+    }
+  }
+};
+
+// Verification codes database operations
+const verificationDb = {
+  // Generate and store verification code
+  createCode: (email, type = 'login', ipAddress = null) => {
+    try {
+      const code = Math.floor(100000 + Math.random() * 900000).toString(); // 6-digit code
+      const expiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString(); // 5 minutes
+
+      const stmt = db.prepare(`
+        INSERT INTO verification_codes (email, code, type, expires_at, ip_address)
+        VALUES (?, ?, ?, ?, ?)
+      `);
+      const result = stmt.run(email, code, type, expiresAt, ipAddress);
+      return { id: result.lastInsertRowid, code };
+    } catch (err) {
+      throw err;
+    }
+  },
+
+  // Verify code and check if valid
+  verifyCode: (email, code) => {
+    try {
+      const now = new Date().toISOString();
+
+      // Find valid, unused code
+      const record = db.prepare(`
+        SELECT * FROM verification_codes
+        WHERE email = ? AND code = ? AND used = 0 AND expires_at > ?
+        ORDER BY created_at DESC LIMIT 1
+      `).get(email, code, now);
+
+      if (!record) {
+        return { valid: false, error: 'invalid_code' };
+      }
+
+      if (record.attempts >= 5) {
+        return { valid: false, error: 'max_attempts' };
+      }
+
+      // Mark as used
+      db.prepare('UPDATE verification_codes SET used = 1 WHERE id = ?').run(record.id);
+
+      return { valid: true, type: record.type };
+    } catch (err) {
+      throw err;
+    }
+  },
+
+  // Increment attempt count
+  incrementAttempts: (email, code) => {
+    try {
+      db.prepare(`
+        UPDATE verification_codes SET attempts = attempts + 1
+        WHERE email = ? AND code = ? AND used = 0
+      `).run(email, code);
+    } catch (err) {
+      throw err;
+    }
+  },
+
+  // Check rate limit for sending codes
+  canSendCode: (email) => {
+    try {
+      const oneMinuteAgo = new Date(Date.now() - 60 * 1000).toISOString();
+      const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+
+      // Check per-email rate limit (1 per minute)
+      const recentByEmail = db.prepare(`
+        SELECT COUNT(*) as count FROM verification_codes
+        WHERE email = ? AND created_at > ?
+      `).get(email, oneMinuteAgo);
+
+      if (recentByEmail.count >= 1) {
+        return { allowed: false, error: 'rate_limit_email', waitSeconds: 60 };
+      }
+
+      // Check per-email hourly limit (10 per hour)
+      const hourlyByEmail = db.prepare(`
+        SELECT COUNT(*) as count FROM verification_codes
+        WHERE email = ? AND created_at > ?
+      `).get(email, oneHourAgo);
+
+      if (hourlyByEmail.count >= 10) {
+        return { allowed: false, error: 'rate_limit_hourly' };
+      }
+
+      return { allowed: true };
+    } catch (err) {
+      throw err;
+    }
+  },
+
+  // Cleanup expired codes
+  cleanupExpired: () => {
+    try {
+      const now = new Date().toISOString();
+      const result = db.prepare('DELETE FROM verification_codes WHERE expires_at < ?').run(now);
+      return result.changes;
     } catch (err) {
       throw err;
     }
@@ -516,9 +688,81 @@ const usageDb = {
   }
 };
 
+// Email domain whitelist database operations
+const domainWhitelistDb = {
+  // Get all whitelisted domains
+  getAllDomains: () => {
+    try {
+      return db.prepare('SELECT * FROM email_domain_whitelist ORDER BY domain ASC').all();
+    } catch (err) {
+      throw err;
+    }
+  },
+
+  // Add a domain to whitelist
+  addDomain: (domain, createdBy = null) => {
+    try {
+      const normalizedDomain = domain.toLowerCase().trim();
+      const stmt = db.prepare('INSERT INTO email_domain_whitelist (domain, created_by) VALUES (?, ?)');
+      const result = stmt.run(normalizedDomain, createdBy);
+      return { id: result.lastInsertRowid, domain: normalizedDomain };
+    } catch (err) {
+      if (err.code === 'SQLITE_CONSTRAINT_UNIQUE') {
+        throw new Error('域名已存在');
+      }
+      throw err;
+    }
+  },
+
+  // Remove a domain from whitelist
+  removeDomain: (id) => {
+    try {
+      const result = db.prepare('DELETE FROM email_domain_whitelist WHERE id = ?').run(id);
+      return result.changes > 0;
+    } catch (err) {
+      throw err;
+    }
+  },
+
+  // Check if email domain is allowed
+  isEmailAllowed: (email) => {
+    try {
+      // First check if whitelist is empty (allow all if no restrictions)
+      const count = db.prepare('SELECT COUNT(*) as count FROM email_domain_whitelist').get();
+      if (count.count === 0) {
+        return true; // No whitelist configured, allow all
+      }
+
+      // Extract domain from email
+      const domain = email.toLowerCase().split('@')[1];
+      if (!domain) {
+        return false;
+      }
+
+      // Check if domain is in whitelist
+      const row = db.prepare('SELECT id FROM email_domain_whitelist WHERE domain = ?').get(domain);
+      return !!row;
+    } catch (err) {
+      throw err;
+    }
+  },
+
+  // Get whitelist count
+  getCount: () => {
+    try {
+      const row = db.prepare('SELECT COUNT(*) as count FROM email_domain_whitelist').get();
+      return row.count;
+    } catch (err) {
+      throw err;
+    }
+  }
+};
+
 export {
   db,
   initializeDatabase,
   userDb,
-  usageDb
+  usageDb,
+  verificationDb,
+  domainWhitelistDb
 };

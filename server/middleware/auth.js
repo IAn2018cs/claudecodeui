@@ -65,17 +65,18 @@ const authenticateToken = async (req, res, next) => {
   }
 };
 
-// Generate JWT token (never expires)
+// Generate JWT token with 30-day expiration
 const generateToken = (user) => {
   return jwt.sign(
     {
       userId: user.id,
-      username: user.username,
+      username: user.username || user.email,
+      email: user.email,
       uuid: user.uuid,
       role: user.role
     },
-    JWT_SECRET
-    // No expiration - token lasts forever
+    JWT_SECRET,
+    { expiresIn: '30d' } // 30-day expiration
   );
 };
 

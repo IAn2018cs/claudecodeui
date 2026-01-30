@@ -1,7 +1,9 @@
 import express from 'express';
-import { userDb } from '../database/db.js';
+import bcrypt from 'bcrypt';
+import { v4 as uuidv4 } from 'uuid';
+import { userDb, domainWhitelistDb } from '../database/db.js';
 import { authenticateToken } from '../middleware/auth.js';
-import { deleteUserDirectories } from '../services/user-directories.js';
+import { deleteUserDirectories, initUserDirectories } from '../services/user-directories.js';
 
 const router = express.Router();
 
@@ -25,6 +27,58 @@ router.get('/users', (req, res) => {
   } catch (error) {
     console.error('Error fetching users:', error);
     res.status(500).json({ error: 'Failed to fetch users' });
+  }
+});
+
+// Create a new user with username and password (admin only)
+router.post('/users', async (req, res) => {
+  try {
+    const { username, password } = req.body;
+
+    if (!username || !password) {
+      return res.status(400).json({ error: '用户名和密码不能为空' });
+    }
+
+    if (username.length < 3 || password.length < 6) {
+      return res.status(400).json({
+        error: '用户名至少3个字符，密码至少6个字符'
+      });
+    }
+
+    // Check if username already exists
+    const existingUser = userDb.getUserByUsername(username);
+    if (existingUser) {
+      return res.status(409).json({ error: '用户名已存在' });
+    }
+
+    // Hash password
+    const saltRounds = 12;
+    const passwordHash = await bcrypt.hash(password, saltRounds);
+
+    // Create user
+    const uuid = uuidv4();
+    const user = userDb.createUserFull(username, passwordHash, uuid, 'user');
+
+    // Initialize user directories
+    await initUserDirectories(uuid);
+
+    res.json({
+      success: true,
+      user: {
+        id: user.id,
+        username: user.username,
+        uuid: user.uuid,
+        role: user.role
+      }
+    });
+
+  } catch (error) {
+    console.error('Error creating user:', error);
+    if (error.code === 'SQLITE_CONSTRAINT_UNIQUE') {
+      res.status(409).json({ error: '用户名已存在' });
+    } else {
+      res.status(500).json({ error: '创建用户失败' });
+    }
   }
 });
 
@@ -83,6 +137,63 @@ router.delete('/users/:id', async (req, res) => {
   } catch (error) {
     console.error('Error deleting user:', error);
     res.status(500).json({ error: 'Failed to delete user' });
+  }
+});
+
+// ==================== Email Domain Whitelist ====================
+
+// Get all whitelisted domains
+router.get('/email-domains', (req, res) => {
+  try {
+    const domains = domainWhitelistDb.getAllDomains();
+    res.json({ domains });
+  } catch (error) {
+    console.error('Error fetching email domains:', error);
+    res.status(500).json({ error: '获取域名列表失败' });
+  }
+});
+
+// Add a domain to whitelist
+router.post('/email-domains', (req, res) => {
+  try {
+    const { domain } = req.body;
+
+    if (!domain) {
+      return res.status(400).json({ error: '域名不能为空' });
+    }
+
+    // Validate domain format
+    const domainRegex = /^[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?)*\.[a-zA-Z]{2,}$/;
+    if (!domainRegex.test(domain)) {
+      return res.status(400).json({ error: '域名格式无效' });
+    }
+
+    const result = domainWhitelistDb.addDomain(domain, req.user.id);
+    res.json({ success: true, domain: result });
+  } catch (error) {
+    console.error('Error adding email domain:', error);
+    if (error.message === '域名已存在') {
+      res.status(409).json({ error: error.message });
+    } else {
+      res.status(500).json({ error: '添加域名失败' });
+    }
+  }
+});
+
+// Remove a domain from whitelist
+router.delete('/email-domains/:id', (req, res) => {
+  try {
+    const { id } = req.params;
+    const success = domainWhitelistDb.removeDomain(parseInt(id));
+
+    if (success) {
+      res.json({ success: true, message: '域名已删除' });
+    } else {
+      res.status(404).json({ error: '域名不存在' });
+    }
+  } catch (error) {
+    console.error('Error removing email domain:', error);
+    res.status(500).json({ error: '删除域名失败' });
   }
 });
 

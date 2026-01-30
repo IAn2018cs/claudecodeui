@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import SetupForm from './SetupForm';
 import LoginForm from './LoginForm';
@@ -25,7 +25,6 @@ const LoadingScreen = () => (
 
 const ProtectedRoute = ({ children }) => {
   const { user, isLoading, needsSetup } = useAuth();
-  const [showRegister, setShowRegister] = useState(false);
 
   if (import.meta.env.VITE_IS_PLATFORM === 'true') {
     if (isLoading) {
@@ -39,15 +38,14 @@ const ProtectedRoute = ({ children }) => {
     return <LoadingScreen />;
   }
 
+  // First time setup - show SetupForm for creating admin account
   if (needsSetup) {
     return <SetupForm />;
   }
 
+  // Not logged in - show LoginForm
   if (!user) {
-    if (showRegister) {
-      return <SetupForm onSwitchToLogin={() => setShowRegister(false)} />;
-    }
-    return <LoginForm onSwitchToRegister={() => setShowRegister(true)} />;
+    return <LoginForm />;
   }
 
   return children;

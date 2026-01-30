@@ -5,10 +5,12 @@ const AuthContext = createContext({
   user: null,
   token: null,
   login: () => {},
-  register: () => {},
+  sendCode: () => {},
+  verifyCode: () => {},
   logout: () => {},
   isLoading: true,
   needsSetup: false,
+  smtpConfigured: false,
   error: null,
   isAdmin: false
 });
@@ -26,6 +28,7 @@ export const AuthProvider = ({ children }) => {
   const [token, setToken] = useState(localStorage.getItem('auth-token'));
   const [isLoading, setIsLoading] = useState(true);
   const [needsSetup, setNeedsSetup] = useState(false);
+  const [smtpConfigured, setSmtpConfigured] = useState(false);
   const [error, setError] = useState(null);
 
   useEffect(() => {
@@ -47,6 +50,8 @@ export const AuthProvider = ({ children }) => {
       // Check if system needs setup
       const statusResponse = await api.auth.status();
       const statusData = await statusResponse.json();
+
+      setSmtpConfigured(statusData.smtpConfigured || false);
 
       if (statusData.needsSetup) {
         setNeedsSetup(true);
@@ -84,6 +89,52 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  // Send verification code to email
+  const sendCode = async (email) => {
+    try {
+      setError(null);
+      const response = await api.auth.sendCode(email);
+      const data = await response.json();
+
+      if (response.ok) {
+        return { success: true, type: data.type };
+      } else {
+        return {
+          success: false,
+          error: data.error || '发送验证码失败',
+          waitSeconds: data.waitSeconds
+        };
+      }
+    } catch (error) {
+      console.error('Send code error:', error);
+      return { success: false, error: '网络错误，请稍后再试' };
+    }
+  };
+
+  // Verify code and login/register
+  const verifyCode = async (email, code) => {
+    try {
+      setError(null);
+      const response = await api.auth.verifyCode(email, code);
+      const data = await response.json();
+
+      if (response.ok) {
+        setToken(data.token);
+        setUser(data.user);
+        setNeedsSetup(false);
+        localStorage.setItem('auth-token', data.token);
+        return { success: true };
+      } else {
+        setError(data.error || '验证失败');
+        return { success: false, error: data.error || '验证失败' };
+      }
+    } catch (error) {
+      console.error('Verify code error:', error);
+      return { success: false, error: '网络错误，请稍后再试' };
+    }
+  };
+
+  // Login with username/password (for admin-created accounts)
   const login = async (username, password) => {
     try {
       setError(null);
@@ -97,37 +148,12 @@ export const AuthProvider = ({ children }) => {
         localStorage.setItem('auth-token', data.token);
         return { success: true };
       } else {
-        setError(data.error || 'Login failed');
-        return { success: false, error: data.error || 'Login failed' };
+        setError(data.error || '登录失败');
+        return { success: false, error: data.error || '登录失败' };
       }
     } catch (error) {
       console.error('Login error:', error);
-      const errorMessage = 'Network error. Please try again.';
-      setError(errorMessage);
-      return { success: false, error: errorMessage };
-    }
-  };
-
-  const register = async (username, password) => {
-    try {
-      setError(null);
-      const response = await api.auth.register(username, password);
-
-      const data = await response.json();
-
-      if (response.ok) {
-        setToken(data.token);
-        setUser(data.user);
-        setNeedsSetup(false);
-        localStorage.setItem('auth-token', data.token);
-        return { success: true };
-      } else {
-        setError(data.error || 'Registration failed');
-        return { success: false, error: data.error || 'Registration failed' };
-      }
-    } catch (error) {
-      console.error('Registration error:', error);
-      const errorMessage = 'Network error. Please try again.';
+      const errorMessage = '网络错误，请稍后再试';
       setError(errorMessage);
       return { success: false, error: errorMessage };
     }
@@ -137,7 +163,7 @@ export const AuthProvider = ({ children }) => {
     setToken(null);
     setUser(null);
     localStorage.removeItem('auth-token');
-    
+
     // Optional: Call logout endpoint for logging
     if (token) {
       api.auth.logout().catch(error => {
@@ -150,10 +176,12 @@ export const AuthProvider = ({ children }) => {
     user,
     token,
     login,
-    register,
+    sendCode,
+    verifyCode,
     logout,
     isLoading,
     needsSetup,
+    smtpConfigured,
     error,
     isAdmin: user?.role === 'admin'
   };

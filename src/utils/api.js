@@ -33,13 +33,43 @@ export const api = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username, password }),
     }),
-    register: (username, password) => fetch('/api/auth/register', {
+    sendCode: (email) => fetch('/api/auth/send-code', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username, password }),
+      body: JSON.stringify({ email }),
+    }),
+    verifyCode: (email, code) => fetch('/api/auth/verify-code', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, code }),
     }),
     user: () => authenticatedFetch('/api/auth/user'),
     logout: () => authenticatedFetch('/api/auth/logout', { method: 'POST' }),
+  },
+
+  // Admin endpoints
+  admin: {
+    getUsers: () => authenticatedFetch('/api/admin/users'),
+    createUser: (username, password) => authenticatedFetch('/api/admin/users', {
+      method: 'POST',
+      body: JSON.stringify({ username, password }),
+    }),
+    updateUserStatus: (userId, status) => authenticatedFetch(`/api/admin/users/${userId}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status }),
+    }),
+    deleteUser: (userId) => authenticatedFetch(`/api/admin/users/${userId}`, {
+      method: 'DELETE',
+    }),
+    // Email domain whitelist
+    getEmailDomains: () => authenticatedFetch('/api/admin/email-domains'),
+    addEmailDomain: (domain) => authenticatedFetch('/api/admin/email-domains', {
+      method: 'POST',
+      body: JSON.stringify({ domain }),
+    }),
+    removeEmailDomain: (id) => authenticatedFetch(`/api/admin/email-domains/${id}`, {
+      method: 'DELETE',
+    }),
   },
 
   // Protected endpoints

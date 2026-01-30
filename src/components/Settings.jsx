@@ -13,6 +13,7 @@ import { authenticatedFetch } from '../utils/api';
 import PermissionsContent from './settings/PermissionsContent';
 import McpServersContent from './settings/McpServersContent';
 import UserManagement from './settings/UserManagement';
+import EmailDomainWhitelist from './settings/EmailDomainWhitelist';
 import UsageDashboard from './UsageDashboard';
 import SkillsContent from './settings/SkillsContent';
 
@@ -905,7 +906,10 @@ function Settings({ isOpen, onClose, projects = [], initialTab = 'agents' }) {
                 {showUsageDashboard ? (
                   <UsageDashboard onBack={() => setShowUsageDashboard(false)} />
                 ) : (
-                  <UserManagement onNavigateToUsage={() => setShowUsageDashboard(true)} />
+                  <>
+                    <UserManagement onNavigateToUsage={() => setShowUsageDashboard(true)} />
+                    <EmailDomainWhitelist />
+                  </>
                 )}
               </div>
             )}
