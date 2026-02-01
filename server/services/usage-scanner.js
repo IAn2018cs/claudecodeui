@@ -220,9 +220,15 @@ async function scanSessionFile(userUuid, sessionId, filePath, startLine) {
       });
 
       // Determine the date from the entry timestamp or use current date
-      const entryDate = entry.timestamp
-        ? new Date(entry.timestamp).toISOString().split('T')[0]
-        : new Date().toISOString().split('T')[0];
+      const entryTimestamp = entry.timestamp || new Date().toISOString();
+      const entryDate = entryTimestamp.split('T')[0];
+
+      // Check if this record already exists (deduplication with SDK records)
+      // Uses session_id + model + token counts + time window to match
+      if (usageDb.checkRecordExists(sessionId, model, inputTokens, outputTokens, entryTimestamp)) {
+        // Record already exists (likely from SDK), skip to avoid duplicate counting
+        continue;
+      }
 
       // Insert usage record (source: cli)
       usageDb.insertRecord({
@@ -235,7 +241,7 @@ async function scanSessionFile(userUuid, sessionId, filePath, startLine) {
         cache_creation_tokens: cacheCreationTokens,
         cost_usd: cost,
         source: 'cli',
-        created_at: entry.timestamp || new Date().toISOString()
+        created_at: entryTimestamp
       });
 
       // Update daily summary

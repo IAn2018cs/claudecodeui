@@ -530,6 +530,33 @@ const verificationDb = {
 
 // Usage database operations
 const usageDb = {
+  // Check if a usage record already exists (for deduplication)
+  // Uses session_id + model + token counts to identify duplicates within a time window
+  checkRecordExists: (sessionId, model, inputTokens, outputTokens, createdAt) => {
+    if (!sessionId) return false;
+    try {
+      // Parse the timestamp and create a time window (±2 seconds)
+      const timestamp = new Date(createdAt || Date.now());
+      const windowStart = new Date(timestamp.getTime() - 2000).toISOString();
+      const windowEnd = new Date(timestamp.getTime() + 2000).toISOString();
+
+      const stmt = db.prepare(`
+        SELECT id FROM usage_records
+        WHERE session_id = ?
+          AND model = ?
+          AND input_tokens = ?
+          AND output_tokens = ?
+          AND created_at BETWEEN ? AND ?
+        LIMIT 1
+      `);
+      const result = stmt.get(sessionId, model, inputTokens, outputTokens, windowStart, windowEnd);
+      return !!result;
+    } catch (err) {
+      console.error('[usageDb] Error checking record exists:', err);
+      return false;
+    }
+  },
+
   // Insert a usage record
   insertRecord: (record) => {
     try {
