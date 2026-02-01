@@ -140,6 +140,76 @@ router.delete('/users/:id', async (req, res) => {
   }
 });
 
+// ==================== User Spending Limits ====================
+
+// Get user spending limits
+router.get('/users/:id/limits', (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const user = userDb.getUserById(id);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const limits = userDb.getUserLimits(id);
+    res.json({
+      total_limit_usd: limits?.total_limit_usd ?? null,
+      daily_limit_usd: limits?.daily_limit_usd ?? null
+    });
+  } catch (error) {
+    console.error('Error fetching user limits:', error);
+    res.status(500).json({ error: '获取用户限制失败' });
+  }
+});
+
+// Update user spending limits
+router.patch('/users/:id/limits', (req, res) => {
+  try {
+    const { id } = req.params;
+    const { total_limit_usd, daily_limit_usd } = req.body;
+
+    // Validate limits - allow null or positive numbers
+    if (total_limit_usd !== null && total_limit_usd !== undefined) {
+      if (typeof total_limit_usd !== 'number' || total_limit_usd < 0) {
+        return res.status(400).json({ error: '总额度限制必须是正数或为空' });
+      }
+    }
+    if (daily_limit_usd !== null && daily_limit_usd !== undefined) {
+      if (typeof daily_limit_usd !== 'number' || daily_limit_usd < 0) {
+        return res.status(400).json({ error: '每日额度限制必须是正数或为空' });
+      }
+    }
+
+    // Prevent modifying own limits
+    if (parseInt(id) === req.user.id) {
+      return res.status(400).json({ error: '不能修改自己的额度限制' });
+    }
+
+    const user = userDb.getUserById(id);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Convert undefined to null for database
+    const totalLimit = total_limit_usd === undefined ? null : total_limit_usd;
+    const dailyLimit = daily_limit_usd === undefined ? null : daily_limit_usd;
+
+    userDb.updateUserLimits(id, totalLimit, dailyLimit);
+    res.json({
+      success: true,
+      message: '用户额度限制已更新',
+      limits: {
+        total_limit_usd: totalLimit,
+        daily_limit_usd: dailyLimit
+      }
+    });
+  } catch (error) {
+    console.error('Error updating user limits:', error);
+    res.status(500).json({ error: '更新用户限制失败' });
+  }
+});
+
 // ==================== Email Domain Whitelist ====================
 
 // Get all whitelisted domains

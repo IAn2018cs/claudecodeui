@@ -49,13 +49,24 @@ function MainContent({
   showThinking,           // Show thinking/reasoning sections
   autoScrollToBottom,     // Auto-scroll to bottom when new messages arrive
   sendByCtrlEnter,        // Send by Ctrl+Enter mode for East Asian language input
-  externalMessageUpdate   // Trigger for external CLI updates to current session
+  externalMessageUpdate,  // Trigger for external CLI updates to current session
+  // Usage limit props
+  limitStatus,            // Current user's spending limit status
+  onLimitBlocked,         // Callback when user is blocked by limit
+  checkLimitStatus        // Function to refresh limit status
 }) {
   const [editingFile, setEditingFile] = useState(null);
   const [editorWidth, setEditorWidth] = useState(600);
   const [isResizing, setIsResizing] = useState(false);
   const [editorExpanded, setEditorExpanded] = useState(false);
   const resizeRef = useRef(null);
+
+  // Check limit status when switching to Shell tab
+  useEffect(() => {
+    if (activeTab === 'shell' && checkLimitStatus) {
+      checkLimitStatus();
+    }
+  }, [activeTab, checkLimitStatus]);
 
   const handleFileOpen = (filePath, diffInfo = null) => {
     // Create a file object that CodeEditor expects
@@ -280,13 +291,22 @@ function MainContent({
                   </span>
                 </button>
               </Tooltip>
-              <Tooltip content="Shell" position="bottom">
+              <Tooltip content={limitStatus && !limitStatus.allowed ? "使用已达上限" : "Shell"} position="bottom">
                 <button
-                  onClick={() => setActiveTab('shell')}
-                  className={`relative px-2 sm:px-3 py-1.5 text-xs sm:text-sm font-medium rounded-md transition-all duration-200 ${activeTab === 'shell'
-                      ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
-                      : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-200 dark:hover:bg-gray-700'
-                    }`}
+                  onClick={() => {
+                    if (limitStatus && !limitStatus.allowed) {
+                      onLimitBlocked?.(limitStatus.reason);
+                      return;
+                    }
+                    setActiveTab('shell');
+                  }}
+                  className={`relative px-2 sm:px-3 py-1.5 text-xs sm:text-sm font-medium rounded-md transition-all duration-200 ${
+                    limitStatus && !limitStatus.allowed
+                      ? 'opacity-50 cursor-not-allowed text-gray-400 dark:text-gray-500'
+                      : activeTab === 'shell'
+                        ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
+                        : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-200 dark:hover:bg-gray-700'
+                  }`}
                 >
                   <span className="flex items-center gap-1 sm:gap-1.5">
                     <svg className="w-3 sm:w-3.5 h-3 sm:h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -360,6 +380,9 @@ function MainContent({
                 autoScrollToBottom={autoScrollToBottom}
                 sendByCtrlEnter={sendByCtrlEnter}
                 externalMessageUpdate={externalMessageUpdate}
+                limitStatus={limitStatus}
+                onLimitExceeded={onLimitBlocked}
+                checkLimitStatus={checkLimitStatus}
               />
             </ErrorBoundary>
           </div>
@@ -369,12 +392,38 @@ function MainContent({
             </div>
           )}
           {activeTab === 'shell' && (
-            <div className="h-full w-full overflow-hidden">
+            <div className="h-full w-full overflow-hidden relative">
               <StandaloneShell
                 project={selectedProject}
                 session={selectedSession}
                 showHeader={false}
               />
+              {/* Limit exceeded overlay for Shell */}
+              {limitStatus && !limitStatus.allowed && (
+                <div className="absolute inset-0 bg-black/60 z-50 flex items-center justify-center">
+                  <div className="bg-card border border-border rounded-lg shadow-xl p-6 mx-4 max-w-md text-center">
+                    <div className="w-12 h-12 mx-auto mb-4 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center">
+                      <svg className="w-6 h-6 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                      </svg>
+                    </div>
+                    <h3 className="text-lg font-semibold text-foreground mb-2">
+                      {limitStatus.reason === 'total_limit_exceeded' ? '使用上限已达到' : '今日使用上限已达到'}
+                    </h3>
+                    <p className="text-muted-foreground mb-4">
+                      {limitStatus.reason === 'total_limit_exceeded'
+                        ? '您已达到使用上限，请联系管理员提升额度。'
+                        : '您已达到今日使用上限，请明日再来或联系管理员提升额度。'}
+                    </p>
+                    <button
+                      onClick={() => setActiveTab('chat')}
+                      className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
+                    >
+                      返回 Chat
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
           <div className={`h-full overflow-hidden ${activeTab === 'preview' ? 'block' : 'hidden'}`}>

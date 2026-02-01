@@ -12,7 +12,11 @@ const AuthContext = createContext({
   needsSetup: false,
   smtpConfigured: false,
   error: null,
-  isAdmin: false
+  isAdmin: false,
+  // Spending limit status
+  limitStatus: { allowed: true },
+  checkLimitStatus: () => {},
+  setLimitStatus: () => {}
 });
 
 export const useAuth = () => {
@@ -30,6 +34,7 @@ export const AuthProvider = ({ children }) => {
   const [needsSetup, setNeedsSetup] = useState(false);
   const [smtpConfigured, setSmtpConfigured] = useState(false);
   const [error, setError] = useState(null);
+  const [limitStatus, setLimitStatus] = useState({ allowed: true });
 
   useEffect(() => {
     if (import.meta.env.VITE_IS_PLATFORM === 'true') {
@@ -162,6 +167,7 @@ export const AuthProvider = ({ children }) => {
   const logout = () => {
     setToken(null);
     setUser(null);
+    setLimitStatus({ allowed: true });
     localStorage.removeItem('auth-token');
 
     // Optional: Call logout endpoint for logging
@@ -171,6 +177,33 @@ export const AuthProvider = ({ children }) => {
       });
     }
   };
+
+  // Check spending limit status
+  const checkLimitStatus = async () => {
+    // Skip if in platform mode or no user
+    if (import.meta.env.VITE_IS_PLATFORM === 'true' || !user) {
+      return { allowed: true };
+    }
+
+    try {
+      const response = await api.auth.limitStatus();
+      if (response.ok) {
+        const status = await response.json();
+        setLimitStatus(status);
+        return status;
+      }
+    } catch (error) {
+      console.error('Error checking limit status:', error);
+    }
+    return { allowed: true };
+  };
+
+  // Check limit status when user logs in
+  useEffect(() => {
+    if (user && !isLoading) {
+      checkLimitStatus();
+    }
+  }, [user, isLoading]);
 
   const value = {
     user,
@@ -183,7 +216,11 @@ export const AuthProvider = ({ children }) => {
     needsSetup,
     smtpConfigured,
     error,
-    isAdmin: user?.role === 'admin'
+    isAdmin: user?.role === 'admin',
+    // Spending limit status
+    limitStatus,
+    checkLimitStatus,
+    setLimitStatus
   };
 
   return (

@@ -26,9 +26,10 @@ import MainContent from './components/MainContent';
 import MobileNav from './components/MobileNav';
 import Settings from './components/Settings';
 import QuickSettingsPanel from './components/QuickSettingsPanel';
+import UsageLimitModal from './components/UsageLimitModal';
 
 import { ThemeProvider } from './contexts/ThemeContext';
-import { AuthProvider } from './contexts/AuthContext';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { WebSocketProvider, useWebSocketContext } from './contexts/WebSocketContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import useLocalStorage from './hooks/useLocalStorage';
@@ -39,6 +40,7 @@ import { api } from './utils/api';
 function AppContent() {
   const navigate = useNavigate();
   const { sessionId } = useParams();
+  const { limitStatus, setLimitStatus, checkLimitStatus } = useAuth();
 
   const [projects, setProjects] = useState([]);
   const [selectedProject, setSelectedProject] = useState(null);
@@ -57,6 +59,11 @@ function AppContent() {
   const [autoScrollToBottom, setAutoScrollToBottom] = useLocalStorage('autoScrollToBottom', true);
   const [sendByCtrlEnter, setSendByCtrlEnter] = useLocalStorage('sendByCtrlEnter', false);
   const [sidebarVisible, setSidebarVisible] = useLocalStorage('sidebarVisible', true);
+
+  // Usage Limit Modal state
+  const [showLimitModal, setShowLimitModal] = useState(false);
+  const [limitModalType, setLimitModalType] = useState(null);
+
   // Session Protection System: Track sessions with active conversations to prevent
   // automatic project updates from interrupting ongoing chats. When a user sends
   // a message, the session is marked as "active" and project updates are paused
@@ -72,6 +79,12 @@ function AppContent() {
   const [externalMessageUpdate, setExternalMessageUpdate] = useState(0);
 
   const { ws, sendMessage, messages } = useWebSocketContext();
+
+  // Handle usage limit exceeded - shows modal with appropriate message
+  const handleLimitBlocked = useCallback((reason) => {
+    setLimitModalType(reason);
+    setShowLimitModal(true);
+  }, []);
 
   // Detect if running as PWA
   const [isPWA, setIsPWA] = useState(false);
@@ -637,6 +650,9 @@ function AppContent() {
           autoScrollToBottom={autoScrollToBottom}
           sendByCtrlEnter={sendByCtrlEnter}
           externalMessageUpdate={externalMessageUpdate}
+          limitStatus={limitStatus}
+          onLimitBlocked={handleLimitBlocked}
+          checkLimitStatus={checkLimitStatus}
         />
       </div>
 
@@ -673,6 +689,13 @@ function AppContent() {
         onClose={() => setShowSettings(false)}
         projects={projects}
         initialTab={settingsInitialTab}
+      />
+
+      {/* Usage Limit Modal */}
+      <UsageLimitModal
+        isOpen={showLimitModal}
+        limitType={limitModalType}
+        onClose={() => setShowLimitModal(false)}
       />
     </div>
   );

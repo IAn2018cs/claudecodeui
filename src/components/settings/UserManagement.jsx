@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
-import { Trash2, UserCheck, UserX, Shield, User, BarChart3, UserPlus, X } from 'lucide-react';
+import { Trash2, UserCheck, UserX, Shield, User, BarChart3, UserPlus, X, DollarSign } from 'lucide-react';
 import { authenticatedFetch, api } from '../../utils/api';
 
 function UserManagement({ onNavigateToUsage }) {
@@ -16,6 +16,12 @@ function UserManagement({ onNavigateToUsage }) {
   const [newPassword, setNewPassword] = useState('');
   const [createError, setCreateError] = useState('');
   const [createLoading, setCreateLoading] = useState(false);
+
+  // Limit editing state
+  const [editingLimits, setEditingLimits] = useState(null);
+  const [limitForm, setLimitForm] = useState({ total_limit_usd: '', daily_limit_usd: '' });
+  const [limitError, setLimitError] = useState('');
+  const [limitLoading, setLimitLoading] = useState(false);
 
   const fetchUsers = async () => {
     try {
@@ -152,6 +158,74 @@ function UserManagement({ onNavigateToUsage }) {
     setCreateError('');
   };
 
+  // Open limit editing modal
+  const openLimitModal = (user) => {
+    setEditingLimits(user);
+    setLimitForm({
+      total_limit_usd: user.total_limit_usd !== null && user.total_limit_usd !== undefined ? String(user.total_limit_usd) : '',
+      daily_limit_usd: user.daily_limit_usd !== null && user.daily_limit_usd !== undefined ? String(user.daily_limit_usd) : ''
+    });
+    setLimitError('');
+  };
+
+  const closeLimitModal = () => {
+    setEditingLimits(null);
+    setLimitForm({ total_limit_usd: '', daily_limit_usd: '' });
+    setLimitError('');
+  };
+
+  const handleSaveLimits = async (e) => {
+    e.preventDefault();
+    setLimitError('');
+
+    // Parse values - empty string means null (no limit)
+    const totalLimit = limitForm.total_limit_usd.trim() === '' ? null : parseFloat(limitForm.total_limit_usd);
+    const dailyLimit = limitForm.daily_limit_usd.trim() === '' ? null : parseFloat(limitForm.daily_limit_usd);
+
+    // Validate
+    if (totalLimit !== null && (isNaN(totalLimit) || totalLimit < 0)) {
+      setLimitError('总额度限制必须是正数或留空');
+      return;
+    }
+    if (dailyLimit !== null && (isNaN(dailyLimit) || dailyLimit < 0)) {
+      setLimitError('每日额度限制必须是正数或留空');
+      return;
+    }
+
+    setLimitLoading(true);
+
+    try {
+      const response = await api.admin.updateUserLimits(editingLimits.id, {
+        total_limit_usd: totalLimit,
+        daily_limit_usd: dailyLimit
+      });
+      const data = await response.json();
+
+      if (response.ok) {
+        // Update local state
+        setUsers(users.map(u =>
+          u.id === editingLimits.id
+            ? { ...u, total_limit_usd: totalLimit, daily_limit_usd: dailyLimit }
+            : u
+        ));
+        closeLimitModal();
+      } else {
+        setLimitError(data.error || '更新限制失败');
+      }
+    } catch (error) {
+      console.error('Error updating limits:', error);
+      setLimitError('网络错误，请稍后再试');
+    } finally {
+      setLimitLoading(false);
+    }
+  };
+
+  // Format limit display
+  const formatLimit = (value) => {
+    if (value === null || value === undefined) return '无限制';
+    return `$${value.toFixed(2)}`;
+  };
+
   if (loading) {
     return <div className="text-center py-8 text-muted-foreground">正在加载用户...</div>;
   }
@@ -192,6 +266,7 @@ function UserManagement({ onNavigateToUsage }) {
               <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">角色</th>
               <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">状态</th>
               <th className="px-4 py-3 text-right text-sm font-medium text-muted-foreground">费用</th>
+              <th className="px-4 py-3 text-right text-sm font-medium text-muted-foreground">额度限制</th>
               <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">创建时间</th>
               <th className="px-4 py-3 text-right text-sm font-medium text-muted-foreground">操作</th>
             </tr>
@@ -230,6 +305,28 @@ function UserManagement({ onNavigateToUsage }) {
                   <span className="font-mono text-sm text-foreground">
                     {formatCost(usageData[user.uuid]?.total_cost)}
                   </span>
+                </td>
+                <td className="px-4 py-3 text-right">
+                  {user.role !== 'admin' ? (
+                    <button
+                      onClick={() => openLimitModal(user)}
+                      className="text-xs text-blue-600 dark:text-blue-400 hover:underline font-mono"
+                      title="点击编辑额度限制"
+                    >
+                      {user.total_limit_usd !== null || user.daily_limit_usd !== null ? (
+                        <span>
+                          总:{formatLimit(user.total_limit_usd)} / 日:{formatLimit(user.daily_limit_usd)}
+                        </span>
+                      ) : (
+                        <span className="flex items-center gap-1 justify-end">
+                          <DollarSign className="w-3 h-3" />
+                          设置限额
+                        </span>
+                      )}
+                    </button>
+                  ) : (
+                    <span className="text-xs text-muted-foreground">-</span>
+                  )}
                 </td>
                 <td className="px-4 py-3 text-sm text-muted-foreground">
                   {new Date(user.created_at).toLocaleDateString()}
@@ -335,6 +432,99 @@ function UserManagement({ onNavigateToUsage }) {
                   disabled={createLoading}
                 >
                   {createLoading ? '创建中...' : '创建'}
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Limits Modal */}
+      {editingLimits && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-card border border-border rounded-lg shadow-lg w-full max-w-md p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h4 className="text-lg font-semibold text-foreground">
+                设置额度限制 - {editingLimits.username || editingLimits.email}
+              </h4>
+              <button
+                onClick={closeLimitModal}
+                className="text-muted-foreground hover:text-foreground"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveLimits} className="space-y-4">
+              <div>
+                <label htmlFor="totalLimit" className="block text-sm font-medium text-foreground mb-1">
+                  总额度上限 (USD)
+                </label>
+                <input
+                  type="number"
+                  id="totalLimit"
+                  step="0.01"
+                  min="0"
+                  value={limitForm.total_limit_usd}
+                  onChange={(e) => setLimitForm(prev => ({ ...prev, total_limit_usd: e.target.value }))}
+                  className="w-full px-3 py-2 border border-border rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="留空表示不限制"
+                  disabled={limitLoading}
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  用户累计使用金额达到此限制后，将无法继续使用
+                </p>
+              </div>
+
+              <div>
+                <label htmlFor="dailyLimit" className="block text-sm font-medium text-foreground mb-1">
+                  每日额度上限 (USD)
+                </label>
+                <input
+                  type="number"
+                  id="dailyLimit"
+                  step="0.01"
+                  min="0"
+                  value={limitForm.daily_limit_usd}
+                  onChange={(e) => setLimitForm(prev => ({ ...prev, daily_limit_usd: e.target.value }))}
+                  className="w-full px-3 py-2 border border-border rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="留空表示不限制"
+                  disabled={limitLoading}
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  用户每日使用金额达到此限制后，需等待次日重置
+                </p>
+              </div>
+
+              {/* Current usage info */}
+              {usageData[editingLimits.uuid] && (
+                <div className="p-3 bg-gray-100 dark:bg-gray-800 rounded-md">
+                  <p className="text-sm text-muted-foreground">
+                    当前已使用：<span className="font-mono text-foreground">{formatCost(usageData[editingLimits.uuid]?.total_cost)}</span>
+                  </p>
+                </div>
+              )}
+
+              {limitError && (
+                <div className="p-3 bg-red-100 dark:bg-red-900/20 border border-red-300 dark:border-red-800 rounded-md">
+                  <p className="text-sm text-red-700 dark:text-red-400">{limitError}</p>
+                </div>
+              )}
+
+              <div className="flex justify-end gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={closeLimitModal}
+                  disabled={limitLoading}
+                >
+                  取消
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={limitLoading}
+                >
+                  {limitLoading ? '保存中...' : '保存'}
                 </Button>
               </div>
             </form>

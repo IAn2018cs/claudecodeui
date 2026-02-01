@@ -1,7 +1,7 @@
 import express from 'express';
 import bcrypt from 'bcrypt';
 import { v4 as uuidv4 } from 'uuid';
-import { userDb, verificationDb, domainWhitelistDb } from '../database/db.js';
+import { userDb, verificationDb, domainWhitelistDb, usageDb } from '../database/db.js';
 import { generateToken, authenticateToken } from '../middleware/auth.js';
 import { initUserDirectories } from '../services/user-directories.js';
 import { sendVerificationCode, isSmtpConfigured } from '../services/email.js';
@@ -214,6 +214,17 @@ router.post('/logout', authenticateToken, (req, res) => {
   // In a simple JWT system, logout is mainly client-side
   // This endpoint exists for consistency and potential future logging
   res.json({ success: true, message: 'Logged out successfully' });
+});
+
+// Get current user's spending limit status
+router.get('/limit-status', authenticateToken, (req, res) => {
+  try {
+    const status = usageDb.checkUserLimits(req.user.uuid);
+    res.json(status);
+  } catch (error) {
+    console.error('Error checking limit status:', error);
+    res.status(500).json({ error: '获取限制状态失败' });
+  }
 });
 
 export default router;

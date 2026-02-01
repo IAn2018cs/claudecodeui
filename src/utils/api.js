@@ -45,6 +45,8 @@ export const api = {
     }),
     user: () => authenticatedFetch('/api/auth/user'),
     logout: () => authenticatedFetch('/api/auth/logout', { method: 'POST' }),
+    // Spending limit status
+    limitStatus: () => authenticatedFetch('/api/auth/limit-status'),
   },
 
   // Admin endpoints
@@ -69,6 +71,12 @@ export const api = {
     }),
     removeEmailDomain: (id) => authenticatedFetch(`/api/admin/email-domains/${id}`, {
       method: 'DELETE',
+    }),
+    // User spending limits
+    getUserLimits: (userId) => authenticatedFetch(`/api/admin/users/${userId}/limits`),
+    updateUserLimits: (userId, limits) => authenticatedFetch(`/api/admin/users/${userId}/limits`, {
+      method: 'PATCH',
+      body: JSON.stringify(limits),
     }),
   },
 

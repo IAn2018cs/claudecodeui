@@ -1791,7 +1791,7 @@ const ImageAttachment = ({ file, onRemove, uploadProgress, error }) => {
 // - onReplaceTemporarySession: Called to replace temporary session ID with real WebSocket session ID
 //
 // This ensures uninterrupted chat experience by pausing sidebar refreshes during conversations.
-function ChatInterface({ selectedProject, selectedSession, ws, sendMessage, messages, onFileOpen, onInputFocusChange, onSessionActive, onSessionInactive, onSessionProcessing, onSessionNotProcessing, processingSessions, onReplaceTemporarySession, onNavigateToSession, onShowSettings, autoExpandTools, showRawParameters, showThinking, autoScrollToBottom, sendByCtrlEnter, externalMessageUpdate, onTaskClick }) {
+function ChatInterface({ selectedProject, selectedSession, ws, sendMessage, messages, onFileOpen, onInputFocusChange, onSessionActive, onSessionInactive, onSessionProcessing, onSessionNotProcessing, processingSessions, onReplaceTemporarySession, onNavigateToSession, onShowSettings, autoExpandTools, showRawParameters, showThinking, autoScrollToBottom, sendByCtrlEnter, externalMessageUpdate, onTaskClick, limitStatus, onLimitExceeded, checkLimitStatus }) {
   const [input, setInput] = useState(() => {
     if (typeof window !== 'undefined' && selectedProject) {
       return safeLocalStorage.getItem(`draft_input_${selectedProject.name}`) || '';
@@ -3556,6 +3556,15 @@ function ChatInterface({ selectedProject, selectedSession, ws, sendMessage, mess
     e.preventDefault();
     if (!input.trim() || isLoading || !selectedProject) return;
 
+    // Check spending limit before submitting - fetch fresh status from server
+    if (checkLimitStatus) {
+      const freshStatus = await checkLimitStatus();
+      if (freshStatus && !freshStatus.allowed) {
+        onLimitExceeded?.(freshStatus.reason);
+        return;
+      }
+    }
+
     // Upload images first if any
     let uploadedImages = [];
     if (attachedImages.length > 0) {
@@ -3669,7 +3678,7 @@ function ChatInterface({ selectedProject, selectedSession, ws, sendMessage, mess
     if (selectedProject) {
       safeLocalStorage.removeItem(`draft_input_${selectedProject.name}`);
     }
-  }, [input, isLoading, selectedProject, attachedImages, currentSessionId, selectedSession, provider, permissionMode, onSessionActive, claudeModel, sendMessage, setInput, setAttachedImages, setUploadingImages, setImageErrors, setIsTextareaExpanded, textareaRef, setChatMessages, setIsLoading, setCanAbortSession, setClaudeStatus, setIsUserScrolledUp, scrollToBottom]);
+  }, [input, isLoading, selectedProject, attachedImages, currentSessionId, selectedSession, provider, permissionMode, onSessionActive, claudeModel, sendMessage, setInput, setAttachedImages, setUploadingImages, setImageErrors, setIsTextareaExpanded, textareaRef, setChatMessages, setIsLoading, setCanAbortSession, setClaudeStatus, setIsUserScrolledUp, scrollToBottom, checkLimitStatus, onLimitExceeded]);
 
   const handleGrantToolPermission = useCallback((suggestion) => {
     if (!suggestion || provider !== 'claude') {
@@ -4338,8 +4347,9 @@ function ChatInterface({ selectedProject, selectedSession, ws, sendMessage, mess
                     textareaRef.current.focus();
                   }
                 }}
-                className="relative w-8 h-8 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 rounded-full flex items-center justify-center transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:ring-offset-gray-800"
-                title="显示所有命令"
+                disabled={limitStatus && !limitStatus.allowed}
+                className="relative w-8 h-8 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 rounded-full flex items-center justify-center transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:ring-offset-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
+                title={limitStatus && !limitStatus.allowed ? '使用上限已达到' : '显示所有命令'}
               >
                 <svg
                   className="w-5 h-5"
@@ -4523,8 +4533,10 @@ function ChatInterface({ selectedProject, selectedSession, ws, sendMessage, mess
                   const isExpanded = e.target.scrollHeight > lineHeight * 2;
                   setIsTextareaExpanded(isExpanded);
                 }}
-                placeholder="输入 / 使用命令，@ 引用文件，或向 Claude 提问..."
-                disabled={isLoading}
+                placeholder={limitStatus && !limitStatus.allowed
+                  ? (limitStatus.reason === 'total_limit_exceeded' ? '使用上限已达到，请联系管理员' : '今日使用上限已达到')
+                  : "输入 / 使用命令，@ 引用文件，或向 Claude 提问..."}
+                disabled={isLoading || (limitStatus && !limitStatus.allowed)}
                 className="chat-input-placeholder block w-full pl-20 pr-20 sm:pr-40 py-1.5 sm:py-4 bg-transparent rounded-2xl focus:outline-none text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 disabled:opacity-50 resize-none min-h-[50px] sm:min-h-[80px] max-h-[40vh] sm:max-h-[300px] overflow-y-auto text-sm sm:text-base leading-[21px] sm:leading-6 transition-all duration-200"
                 style={{ height: '50px' }}
               />
@@ -4532,8 +4544,9 @@ function ChatInterface({ selectedProject, selectedSession, ws, sendMessage, mess
               <button
                 type="button"
                 onClick={open}
-                className="absolute left-2 top-1/2 transform -translate-y-1/2 p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-                title="添加图片"
+                disabled={limitStatus && !limitStatus.allowed}
+                className="absolute left-2 top-1/2 transform -translate-y-1/2 p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                title={limitStatus && !limitStatus.allowed ? '使用上限已达到' : '添加图片'}
               >
                 <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
@@ -4551,9 +4564,9 @@ function ChatInterface({ selectedProject, selectedSession, ws, sendMessage, mess
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
-                disabled={isUploadingFile || !selectedProject}
-                className="absolute left-10 top-1/2 transform -translate-y-1/2 p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors disabled:opacity-50"
-                title="上传文件并引用"
+                disabled={isUploadingFile || !selectedProject || (limitStatus && !limitStatus.allowed)}
+                className="absolute left-10 top-1/2 transform -translate-y-1/2 p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                title={limitStatus && !limitStatus.allowed ? '使用上限已达到' : '上传文件并引用'}
               >
                 {isUploadingFile ? (
                   <svg className="w-5 h-5 text-gray-500 animate-spin" fill="none" viewBox="0 0 24 24">

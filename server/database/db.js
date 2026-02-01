@@ -174,6 +174,17 @@ const runMigrations = () => {
     `);
     db.exec('CREATE INDEX IF NOT EXISTS idx_email_domain_whitelist_domain ON email_domain_whitelist(domain)');
 
+    // Add spending limit columns for users
+    if (!columnNames.includes('total_limit_usd')) {
+      console.log('Running migration: Adding total_limit_usd column');
+      db.exec('ALTER TABLE users ADD COLUMN total_limit_usd REAL DEFAULT NULL');
+    }
+
+    if (!columnNames.includes('daily_limit_usd')) {
+      console.log('Running migration: Adding daily_limit_usd column');
+      db.exec('ALTER TABLE users ADD COLUMN daily_limit_usd REAL DEFAULT NULL');
+    }
+
     console.log('Database migrations completed successfully');
   } catch (error) {
     console.error('Error running migrations:', error.message);
@@ -318,7 +329,7 @@ const userDb = {
   getAllUsers: () => {
     try {
       return db.prepare(
-        'SELECT id, username, email, uuid, role, status, created_at, last_login FROM users ORDER BY created_at DESC'
+        'SELECT id, username, email, uuid, role, status, created_at, last_login, total_limit_usd, daily_limit_usd FROM users ORDER BY created_at DESC'
       ).all();
     } catch (err) {
       throw err;
@@ -379,6 +390,34 @@ const userDb = {
     try {
       const row = db.prepare('SELECT COUNT(*) as count FROM users WHERE email = ?').get(email);
       return row.count > 0;
+    } catch (err) {
+      throw err;
+    }
+  },
+
+  // Update user spending limits
+  updateUserLimits: (userId, totalLimit, dailyLimit) => {
+    try {
+      db.prepare('UPDATE users SET total_limit_usd = ?, daily_limit_usd = ? WHERE id = ?')
+        .run(totalLimit, dailyLimit, userId);
+    } catch (err) {
+      throw err;
+    }
+  },
+
+  // Get user spending limits
+  getUserLimits: (userId) => {
+    try {
+      return db.prepare('SELECT total_limit_usd, daily_limit_usd FROM users WHERE id = ?').get(userId);
+    } catch (err) {
+      throw err;
+    }
+  },
+
+  // Get user limits by UUID
+  getUserLimitsByUuid: (uuid) => {
+    try {
+      return db.prepare('SELECT total_limit_usd, daily_limit_usd FROM users WHERE uuid = ?').get(uuid);
     } catch (err) {
       throw err;
     }
@@ -682,6 +721,81 @@ const usageDb = {
 
       const result = db.prepare('DELETE FROM usage_records WHERE created_at < ?').run(cutoffStr);
       return result.changes;
+    } catch (err) {
+      throw err;
+    }
+  },
+
+  // Get user's daily usage for a specific date
+  getUserDailyUsage: (userUuid, date = null) => {
+    try {
+      const targetDate = date || new Date().toISOString().split('T')[0];
+      const result = db.prepare(`
+        SELECT
+          SUM(total_cost_usd) as daily_cost
+        FROM usage_daily_summary
+        WHERE user_uuid = ? AND date = ?
+      `).get(userUuid, targetDate);
+      return result?.daily_cost || 0;
+    } catch (err) {
+      throw err;
+    }
+  },
+
+  // Check if user has exceeded spending limits
+  checkUserLimits: (userUuid) => {
+    try {
+      // Get user's limits
+      const user = db.prepare('SELECT total_limit_usd, daily_limit_usd FROM users WHERE uuid = ?').get(userUuid);
+      if (!user) {
+        return { allowed: true };
+      }
+
+      // Get total usage
+      const totalUsage = db.prepare(`
+        SELECT SUM(total_cost_usd) as total_cost
+        FROM usage_daily_summary
+        WHERE user_uuid = ?
+      `).get(userUuid);
+
+      // Get daily usage
+      const today = new Date().toISOString().split('T')[0];
+      const dailyUsage = db.prepare(`
+        SELECT SUM(total_cost_usd) as daily_cost
+        FROM usage_daily_summary
+        WHERE user_uuid = ? AND date = ?
+      `).get(userUuid, today);
+
+      const totalCost = totalUsage?.total_cost || 0;
+      const dailyCost = dailyUsage?.daily_cost || 0;
+
+      // Check total limit first
+      if (user.total_limit_usd !== null && totalCost >= user.total_limit_usd) {
+        return {
+          allowed: false,
+          reason: 'total_limit_exceeded',
+          limit: user.total_limit_usd,
+          current: totalCost
+        };
+      }
+
+      // Check daily limit
+      if (user.daily_limit_usd !== null && dailyCost >= user.daily_limit_usd) {
+        return {
+          allowed: false,
+          reason: 'daily_limit_exceeded',
+          limit: user.daily_limit_usd,
+          current: dailyCost
+        };
+      }
+
+      return {
+        allowed: true,
+        totalCost,
+        dailyCost,
+        totalLimit: user.total_limit_usd,
+        dailyLimit: user.daily_limit_usd
+      };
     } catch (err) {
       throw err;
     }
