@@ -152,18 +152,18 @@ async function scanUserSessions(userUuid) {
 
       // Scan the session file
       try {
-        const recordsAdded = await scanSessionFile(
+        const scanResult = await scanSessionFile(
           userUuid,
           sessionId,
           sessionPath,
           lastScanned?.lastLine || 0
         );
-        newRecordsCount += recordsAdded;
+        newRecordsCount += scanResult.recordsAdded;
 
-        // Update scan state
+        // Update scan state with the new lastLine position
         scanState.scannedSessions[sessionId] = {
           lastModified,
-          lastLine: lastScanned?.lastLine || 0,
+          lastLine: scanResult.lastLine,
           lastScan: new Date().toISOString()
         };
       } catch (error) {
@@ -224,8 +224,11 @@ async function scanSessionFile(userUuid, sessionId, filePath, startLine) {
       const entryDate = entryTimestamp.split('T')[0];
 
       // Check if this record already exists (deduplication with SDK records)
-      // Uses session_id + model + token counts + time window to match
-      if (usageDb.checkRecordExists(sessionId, model, inputTokens, outputTokens, entryTimestamp)) {
+      // Uses session_id (or user_uuid) + model + all token counts + time window to match
+      if (usageDb.checkRecordExists(
+        userUuid, sessionId, model, inputTokens, outputTokens,
+        cacheReadTokens, cacheCreationTokens, entryTimestamp
+      )) {
         // Record already exists (likely from SDK), skip to avoid duplicate counting
         continue;
       }
@@ -274,7 +277,8 @@ async function scanSessionFile(userUuid, sessionId, filePath, startLine) {
     }
   }
 
-  return recordsAdded;
+  // Return both records added and the last line processed
+  return { recordsAdded, lastLine: lines.length };
 }
 
 /**

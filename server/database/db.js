@@ -531,25 +531,60 @@ const verificationDb = {
 // Usage database operations
 const usageDb = {
   // Check if a usage record already exists (for deduplication)
-  // Uses session_id + model + token counts to identify duplicates within a time window
-  checkRecordExists: (sessionId, model, inputTokens, outputTokens, createdAt) => {
-    if (!sessionId) return false;
+  // Uses session_id + model + all token counts to identify duplicates within a time window
+  // If session_id is null, uses user_uuid instead for matching
+  checkRecordExists: (userUuid, sessionId, model, inputTokens, outputTokens, cacheReadTokens, cacheCreationTokens, createdAt) => {
     try {
-      // Parse the timestamp and create a time window (±2 seconds)
+      // Parse the timestamp and create a time window (±5 seconds to handle network delays)
       const timestamp = new Date(createdAt || Date.now());
-      const windowStart = new Date(timestamp.getTime() - 2000).toISOString();
-      const windowEnd = new Date(timestamp.getTime() + 2000).toISOString();
+      const windowStart = new Date(timestamp.getTime() - 5000).toISOString();
+      const windowEnd = new Date(timestamp.getTime() + 5000).toISOString();
 
-      const stmt = db.prepare(`
-        SELECT id FROM usage_records
-        WHERE session_id = ?
-          AND model = ?
-          AND input_tokens = ?
-          AND output_tokens = ?
-          AND created_at BETWEEN ? AND ?
-        LIMIT 1
-      `);
-      const result = stmt.get(sessionId, model, inputTokens, outputTokens, windowStart, windowEnd);
+      let stmt;
+      let result;
+
+      if (sessionId) {
+        // Use session_id for matching (more precise)
+        stmt = db.prepare(`
+          SELECT id FROM usage_records
+          WHERE session_id = ?
+            AND model = ?
+            AND input_tokens = ?
+            AND output_tokens = ?
+            AND cache_read_tokens = ?
+            AND cache_creation_tokens = ?
+            AND created_at BETWEEN ? AND ?
+          LIMIT 1
+        `);
+        result = stmt.get(
+          sessionId, model, inputTokens, outputTokens,
+          cacheReadTokens || 0, cacheCreationTokens || 0,
+          windowStart, windowEnd
+        );
+      } else if (userUuid) {
+        // Fallback to user_uuid when session_id is not available
+        stmt = db.prepare(`
+          SELECT id FROM usage_records
+          WHERE user_uuid = ?
+            AND session_id IS NULL
+            AND model = ?
+            AND input_tokens = ?
+            AND output_tokens = ?
+            AND cache_read_tokens = ?
+            AND cache_creation_tokens = ?
+            AND created_at BETWEEN ? AND ?
+          LIMIT 1
+        `);
+        result = stmt.get(
+          userUuid, model, inputTokens, outputTokens,
+          cacheReadTokens || 0, cacheCreationTokens || 0,
+          windowStart, windowEnd
+        );
+      } else {
+        // No identifier available, cannot deduplicate
+        return false;
+      }
+
       return !!result;
     } catch (err) {
       console.error('[usageDb] Error checking record exists:', err);
