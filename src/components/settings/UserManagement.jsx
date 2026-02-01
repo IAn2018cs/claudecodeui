@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { Button } from '../ui/button';
-import { Badge } from '../ui/badge';
 import { Trash2, UserCheck, UserX, Shield, User, BarChart3, UserPlus, X, DollarSign } from 'lucide-react';
 import { authenticatedFetch, api } from '../../utils/api';
 
@@ -258,69 +257,74 @@ function UserManagement({ onNavigateToUsage }) {
         </div>
       </div>
 
-      <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
-        <table className="w-full">
+      <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-x-auto">
+        <table className="w-full min-w-[700px]">
           <thead className="bg-gray-50 dark:bg-gray-900/50">
             <tr>
-              <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">用户</th>
-              <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">角色</th>
-              <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">状态</th>
-              <th className="px-4 py-3 text-right text-sm font-medium text-muted-foreground">费用</th>
-              <th className="px-4 py-3 text-right text-sm font-medium text-muted-foreground">额度限制</th>
-              <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">创建时间</th>
-              <th className="px-4 py-3 text-right text-sm font-medium text-muted-foreground">操作</th>
+              <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground">用户</th>
+              <th className="px-3 py-2 text-center text-xs font-medium text-muted-foreground w-16">角色</th>
+              <th className="px-3 py-2 text-center text-xs font-medium text-muted-foreground w-16">状态</th>
+              <th className="px-3 py-2 text-right text-xs font-medium text-muted-foreground w-20">费用</th>
+              <th className="px-3 py-2 text-right text-xs font-medium text-muted-foreground w-28">额度限制</th>
+              <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground w-24">创建时间</th>
+              <th className="px-3 py-2 text-right text-xs font-medium text-muted-foreground w-20">操作</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
             {users.map(user => (
               <tr key={user.id} className="hover:bg-gray-50 dark:hover:bg-gray-900/30">
-                <td className="px-4 py-3">
-                  <div className="flex flex-col">
-                    <div className="flex items-center gap-2">
-                      {user.role === 'admin' ? (
-                        <Shield className="w-4 h-4 text-blue-500" />
-                      ) : (
-                        <User className="w-4 h-4 text-gray-400" />
-                      )}
-                      <span className="font-medium text-foreground">
-                        {user.username || user.email}
-                      </span>
-                    </div>
-                    {user.email && user.username && (
-                      <span className="text-xs text-muted-foreground ml-6">{user.email}</span>
+                <td className="px-3 py-2">
+                  <div className="flex items-center gap-2 min-w-0">
+                    {user.role === 'admin' ? (
+                      <Shield className="w-4 h-4 text-blue-500 flex-shrink-0" />
+                    ) : (
+                      <User className="w-4 h-4 text-gray-400 flex-shrink-0" />
                     )}
+                    <div className="min-w-0">
+                      <div className="font-medium text-foreground text-sm truncate">
+                        {user.username || user.email}
+                      </div>
+                      {user.email && user.username && (
+                        <div className="text-xs text-muted-foreground truncate">{user.email}</div>
+                      )}
+                    </div>
                   </div>
                 </td>
-                <td className="px-4 py-3">
-                  <Badge variant={user.role === 'admin' ? 'default' : 'secondary'}>
+                <td className="px-3 py-2 text-center">
+                  <span className={`inline-block px-1.5 py-0.5 text-xs rounded whitespace-nowrap ${
+                    user.role === 'admin'
+                      ? 'bg-blue-500/20 text-blue-400'
+                      : 'bg-gray-500/20 text-gray-400'
+                  }`}>
                     {user.role === 'admin' ? '管理员' : '用户'}
-                  </Badge>
+                  </span>
                 </td>
-                <td className="px-4 py-3">
-                  <Badge variant={user.status === 'active' ? 'success' : 'destructive'}>
-                    {user.status === 'active' ? '活跃' : '已禁用'}
-                  </Badge>
+                <td className="px-3 py-2 text-center">
+                  <span className={`inline-block w-2 h-2 rounded-full ${
+                    user.status === 'active' ? 'bg-green-500' : 'bg-red-500'
+                  }`} title={user.status === 'active' ? '活跃' : '已禁用'} />
                 </td>
-                <td className="px-4 py-3 text-right">
-                  <span className="font-mono text-sm text-foreground">
+                <td className="px-3 py-2 text-right">
+                  <span className="font-mono text-xs text-foreground whitespace-nowrap">
                     {formatCost(usageData[user.uuid]?.total_cost)}
                   </span>
                 </td>
-                <td className="px-4 py-3 text-right">
+                <td className="px-3 py-2 text-right">
                   {user.role !== 'admin' ? (
                     <button
                       onClick={() => openLimitModal(user)}
-                      className="text-xs text-blue-600 dark:text-blue-400 hover:underline font-mono"
+                      className="text-xs text-blue-600 dark:text-blue-400 hover:underline font-mono whitespace-nowrap"
                       title="点击编辑额度限制"
                     >
                       {user.total_limit_usd !== null || user.daily_limit_usd !== null ? (
-                        <span>
-                          总:{formatLimit(user.total_limit_usd)} / 日:{formatLimit(user.daily_limit_usd)}
+                        <span className="flex flex-col items-end text-[11px] leading-tight">
+                          <span>总:{formatLimit(user.total_limit_usd)}</span>
+                          <span>日:{formatLimit(user.daily_limit_usd)}</span>
                         </span>
                       ) : (
                         <span className="flex items-center gap-1 justify-end">
                           <DollarSign className="w-3 h-3" />
-                          设置限额
+                          限额
                         </span>
                       )}
                     </button>
@@ -328,16 +332,17 @@ function UserManagement({ onNavigateToUsage }) {
                     <span className="text-xs text-muted-foreground">-</span>
                   )}
                 </td>
-                <td className="px-4 py-3 text-sm text-muted-foreground">
+                <td className="px-3 py-2 text-xs text-muted-foreground whitespace-nowrap">
                   {new Date(user.created_at).toLocaleDateString()}
                 </td>
-                <td className="px-4 py-3">
-                  <div className="flex items-center justify-end gap-2">
+                <td className="px-3 py-2">
+                  <div className="flex items-center justify-end gap-1">
                     {user.role !== 'admin' && (
                       <>
                         <Button
                           variant="ghost"
                           size="sm"
+                          className="h-7 w-7 p-0"
                           onClick={() => toggleStatus(user.id, user.status)}
                           disabled={actionLoading === user.id}
                           title={user.status === 'active' ? '禁用用户' : '启用用户'}
@@ -351,6 +356,7 @@ function UserManagement({ onNavigateToUsage }) {
                         <Button
                           variant="ghost"
                           size="sm"
+                          className="h-7 w-7 p-0"
                           onClick={() => deleteUser(user.id, user.username || user.email)}
                           disabled={actionLoading === user.id}
                           title="删除用户"
