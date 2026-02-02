@@ -13,7 +13,7 @@ const router = express.Router();
 const SKILL_NAME_REGEX = /^[a-zA-Z0-9_-]{1,100}$/;
 
 // Trusted git hosting domains
-const TRUSTED_GIT_HOSTS = ['github.com', 'gitlab.com', 'bitbucket.org'];
+const TRUSTED_GIT_HOSTS = ['github.com', 'gitlab.com', 'bitbucket.org', 'git.amberweather.com'];
 
 // Configure multer for zip file uploads
 const upload = multer({
@@ -85,11 +85,52 @@ async function isValidSkill(skillPath) {
 }
 
 /**
+ * Check if URL is SSH format (git@host:path)
+ */
+function isSshUrl(url) {
+  return /^[a-zA-Z0-9_-]+@[a-zA-Z0-9.-]+:.+$/.test(url);
+}
+
+/**
+ * Parse SSH URL format (git@host:owner/repo.git)
+ */
+function parseSshUrl(url) {
+  const match = url.match(/^[a-zA-Z0-9_-]+@([a-zA-Z0-9.-]+):(.+)$/);
+  if (!match) return null;
+
+  const host = match[1].toLowerCase();
+  const pathPart = match[2].replace(/\.git$/, '');
+  const pathParts = pathPart.split('/');
+
+  if (pathParts.length >= 2) {
+    return { host, owner: pathParts[0], repo: pathParts[1] };
+  }
+  return { host, owner: null, repo: null };
+}
+
+/**
  * Validate GitHub URL
  */
 function validateGitUrl(url) {
   if (!url || typeof url !== 'string') {
     return { valid: false, error: 'Repository URL is required' };
+  }
+
+  // Handle SSH format: git@host:owner/repo.git
+  if (isSshUrl(url)) {
+    const parsed = parseSshUrl(url);
+    if (!parsed) {
+      return { valid: false, error: 'Invalid SSH URL format' };
+    }
+
+    if (!TRUSTED_GIT_HOSTS.includes(parsed.host)) {
+      return {
+        valid: false,
+        error: `Only trusted git hosts are allowed: ${TRUSTED_GIT_HOSTS.join(', ')}`
+      };
+    }
+
+    return { valid: true, isSsh: true };
   }
 
   let parsedUrl;
@@ -99,11 +140,20 @@ function validateGitUrl(url) {
     return { valid: false, error: 'Invalid URL format' };
   }
 
-  if (parsedUrl.protocol !== 'https:') {
-    return { valid: false, error: 'Only HTTPS URLs are allowed' };
+  const host = parsedUrl.hostname.toLowerCase();
+  const allowedProtocols = ['https:', 'http:'];
+
+  // Allow http protocol only for git.amberweather.com
+  if (host === 'git.amberweather.com') {
+    if (!allowedProtocols.includes(parsedUrl.protocol)) {
+      return { valid: false, error: 'Only HTTPS or HTTP URLs are allowed for this host' };
+    }
+  } else {
+    if (parsedUrl.protocol !== 'https:') {
+      return { valid: false, error: 'Only HTTPS URLs are allowed' };
+    }
   }
 
-  const host = parsedUrl.hostname.toLowerCase();
   if (!TRUSTED_GIT_HOSTS.includes(host)) {
     return {
       valid: false,
@@ -118,6 +168,15 @@ function validateGitUrl(url) {
  * Extract owner and repo from git URL
  */
 function parseGitUrl(url) {
+  // Handle SSH format
+  if (isSshUrl(url)) {
+    const parsed = parseSshUrl(url);
+    if (parsed && parsed.owner && parsed.repo) {
+      return { owner: parsed.owner, repo: parsed.repo };
+    }
+    return null;
+  }
+
   const parsedUrl = new URL(url);
   const pathParts = parsedUrl.pathname.replace(/^\//, '').replace(/\.git$/, '').split('/');
   if (pathParts.length >= 2) {
