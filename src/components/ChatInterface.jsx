@@ -2542,8 +2542,9 @@ function ChatInterface({ selectedProject, selectedSession, ws, sendMessage, mess
         };
         // Prepend new messages to the existing ones
         setSessionMessages(prev => [...moreMessages, ...prev]);
+        return true;
       }
-      return true;
+      return false;
     } finally {
       isLoadingMoreRef.current = false;
     }
@@ -2580,6 +2581,12 @@ function ChatInterface({ selectedProject, selectedSession, ws, sendMessage, mess
 
     container.scrollTop = top + Math.max(scrollDiff, 0);
     pendingScrollRestoreRef.current = null;
+
+    // Unlock top loading after scroll position is restored
+    // Use setTimeout to ensure it happens after the current event loop
+    setTimeout(() => {
+      topLoadLockRef.current = false;
+    }, 100);
   }, [chatMessages.length]);
 
   useEffect(() => {
