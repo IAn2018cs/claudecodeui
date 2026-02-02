@@ -644,13 +644,22 @@ async function queryClaudeSDK(command, options = {}, ws) {
               const cacheReadTokens = modelData.cacheReadInputTokens || 0;
               const cacheCreationTokens = modelData.cacheCreationInputTokens || 0;
 
+              // Extract detailed cache creation tokens if available
+              const cacheCreation = modelData.cacheCreation || {};
+              const cacheCreation5mTokens = cacheCreation.ephemeral5mInputTokens || 0;
+              const cacheCreation1hTokens = cacheCreation.ephemeral1hInputTokens || 0;
+              const hasPreciseCacheData = cacheCreation5mTokens > 0 || cacheCreation1hTokens > 0;
+
               const normalizedModel = normalizeModelName(modelKey);
               const cost = calculateCost({
                 model: normalizedModel,
                 inputTokens,
                 outputTokens,
                 cacheReadTokens,
-                cacheCreationTokens
+                // Use precise data if available, otherwise fallback to legacy field
+                cacheCreation5mTokens: hasPreciseCacheData ? cacheCreation5mTokens : undefined,
+                cacheCreation1hTokens: hasPreciseCacheData ? cacheCreation1hTokens : undefined,
+                cacheCreationTokens: hasPreciseCacheData ? undefined : cacheCreationTokens
               });
 
               // Insert usage record

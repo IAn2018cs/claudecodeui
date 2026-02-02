@@ -209,14 +209,26 @@ async function scanSessionFile(userUuid, sessionId, filePath, startLine) {
       const inputTokens = usage.input_tokens || 0;
       const outputTokens = usage.output_tokens || 0;
       const cacheReadTokens = usage.cache_read_input_tokens || 0;
-      const cacheCreationTokens = usage.cache_creation_input_tokens || 0;
+
+      // Extract detailed cache creation tokens from nested cache_creation object
+      // Structure: usage.cache_creation.ephemeral_5m_input_tokens / ephemeral_1h_input_tokens
+      const cacheCreation = usage.cache_creation || {};
+      const cacheCreation5mTokens = cacheCreation.ephemeral_5m_input_tokens || 0;
+      const cacheCreation1hTokens = cacheCreation.ephemeral_1h_input_tokens || 0;
+
+      // Fallback to legacy field if nested object not present
+      const totalCacheCreationTokens = usage.cache_creation_input_tokens || 0;
+      const hasPreciseCacheData = cacheCreation5mTokens > 0 || cacheCreation1hTokens > 0;
 
       const cost = calculateCost({
         model,
         inputTokens,
         outputTokens,
         cacheReadTokens,
-        cacheCreationTokens
+        // Use precise data if available, otherwise fallback to legacy field
+        cacheCreation5mTokens: hasPreciseCacheData ? cacheCreation5mTokens : undefined,
+        cacheCreation1hTokens: hasPreciseCacheData ? cacheCreation1hTokens : undefined,
+        cacheCreationTokens: hasPreciseCacheData ? undefined : totalCacheCreationTokens
       });
 
       // Determine the date from the entry timestamp or use current date
@@ -227,7 +239,7 @@ async function scanSessionFile(userUuid, sessionId, filePath, startLine) {
       // Uses session_id (or user_uuid) + model + all token counts + time window to match
       if (usageDb.checkRecordExists(
         userUuid, sessionId, model, inputTokens, outputTokens,
-        cacheReadTokens, cacheCreationTokens, entryTimestamp
+        cacheReadTokens, totalCacheCreationTokens, entryTimestamp
       )) {
         // Record already exists (likely from SDK), skip to avoid duplicate counting
         continue;
@@ -241,7 +253,7 @@ async function scanSessionFile(userUuid, sessionId, filePath, startLine) {
         input_tokens: inputTokens,
         output_tokens: outputTokens,
         cache_read_tokens: cacheReadTokens,
-        cache_creation_tokens: cacheCreationTokens,
+        cache_creation_tokens: totalCacheCreationTokens,
         cost_usd: cost,
         source: 'cli',
         created_at: entryTimestamp

@@ -15,21 +15,24 @@ const PRICING_PER_MILLION = {
     input: 5.00,
     output: 25.00,
     cacheRead: 0.50,
-    cacheCreate: 6.25
+    cacheCreate5m: 6.25,    // 1.25x base (5-minute ephemeral cache)
+    cacheCreate1h: 10.00    // 2x base (1-hour extended cache)
   },
   // Claude Sonnet 4.5
   'claude-sonnet-4-5-20250929': {
     input: 3.00,
     output: 15.00,
     cacheRead: 0.30,
-    cacheCreate: 3.75
+    cacheCreate5m: 3.75,    // 1.25x base
+    cacheCreate1h: 6.00     // 2x base
   },
   // Claude Haiku 4.5
   'claude-haiku-4-5-20251001': {
     input: 1.00,
     output: 5.00,
     cacheRead: 0.10,
-    cacheCreate: 1.25
+    cacheCreate5m: 1.25,    // 1.25x base
+    cacheCreate1h: 2.00     // 2x base
   },
   // ============ Legacy Models ============
   // Claude Opus 4.1
@@ -37,42 +40,48 @@ const PRICING_PER_MILLION = {
     input: 15.00,
     output: 75.00,
     cacheRead: 1.50,
-    cacheCreate: 18.75
+    cacheCreate5m: 18.75,   // 1.25x base
+    cacheCreate1h: 30.00    // 2x base
   },
   // Claude Opus 4
   'claude-opus-4-20250514': {
     input: 15.00,
     output: 75.00,
     cacheRead: 1.50,
-    cacheCreate: 18.75
+    cacheCreate5m: 18.75,   // 1.25x base
+    cacheCreate1h: 30.00    // 2x base
   },
   // Claude Sonnet 4
   'claude-sonnet-4-20250514': {
     input: 3.00,
     output: 15.00,
     cacheRead: 0.30,
-    cacheCreate: 3.75
+    cacheCreate5m: 3.75,    // 1.25x base
+    cacheCreate1h: 6.00     // 2x base
   },
   // Claude Sonnet 3.7
   'claude-3-7-sonnet-20250219': {
     input: 3.00,
     output: 15.00,
     cacheRead: 0.30,
-    cacheCreate: 3.75
+    cacheCreate5m: 3.75,    // 1.25x base
+    cacheCreate1h: 6.00     // 2x base
   },
   // Claude Haiku 3.5
   'claude-3-5-haiku-20241022': {
     input: 0.80,
     output: 4.00,
     cacheRead: 0.08,
-    cacheCreate: 1.00
+    cacheCreate5m: 1.00,    // 1.25x base
+    cacheCreate1h: 1.60     // 2x base
   },
   // Claude Haiku 3
   'claude-3-haiku-20240307': {
     input: 0.25,
     output: 1.25,
     cacheRead: 0.03,
-    cacheCreate: 0.30
+    cacheCreate5m: 0.30,    // Per pricing doc (not exactly 1.25x)
+    cacheCreate1h: 0.50     // 2x base
   },
   // ============ Aliases ============
   // Aliases for simplified model names (pointing to latest versions)
@@ -80,19 +89,22 @@ const PRICING_PER_MILLION = {
     input: 3.00,
     output: 15.00,
     cacheRead: 0.30,
-    cacheCreate: 3.75
+    cacheCreate5m: 3.75,    // 1.25x base
+    cacheCreate1h: 6.00     // 2x base
   },
   'opus': {
     input: 5.00,
     output: 25.00,
     cacheRead: 0.50,
-    cacheCreate: 6.25
+    cacheCreate5m: 6.25,    // 1.25x base
+    cacheCreate1h: 10.00    // 2x base
   },
   'haiku': {
     input: 1.00,
     output: 5.00,
     cacheRead: 0.10,
-    cacheCreate: 1.25
+    cacheCreate5m: 1.25,    // 1.25x base
+    cacheCreate1h: 2.00     // 2x base
   }
 };
 
@@ -103,7 +115,8 @@ for (const [model, prices] of Object.entries(PRICING_PER_MILLION)) {
     input: prices.input / 1_000_000,
     output: prices.output / 1_000_000,
     cacheRead: prices.cacheRead / 1_000_000,
-    cacheCreate: prices.cacheCreate / 1_000_000
+    cacheCreate5m: prices.cacheCreate5m / 1_000_000,
+    cacheCreate1h: prices.cacheCreate1h / 1_000_000
   };
 }
 
@@ -144,7 +157,9 @@ function normalizeModelName(model) {
  * @param {number} usage.inputTokens - Input tokens
  * @param {number} usage.outputTokens - Output tokens
  * @param {number} usage.cacheReadTokens - Cache read tokens
- * @param {number} usage.cacheCreationTokens - Cache creation tokens
+ * @param {number} usage.cacheCreation5mTokens - 5-minute ephemeral cache creation tokens
+ * @param {number} usage.cacheCreation1hTokens - 1-hour extended cache creation tokens
+ * @param {number} [usage.cacheCreationTokens] - Legacy: total cache creation tokens (fallback for SDK that doesn't distinguish)
  * @returns {number} Cost in USD
  */
 function calculateCost(usage) {
@@ -159,7 +174,17 @@ function calculateCost(usage) {
   const inputCost = (usage.inputTokens || 0) * prices.input;
   const outputCost = (usage.outputTokens || 0) * prices.output;
   const cacheReadCost = (usage.cacheReadTokens || 0) * prices.cacheRead;
-  const cacheCreateCost = (usage.cacheCreationTokens || 0) * prices.cacheCreate;
+
+  // Calculate cache creation cost with distinction between 5m and 1h
+  let cacheCreateCost = 0;
+  if (usage.cacheCreation5mTokens !== undefined || usage.cacheCreation1hTokens !== undefined) {
+    // Use precise calculation with separate 5m and 1h tokens
+    cacheCreateCost = (usage.cacheCreation5mTokens || 0) * prices.cacheCreate5m +
+                      (usage.cacheCreation1hTokens || 0) * prices.cacheCreate1h;
+  } else {
+    // Fallback: use legacy cacheCreationTokens with 5m price (default assumption)
+    cacheCreateCost = (usage.cacheCreationTokens || 0) * prices.cacheCreate5m;
+  }
 
   return inputCost + outputCost + cacheReadCost + cacheCreateCost;
 }
