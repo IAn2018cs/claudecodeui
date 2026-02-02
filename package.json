@@ -1,6 +1,6 @@
 {
   "name": "@ian2018cs/agenthub",
-  "version": "0.1.9",
+  "version": "0.1.10",
   "description": "A web-based UI for AI Agents",
   "type": "module",
   "main": "server/index.js",
