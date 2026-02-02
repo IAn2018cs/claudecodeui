@@ -541,28 +541,39 @@ app.put('/api/projects/:projectName/file', authenticateToken, async (req, res) =
 
 app.get('/api/projects/:projectName/files', authenticateToken, async (req, res) => {
     try {
-
-        // Using fsPromises from import
+        // Query parameters for lazy loading
+        const { dirPath, depth = '1' } = req.query;
+        const maxDepth = Math.min(parseInt(depth) || 1, 10); // Limit max depth to 10
 
         // Use extractProjectDirectory to get the actual project path
-        let actualPath;
+        let projectPath;
         try {
-            actualPath = await extractProjectDirectory(req.params.projectName, req.user.uuid);
+            projectPath = await extractProjectDirectory(req.params.projectName, req.user.uuid);
         } catch (error) {
             console.error('Error extracting project directory:', error);
             // Fallback to simple dash replacement
-            actualPath = req.params.projectName.replace(/-/g, '/');
+            projectPath = req.params.projectName.replace(/-/g, '/');
+        }
+
+        // Determine target path (project root or specific directory)
+        let targetPath = projectPath;
+        if (dirPath) {
+            // Ensure the requested path is within the project directory (security check)
+            const normalizedDirPath = path.normalize(dirPath);
+            if (!normalizedDirPath.startsWith(projectPath)) {
+                return res.status(403).json({ error: 'Access denied: path outside project directory' });
+            }
+            targetPath = normalizedDirPath;
         }
 
         // Check if path exists
         try {
-            await fsPromises.access(actualPath);
+            await fsPromises.access(targetPath);
         } catch (e) {
-            return res.status(404).json({ error: `Project path not found: ${actualPath}` });
+            return res.status(404).json({ error: `Path not found: ${targetPath}` });
         }
 
-        const files = await getFileTree(actualPath, 10, 0, true);
-        const hiddenFiles = files.filter(f => f.name.startsWith('.'));
+        const files = await getFileTree(targetPath, maxDepth, 0, true);
         res.json(files);
     } catch (error) {
         console.error('[ERROR] File tree error:', error.message);
@@ -1555,7 +1566,24 @@ function permToRwx(perm) {
     return r + w + x;
 }
 
-async function getFileTree(dirPath, maxDepth = 3, currentDepth = 0, showHidden = true) {
+// List of directories to skip when building file tree
+const SKIP_DIRECTORIES = new Set([
+    'node_modules', 'dist', 'build', '.git', '.svn', '.hg',
+    '__pycache__', '.pytest_cache', '.venv', 'venv',
+    '.next', '.nuxt', 'coverage', '.cache'
+]);
+
+// Check if a directory has any visible children (for lazy loading indicator)
+async function hasDirectoryChildren(dirPath) {
+    try {
+        const entries = await fsPromises.readdir(dirPath, { withFileTypes: true });
+        return entries.some(entry => !SKIP_DIRECTORIES.has(entry.name));
+    } catch {
+        return false;
+    }
+}
+
+async function getFileTree(dirPath, maxDepth = 1, currentDepth = 0, showHidden = true) {
     // Using fsPromises from import
     const items = [];
 
@@ -1563,16 +1591,8 @@ async function getFileTree(dirPath, maxDepth = 3, currentDepth = 0, showHidden =
         const entries = await fsPromises.readdir(dirPath, { withFileTypes: true });
 
         for (const entry of entries) {
-            // Debug: log all entries including hidden files
-
-
             // Skip heavy build directories and VCS directories
-            if (entry.name === 'node_modules' ||
-                entry.name === 'dist' ||
-                entry.name === 'build' ||
-                entry.name === '.git' ||
-                entry.name === '.svn' ||
-                entry.name === '.hg') continue;
+            if (SKIP_DIRECTORIES.has(entry.name)) continue;
 
             const itemPath = path.join(dirPath, entry.name);
             const item = {
@@ -1602,15 +1622,22 @@ async function getFileTree(dirPath, maxDepth = 3, currentDepth = 0, showHidden =
                 item.permissionsRwx = '---------';
             }
 
-            if (entry.isDirectory() && currentDepth < maxDepth) {
-                // Recursively get subdirectories but limit depth
-                try {
-                    // Check if we can access the directory before trying to read it
-                    await fsPromises.access(item.path, fs.constants.R_OK);
-                    item.children = await getFileTree(item.path, maxDepth, currentDepth + 1, showHidden);
-                } catch (e) {
-                    // Silently skip directories we can't access (permission denied, etc.)
-                    item.children = [];
+            if (entry.isDirectory()) {
+                // For lazy loading: check if directory has children without loading them
+                if (currentDepth >= maxDepth) {
+                    // Don't load children, just check if they exist
+                    item.hasChildren = await hasDirectoryChildren(item.path);
+                    item.children = []; // Empty array, will be loaded on demand
+                } else {
+                    // Load children up to maxDepth
+                    try {
+                        await fsPromises.access(item.path, fs.constants.R_OK);
+                        item.children = await getFileTree(item.path, maxDepth, currentDepth + 1, showHidden);
+                        item.hasChildren = item.children.length > 0;
+                    } catch (e) {
+                        item.children = [];
+                        item.hasChildren = false;
+                    }
                 }
             }
 

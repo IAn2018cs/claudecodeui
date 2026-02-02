@@ -136,8 +136,13 @@ export const api = {
       method: 'PUT',
       body: JSON.stringify({ filePath, content }),
     }),
-  getFiles: (projectName) =>
-    authenticatedFetch(`/api/projects/${projectName}/files`),
+  getFiles: (projectName, options = {}) => {
+    const params = new URLSearchParams();
+    if (options.dirPath) params.set('dirPath', options.dirPath);
+    if (options.depth) params.set('depth', options.depth.toString());
+    const queryString = params.toString();
+    return authenticatedFetch(`/api/projects/${projectName}/files${queryString ? '?' + queryString : ''}`);
+  },
   uploadFiles: (projectName, formData) =>
     authenticatedFetch(`/api/projects/${projectName}/upload-files`, {
       method: 'POST',

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { ScrollArea } from './ui/scroll-area';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
-import { Folder, FolderOpen, File, FileText, FileCode, List, TableProperties, Eye, Search, X, Upload, Trash2 } from 'lucide-react';
+import { Folder, FolderOpen, File, FileText, FileCode, List, TableProperties, Eye, Search, X, Upload, Trash2, Loader2, ChevronRight } from 'lucide-react';
 import { cn } from '../lib/utils';
 import CodeEditor from './CodeEditor';
 import ImageViewer from './ImageViewer';
@@ -13,6 +13,8 @@ function FileTree({ selectedProject }) {
   const [files, setFiles] = useState([]);
   const [loading, setLoading] = useState(false);
   const [expandedDirs, setExpandedDirs] = useState(new Set());
+  const [loadingPaths, setLoadingPaths] = useState(new Set()); // Paths currently being loaded
+  const [loadedPaths, setLoadedPaths] = useState(new Set()); // Paths that have been loaded
   const [selectedFile, setSelectedFile] = useState(null);
   const [selectedImage, setSelectedImage] = useState(null);
   const [viewMode, setViewMode] = useState('detailed'); // 'simple', 'detailed', 'compact'
@@ -26,6 +28,10 @@ function FileTree({ selectedProject }) {
 
   useEffect(() => {
     if (selectedProject) {
+      // Reset state when project changes
+      setExpandedDirs(new Set());
+      setLoadedPaths(new Set());
+      setLoadingPaths(new Set());
       fetchFiles();
     }
   }, [selectedProject]);
@@ -86,7 +92,8 @@ function FileTree({ selectedProject }) {
   const fetchFiles = async () => {
     setLoading(true);
     try {
-      const response = await api.getFiles(selectedProject.name);
+      // Only load root level files (depth=1) for initial load
+      const response = await api.getFiles(selectedProject.name, { depth: 1 });
 
       if (!response.ok) {
         const errorText = await response.text();
@@ -103,6 +110,51 @@ function FileTree({ selectedProject }) {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Load children for a specific directory (lazy loading)
+  const loadDirectoryChildren = async (dirPath) => {
+    if (loadedPaths.has(dirPath) || loadingPaths.has(dirPath)) {
+      return;
+    }
+
+    setLoadingPaths(prev => new Set([...prev, dirPath]));
+
+    try {
+      const response = await api.getFiles(selectedProject.name, { dirPath, depth: 1 });
+
+      if (!response.ok) {
+        console.error('Failed to load directory:', dirPath);
+        return;
+      }
+
+      const children = await response.json();
+
+      // Update the file tree with loaded children
+      setFiles(prevFiles => updateTreeChildren(prevFiles, dirPath, children));
+      setLoadedPaths(prev => new Set([...prev, dirPath]));
+    } catch (error) {
+      console.error('Error loading directory:', error);
+    } finally {
+      setLoadingPaths(prev => {
+        const next = new Set(prev);
+        next.delete(dirPath);
+        return next;
+      });
+    }
+  };
+
+  // Recursively update children in the file tree
+  const updateTreeChildren = (items, targetPath, newChildren) => {
+    return items.map(item => {
+      if (item.path === targetPath) {
+        return { ...item, children: newChildren };
+      }
+      if (item.type === 'directory' && item.children && item.children.length > 0) {
+        return { ...item, children: updateTreeChildren(item.children, targetPath, newChildren) };
+      }
+      return item;
+    });
   };
 
   // Handle file upload
@@ -184,12 +236,16 @@ function FileTree({ selectedProject }) {
     }
   };
 
-  const toggleDirectory = (path) => {
+  const toggleDirectory = async (path, hasChildren) => {
     const newExpanded = new Set(expandedDirs);
     if (newExpanded.has(path)) {
       newExpanded.delete(path);
     } else {
       newExpanded.add(path);
+      // Load children if not already loaded and directory has children
+      if (hasChildren && !loadedPaths.has(path)) {
+        await loadDirectoryChildren(path);
+      }
     }
     setExpandedDirs(newExpanded);
   };
@@ -224,71 +280,92 @@ function FileTree({ selectedProject }) {
   };
 
   const renderFileTree = (items, level = 0) => {
-    return items.map((item) => (
-      <div key={item.path} className="select-none group/item">
-        <div
-          className={cn(
-            "w-full flex items-center justify-between p-2 hover:bg-accent cursor-pointer",
-          )}
-          style={{ paddingLeft: `${level * 16 + 12}px` }}
-          onClick={() => {
-            if (item.type === 'directory') {
-              toggleDirectory(item.path);
-            } else if (isImageFile(item.name)) {
-              setSelectedImage({
-                name: item.name,
-                path: item.path,
-                projectPath: selectedProject.path,
-                projectName: selectedProject.name
-              });
-            } else {
-              setSelectedFile({
-                name: item.name,
-                path: item.path,
-                projectPath: selectedProject.path,
-                projectName: selectedProject.name
-              });
-            }
-          }}
-        >
-          <div className="flex items-center gap-2 min-w-0 flex-1">
-            {item.type === 'directory' ? (
-              expandedDirs.has(item.path) ? (
-                <FolderOpen className="w-4 h-4 text-blue-500 flex-shrink-0" />
-              ) : (
-                <Folder className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-              )
-            ) : (
-              getFileIcon(item.name)
-            )}
-            <span className="text-sm truncate text-foreground">
-              {item.name}
-            </span>
-          </div>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-6 w-6 p-0 opacity-0 group-hover/item:opacity-100 transition-opacity flex-shrink-0"
-            onClick={(e) => {
-              e.stopPropagation();
-              setDeleteConfirm({ path: item.path, name: item.name, type: item.type });
-            }}
-            title={`删除${item.type === 'directory' ? '文件夹' : '文件'}`}
-          >
-            <Trash2 className="w-3.5 h-3.5 text-muted-foreground hover:text-destructive" />
-          </Button>
-        </div>
+    return items.map((item) => {
+      const isLoading = loadingPaths.has(item.path);
+      const isExpanded = expandedDirs.has(item.path);
+      const hasChildren = item.hasChildren || (item.children && item.children.length > 0);
 
-        {item.type === 'directory' &&
-         expandedDirs.has(item.path) &&
-         item.children &&
-         item.children.length > 0 && (
-          <div>
-            {renderFileTree(item.children, level + 1)}
+      return (
+        <div key={item.path} className="select-none group/item">
+          <div
+            className={cn(
+              "w-full flex items-center justify-between p-2 hover:bg-accent cursor-pointer",
+            )}
+            style={{ paddingLeft: `${level * 16 + 12}px` }}
+            onClick={() => {
+              if (item.type === 'directory') {
+                toggleDirectory(item.path, hasChildren);
+              } else if (isImageFile(item.name)) {
+                setSelectedImage({
+                  name: item.name,
+                  path: item.path,
+                  projectPath: selectedProject.path,
+                  projectName: selectedProject.name
+                });
+              } else {
+                setSelectedFile({
+                  name: item.name,
+                  path: item.path,
+                  projectPath: selectedProject.path,
+                  projectName: selectedProject.name
+                });
+              }
+            }}
+          >
+            <div className="flex items-center gap-2 min-w-0 flex-1">
+              {item.type === 'directory' ? (
+                isLoading ? (
+                  <Loader2 className="w-4 h-4 text-blue-500 flex-shrink-0 animate-spin" />
+                ) : isExpanded ? (
+                  <FolderOpen className="w-4 h-4 text-blue-500 flex-shrink-0" />
+                ) : hasChildren ? (
+                  <Folder className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                ) : (
+                  <Folder className="w-4 h-4 text-muted-foreground/50 flex-shrink-0" />
+                )
+              ) : (
+                getFileIcon(item.name)
+              )}
+              <span className="text-sm truncate text-foreground">
+                {item.name}
+              </span>
+              {item.type === 'directory' && hasChildren && !isExpanded && !isLoading && (
+                <ChevronRight className="w-3 h-3 text-muted-foreground flex-shrink-0" />
+              )}
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-6 w-6 p-0 opacity-0 group-hover/item:opacity-100 transition-opacity flex-shrink-0"
+              onClick={(e) => {
+                e.stopPropagation();
+                setDeleteConfirm({ path: item.path, name: item.name, type: item.type });
+              }}
+              title={`删除${item.type === 'directory' ? '文件夹' : '文件'}`}
+            >
+              <Trash2 className="w-3.5 h-3.5 text-muted-foreground hover:text-destructive" />
+            </Button>
           </div>
-        )}
-      </div>
-    ));
+
+          {item.type === 'directory' && isExpanded && (
+            <div>
+              {isLoading ? (
+                <div className="flex items-center gap-2 p-2 text-sm text-muted-foreground" style={{ paddingLeft: `${(level + 1) * 16 + 12}px` }}>
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                  加载中...
+                </div>
+              ) : item.children && item.children.length > 0 ? (
+                renderFileTree(item.children, level + 1)
+              ) : (
+                <div className="p-2 text-sm text-muted-foreground" style={{ paddingLeft: `${(level + 1) * 16 + 12}px` }}>
+                  空文件夹
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      );
+    });
   };
 
   const isImageFile = (filename) => {
@@ -317,151 +394,203 @@ function FileTree({ selectedProject }) {
 
   // Render detailed view with table-like layout
   const renderDetailedView = (items, level = 0) => {
-    return items.map((item) => (
-      <div key={item.path} className="select-none group/item">
-        <div
-          className={cn(
-            "grid grid-cols-12 gap-2 p-2 hover:bg-accent cursor-pointer items-center",
-          )}
-          style={{ paddingLeft: `${level * 16 + 12}px` }}
-          onClick={() => {
-            if (item.type === 'directory') {
-              toggleDirectory(item.path);
-            } else if (isImageFile(item.name)) {
-              setSelectedImage({
-                name: item.name,
-                path: item.path,
-                projectPath: selectedProject.path,
-                projectName: selectedProject.name
-              });
-            } else {
-              setSelectedFile({
-                name: item.name,
-                path: item.path,
-                projectPath: selectedProject.path,
-                projectName: selectedProject.name
-              });
-            }
-          }}
-        >
-          <div className="col-span-4 flex items-center gap-2 min-w-0">
-            {item.type === 'directory' ? (
-              expandedDirs.has(item.path) ? (
-                <FolderOpen className="w-4 h-4 text-blue-500 flex-shrink-0" />
-              ) : (
-                <Folder className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-              )
-            ) : (
-              getFileIcon(item.name)
-            )}
-            <span className="text-sm truncate text-foreground">
-              {item.name}
-            </span>
-          </div>
-          <div className="col-span-2 text-sm text-muted-foreground">
-            {item.type === 'file' ? formatFileSize(item.size) : '-'}
-          </div>
-          <div className="col-span-3 text-sm text-muted-foreground">
-            {formatRelativeTime(item.modified)}
-          </div>
-          <div className="col-span-2 text-sm text-muted-foreground font-mono">
-            {item.permissionsRwx || '-'}
-          </div>
-          <div className="col-span-1 flex justify-end">
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-6 w-6 p-0 opacity-0 group-hover/item:opacity-100 transition-opacity"
-              onClick={(e) => {
-                e.stopPropagation();
-                setDeleteConfirm({ path: item.path, name: item.name, type: item.type });
-              }}
-              title={`删除${item.type === 'directory' ? '文件夹' : '文件'}`}
-            >
-              <Trash2 className="w-3.5 h-3.5 text-muted-foreground hover:text-destructive" />
-            </Button>
-          </div>
-        </div>
+    return items.map((item) => {
+      const isLoading = loadingPaths.has(item.path);
+      const isExpanded = expandedDirs.has(item.path);
+      const hasChildren = item.hasChildren || (item.children && item.children.length > 0);
 
-        {item.type === 'directory' &&
-         expandedDirs.has(item.path) &&
-         item.children &&
-         renderDetailedView(item.children, level + 1)}
-      </div>
-    ));
+      return (
+        <div key={item.path} className="select-none group/item">
+          <div
+            className={cn(
+              "grid grid-cols-12 gap-2 p-2 hover:bg-accent cursor-pointer items-center",
+            )}
+            style={{ paddingLeft: `${level * 16 + 12}px` }}
+            onClick={() => {
+              if (item.type === 'directory') {
+                toggleDirectory(item.path, hasChildren);
+              } else if (isImageFile(item.name)) {
+                setSelectedImage({
+                  name: item.name,
+                  path: item.path,
+                  projectPath: selectedProject.path,
+                  projectName: selectedProject.name
+                });
+              } else {
+                setSelectedFile({
+                  name: item.name,
+                  path: item.path,
+                  projectPath: selectedProject.path,
+                  projectName: selectedProject.name
+                });
+              }
+            }}
+          >
+            <div className="col-span-4 flex items-center gap-2 min-w-0">
+              {item.type === 'directory' ? (
+                isLoading ? (
+                  <Loader2 className="w-4 h-4 text-blue-500 flex-shrink-0 animate-spin" />
+                ) : isExpanded ? (
+                  <FolderOpen className="w-4 h-4 text-blue-500 flex-shrink-0" />
+                ) : hasChildren ? (
+                  <Folder className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                ) : (
+                  <Folder className="w-4 h-4 text-muted-foreground/50 flex-shrink-0" />
+                )
+              ) : (
+                getFileIcon(item.name)
+              )}
+              <span className="text-sm truncate text-foreground">
+                {item.name}
+              </span>
+              {item.type === 'directory' && hasChildren && !isExpanded && !isLoading && (
+                <ChevronRight className="w-3 h-3 text-muted-foreground flex-shrink-0" />
+              )}
+            </div>
+            <div className="col-span-2 text-sm text-muted-foreground">
+              {item.type === 'file' ? formatFileSize(item.size) : '-'}
+            </div>
+            <div className="col-span-3 text-sm text-muted-foreground">
+              {formatRelativeTime(item.modified)}
+            </div>
+            <div className="col-span-2 text-sm text-muted-foreground font-mono">
+              {item.permissionsRwx || '-'}
+            </div>
+            <div className="col-span-1 flex justify-end">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-6 w-6 p-0 opacity-0 group-hover/item:opacity-100 transition-opacity"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setDeleteConfirm({ path: item.path, name: item.name, type: item.type });
+                }}
+                title={`删除${item.type === 'directory' ? '文件夹' : '文件'}`}
+              >
+                <Trash2 className="w-3.5 h-3.5 text-muted-foreground hover:text-destructive" />
+              </Button>
+            </div>
+          </div>
+
+          {item.type === 'directory' && isExpanded && (
+            <div>
+              {isLoading ? (
+                <div className="grid grid-cols-12 gap-2 p-2 text-sm text-muted-foreground items-center" style={{ paddingLeft: `${(level + 1) * 16 + 12}px` }}>
+                  <div className="col-span-4 flex items-center gap-2">
+                    <Loader2 className="w-3 h-3 animate-spin" />
+                    加载中...
+                  </div>
+                </div>
+              ) : item.children && item.children.length > 0 ? (
+                renderDetailedView(item.children, level + 1)
+              ) : (
+                <div className="grid grid-cols-12 gap-2 p-2 text-sm text-muted-foreground" style={{ paddingLeft: `${(level + 1) * 16 + 12}px` }}>
+                  <div className="col-span-4">空文件夹</div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      );
+    });
   };
 
   // Render compact view with inline details
   const renderCompactView = (items, level = 0) => {
-    return items.map((item) => (
-      <div key={item.path} className="select-none group/item">
-        <div
-          className={cn(
-            "flex items-center justify-between p-2 hover:bg-accent cursor-pointer",
-          )}
-          style={{ paddingLeft: `${level * 16 + 12}px` }}
-          onClick={() => {
-            if (item.type === 'directory') {
-              toggleDirectory(item.path);
-            } else if (isImageFile(item.name)) {
-              setSelectedImage({
-                name: item.name,
-                path: item.path,
-                projectPath: selectedProject.path,
-                projectName: selectedProject.name
-              });
-            } else {
-              setSelectedFile({
-                name: item.name,
-                path: item.path,
-                projectPath: selectedProject.path,
-                projectName: selectedProject.name
-              });
-            }
-          }}
-        >
-          <div className="flex items-center gap-2 min-w-0">
-            {item.type === 'directory' ? (
-              expandedDirs.has(item.path) ? (
-                <FolderOpen className="w-4 h-4 text-blue-500 flex-shrink-0" />
-              ) : (
-                <Folder className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-              )
-            ) : (
-              getFileIcon(item.name)
-            )}
-            <span className="text-sm truncate text-foreground">
-              {item.name}
-            </span>
-          </div>
-          <div className="flex items-center gap-3 text-xs text-muted-foreground">
-            {item.type === 'file' && (
-              <>
-                <span>{formatFileSize(item.size)}</span>
-                <span className="font-mono">{item.permissionsRwx}</span>
-              </>
-            )}
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-6 w-6 p-0 opacity-0 group-hover/item:opacity-100 transition-opacity"
-              onClick={(e) => {
-                e.stopPropagation();
-                setDeleteConfirm({ path: item.path, name: item.name, type: item.type });
-              }}
-              title={`删除${item.type === 'directory' ? '文件夹' : '文件'}`}
-            >
-              <Trash2 className="w-3.5 h-3.5 text-muted-foreground hover:text-destructive" />
-            </Button>
-          </div>
-        </div>
+    return items.map((item) => {
+      const isLoading = loadingPaths.has(item.path);
+      const isExpanded = expandedDirs.has(item.path);
+      const hasChildren = item.hasChildren || (item.children && item.children.length > 0);
 
-        {item.type === 'directory' &&
-         expandedDirs.has(item.path) &&
-         item.children &&
-         renderCompactView(item.children, level + 1)}
-      </div>
-    ));
+      return (
+        <div key={item.path} className="select-none group/item">
+          <div
+            className={cn(
+              "flex items-center justify-between p-2 hover:bg-accent cursor-pointer",
+            )}
+            style={{ paddingLeft: `${level * 16 + 12}px` }}
+            onClick={() => {
+              if (item.type === 'directory') {
+                toggleDirectory(item.path, hasChildren);
+              } else if (isImageFile(item.name)) {
+                setSelectedImage({
+                  name: item.name,
+                  path: item.path,
+                  projectPath: selectedProject.path,
+                  projectName: selectedProject.name
+                });
+              } else {
+                setSelectedFile({
+                  name: item.name,
+                  path: item.path,
+                  projectPath: selectedProject.path,
+                  projectName: selectedProject.name
+                });
+              }
+            }}
+          >
+            <div className="flex items-center gap-2 min-w-0">
+              {item.type === 'directory' ? (
+                isLoading ? (
+                  <Loader2 className="w-4 h-4 text-blue-500 flex-shrink-0 animate-spin" />
+                ) : isExpanded ? (
+                  <FolderOpen className="w-4 h-4 text-blue-500 flex-shrink-0" />
+                ) : hasChildren ? (
+                  <Folder className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                ) : (
+                  <Folder className="w-4 h-4 text-muted-foreground/50 flex-shrink-0" />
+                )
+              ) : (
+                getFileIcon(item.name)
+              )}
+              <span className="text-sm truncate text-foreground">
+                {item.name}
+              </span>
+              {item.type === 'directory' && hasChildren && !isExpanded && !isLoading && (
+                <ChevronRight className="w-3 h-3 text-muted-foreground flex-shrink-0" />
+              )}
+            </div>
+            <div className="flex items-center gap-3 text-xs text-muted-foreground">
+              {item.type === 'file' && (
+                <>
+                  <span>{formatFileSize(item.size)}</span>
+                  <span className="font-mono">{item.permissionsRwx}</span>
+                </>
+              )}
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-6 w-6 p-0 opacity-0 group-hover/item:opacity-100 transition-opacity"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setDeleteConfirm({ path: item.path, name: item.name, type: item.type });
+                }}
+                title={`删除${item.type === 'directory' ? '文件夹' : '文件'}`}
+              >
+                <Trash2 className="w-3.5 h-3.5 text-muted-foreground hover:text-destructive" />
+              </Button>
+            </div>
+          </div>
+
+          {item.type === 'directory' && isExpanded && (
+            <div>
+              {isLoading ? (
+                <div className="flex items-center gap-2 p-2 text-sm text-muted-foreground" style={{ paddingLeft: `${(level + 1) * 16 + 12}px` }}>
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                  加载中...
+                </div>
+              ) : item.children && item.children.length > 0 ? (
+                renderCompactView(item.children, level + 1)
+              ) : (
+                <div className="p-2 text-sm text-muted-foreground" style={{ paddingLeft: `${(level + 1) * 16 + 12}px` }}>
+                  空文件夹
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      );
+    });
   };
 
   if (loading) {
