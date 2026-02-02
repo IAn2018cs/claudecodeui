@@ -81,43 +81,25 @@ async function scanCommandsDirectory(dir, baseDir, namespace) {
 const builtInCommands = [
   {
     name: '/help',
-    description: 'Show help documentation for Claude Code',
-    namespace: 'builtin',
-    metadata: { type: 'builtin' }
-  },
-  {
-    name: '/clear',
-    description: 'Clear the conversation history',
+    description: '显示帮助文档',
     namespace: 'builtin',
     metadata: { type: 'builtin' }
   },
   {
     name: '/model',
-    description: 'Switch or view the current AI model',
+    description: '切换或查看当前 AI 模型',
     namespace: 'builtin',
     metadata: { type: 'builtin' }
   },
   {
     name: '/memory',
-    description: 'Open CLAUDE.md memory file for editing',
+    description: '编辑 CLAUDE.md 记忆文件',
     namespace: 'builtin',
     metadata: { type: 'builtin' }
   },
   {
     name: '/config',
-    description: 'Open settings and configuration',
-    namespace: 'builtin',
-    metadata: { type: 'builtin' }
-  },
-  {
-    name: '/status',
-    description: 'Show system status and version information',
-    namespace: 'builtin',
-    metadata: { type: 'builtin' }
-  },
-  {
-    name: '/rewind',
-    description: 'Rewind the conversation to a previous state',
+    description: '打开设置和配置',
     namespace: 'builtin',
     metadata: { type: 'builtin' }
   }
@@ -129,27 +111,27 @@ const builtInCommands = [
  */
 const builtInHandlers = {
   '/help': async (args, context) => {
-    const helpText = `# Claude Code Commands
+    const helpText = `# Claude Code 命令
 
-## Built-in Commands
+## 内置命令
 
 ${builtInCommands.map(cmd => `### ${cmd.name}
 ${cmd.description}
 `).join('\n')}
 
-## Custom Commands
+## 自定义命令
 
-Custom commands can be created in:
-- Project: \`.claude/commands/\` (project-specific)
-- User: \`~/.claude/commands/\` (available in all projects)
+自定义命令可以创建在：
+- 项目级别：\`.claude/commands/\`（仅当前项目可用）
+- 用户级别：\`~/.claude/commands/\`（所有项目可用）
 
-### Command Syntax
+### 命令语法
 
-- **Arguments**: Use \`$ARGUMENTS\` for all args or \`$1\`, \`$2\`, etc. for positional
-- **File Includes**: Use \`@filename\` to include file contents
-- **Bash Commands**: Use \`!command\` to execute bash commands
+- **参数**：使用 \`$ARGUMENTS\` 获取所有参数，或 \`$1\`、\`$2\` 等获取位置参数
+- **文件包含**：使用 \`@filename\` 包含文件内容
+- **Bash 命令**：使用 \`!command\` 执行 bash 命令
 
-### Examples
+### 示例
 
 \`\`\`markdown
 /mycommand arg1 arg2
@@ -162,16 +144,6 @@ Custom commands can be created in:
       data: {
         content: helpText,
         format: 'markdown'
-      }
-    };
-  },
-
-  '/clear': async (args, context) => {
-    return {
-      type: 'builtin',
-      action: 'clear',
-      data: {
-        message: 'Conversation history cleared'
       }
     };
   },
@@ -197,43 +169,6 @@ Custom commands can be created in:
         message: args.length > 0
           ? `Switching to model: ${args[0]}`
           : `Current model: ${currentModel}`
-      }
-    };
-  },
-
-  '/status': async (args, context) => {
-    // Read version from package.json
-    const packageJsonPath = path.join(path.dirname(__dirname), '..', 'package.json');
-    let version = 'unknown';
-    let packageName = 'claude-code-ui';
-
-    try {
-      const packageJson = JSON.parse(await fs.readFile(packageJsonPath, 'utf8'));
-      version = packageJson.version;
-      packageName = packageJson.name;
-    } catch (err) {
-      console.error('Error reading package.json:', err);
-    }
-
-    const uptime = process.uptime();
-    const uptimeMinutes = Math.floor(uptime / 60);
-    const uptimeHours = Math.floor(uptimeMinutes / 60);
-    const uptimeFormatted = uptimeHours > 0
-      ? `${uptimeHours}h ${uptimeMinutes % 60}m`
-      : `${uptimeMinutes}m`;
-
-    return {
-      type: 'builtin',
-      action: 'status',
-      data: {
-        version,
-        packageName,
-        uptime: uptimeFormatted,
-        uptimeSeconds: Math.floor(uptime),
-        model: context?.model || 'claude-sonnet-4.5',
-        provider: context?.provider || 'claude',
-        nodeVersion: process.version,
-        platform: process.platform
       }
     };
   },
@@ -282,30 +217,6 @@ Custom commands can be created in:
       action: 'config',
       data: {
         message: 'Opening settings...'
-      }
-    };
-  },
-
-  '/rewind': async (args, context) => {
-    const steps = args[0] ? parseInt(args[0]) : 1;
-
-    if (isNaN(steps) || steps < 1) {
-      return {
-        type: 'builtin',
-        action: 'rewind',
-        data: {
-          error: 'Invalid steps parameter',
-          message: 'Usage: /rewind [number] - Rewind conversation by N steps (default: 1)'
-        }
-      };
-    }
-
-    return {
-      type: 'builtin',
-      action: 'rewind',
-      data: {
-        steps,
-        message: `Rewinding conversation by ${steps} step${steps > 1 ? 's' : ''}...`
       }
     };
   }

@@ -28,7 +28,6 @@ import TodoList from './TodoList';
 import ClaudeLogo from './ClaudeLogo.jsx';
 
 import ClaudeStatus from './ClaudeStatus';
-import TokenUsagePie from './TokenUsagePie';
 import { MicButton } from './MicButton.jsx';
 import { api, authenticatedFetch } from '../utils/api';
 import Fuse from 'fuse.js';
@@ -2031,12 +2030,6 @@ function ChatInterface({ selectedProject, selectedSession, ws, sendMessage, mess
     const { action, data } = result;
 
     switch (action) {
-      case 'clear':
-        // Clear conversation history
-        setChatMessages([]);
-        setSessionMessages([]);
-        break;
-
       case 'help':
         // Show help content
         setChatMessages(prev => [...prev, {
@@ -2046,14 +2039,39 @@ function ChatInterface({ selectedProject, selectedSession, ws, sendMessage, mess
         }]);
         break;
 
-      case 'model':
-        // Show model information
-        setChatMessages(prev => [...prev, {
-          type: 'assistant',
-          content: `**Current Model**: ${data.current.model}\n\n**Available Models**: ${data.available.claude.join(', ')}`,
-          timestamp: Date.now()
-        }]);
+      case 'model': {
+        // Check if user wants to switch model
+        const availableModels = data.available.claude;
+        const requestedModel = data.message?.includes('Switching to model:')
+          ? data.message.replace('Switching to model: ', '').trim()
+          : null;
+
+        if (requestedModel && availableModels.includes(requestedModel)) {
+          // Switch to the new model
+          setClaudeModel(requestedModel);
+          localStorage.setItem('claude-model', requestedModel);
+          setChatMessages(prev => [...prev, {
+            type: 'assistant',
+            content: `已切换到模型: **${requestedModel}**`,
+            timestamp: Date.now()
+          }]);
+        } else if (requestedModel) {
+          // Invalid model requested
+          setChatMessages(prev => [...prev, {
+            type: 'assistant',
+            content: `无效的模型: ${requestedModel}\n\n**可用模型**: ${availableModels.join(', ')}`,
+            timestamp: Date.now()
+          }]);
+        } else {
+          // Show model information
+          setChatMessages(prev => [...prev, {
+            type: 'assistant',
+            content: `**当前模型**: ${claudeModel}\n\n**可用模型**: ${availableModels.join(', ')}\n\n使用 \`/model <模型名>\` 切换模型，例如 \`/model opus\``,
+            timestamp: Date.now()
+          }]);
+        }
         break;
+      }
 
       case 'cost': {
         let costMessage;
@@ -2066,11 +2084,6 @@ function ChatInterface({ selectedProject, selectedSession, ws, sendMessage, mess
         break;
       }
 
-      case 'status': {
-        const statusMessage = `**System Status**\n\n- Version: ${data.version}\n- Uptime: ${data.uptime}\n- Model: ${data.model}\n- Provider: ${data.provider}\n- Node.js: ${data.nodeVersion}\n- Platform: ${data.platform}`;
-        setChatMessages(prev => [...prev, { type: 'assistant', content: statusMessage, timestamp: Date.now() }]);
-        break;
-      }
       case 'memory':
         // Show memory file info
         if (data.error) {
@@ -2099,29 +2112,10 @@ function ChatInterface({ selectedProject, selectedSession, ws, sendMessage, mess
         }
         break;
 
-      case 'rewind':
-        // Rewind conversation
-        if (data.error) {
-          setChatMessages(prev => [...prev, {
-            type: 'assistant',
-            content: `⚠️ ${data.message}`,
-            timestamp: Date.now()
-          }]);
-        } else {
-          // Remove last N messages
-          setChatMessages(prev => prev.slice(0, -data.steps * 2)); // Remove user + assistant pairs
-          setChatMessages(prev => [...prev, {
-            type: 'assistant',
-            content: `⏪ ${data.message}`,
-            timestamp: Date.now()
-          }]);
-        }
-        break;
-
       default:
         console.warn('Unknown built-in command action:', action);
     }
-  }, [onFileOpen, onShowSettings]);
+  }, [onFileOpen, onShowSettings, claudeModel]);
 
   // Ref to store handleSubmit so we can call it from handleCustomCommand
   const handleSubmitRef = useRef(null);
@@ -3556,6 +3550,22 @@ function ChatInterface({ selectedProject, selectedSession, ws, sendMessage, mess
     e.preventDefault();
     if (!input.trim() || isLoading || !selectedProject) return;
 
+    // Check if input is a built-in slash command and handle it
+    const trimmedInput = input.trim();
+    if (trimmedInput.startsWith('/')) {
+      // Extract command name (first word)
+      const spaceIndex = trimmedInput.indexOf(' ');
+      const commandName = spaceIndex !== -1 ? trimmedInput.slice(0, spaceIndex) : trimmedInput;
+
+      // Find matching built-in command only
+      const matchedCommand = slashCommands.find(cmd => cmd.name === commandName && cmd.namespace === 'builtin');
+      if (matchedCommand) {
+        // Execute the built-in command instead of sending to Claude
+        executeCommand(matchedCommand);
+        return;
+      }
+    }
+
     // Check spending limit before submitting - fetch fresh status from server
     if (checkLimitStatus) {
       const freshStatus = await checkLimitStatus();
@@ -3678,7 +3688,7 @@ function ChatInterface({ selectedProject, selectedSession, ws, sendMessage, mess
     if (selectedProject) {
       safeLocalStorage.removeItem(`draft_input_${selectedProject.name}`);
     }
-  }, [input, isLoading, selectedProject, attachedImages, currentSessionId, selectedSession, provider, permissionMode, onSessionActive, claudeModel, sendMessage, setInput, setAttachedImages, setUploadingImages, setImageErrors, setIsTextareaExpanded, textareaRef, setChatMessages, setIsLoading, setCanAbortSession, setClaudeStatus, setIsUserScrolledUp, scrollToBottom, checkLimitStatus, onLimitExceeded]);
+  }, [input, isLoading, selectedProject, attachedImages, currentSessionId, selectedSession, provider, permissionMode, onSessionActive, claudeModel, sendMessage, setInput, setAttachedImages, setUploadingImages, setImageErrors, setIsTextareaExpanded, textareaRef, setChatMessages, setIsLoading, setCanAbortSession, setClaudeStatus, setIsUserScrolledUp, scrollToBottom, checkLimitStatus, onLimitExceeded, executeCommand, slashCommands]);
 
   const handleGrantToolPermission = useCallback((suggestion) => {
     if (!suggestion || provider !== 'claude') {
@@ -4323,12 +4333,6 @@ function ChatInterface({ selectedProject, selectedSession, ws, sendMessage, mess
                   </span>
                 </div>
               </button>
-              {/* Token usage pie chart - positioned next to mode indicator */}
-              <TokenUsagePie
-                used={tokenBudget?.used || 0}
-                total={tokenBudget?.total || parseInt(import.meta.env.VITE_CONTEXT_WINDOW) || 160000}
-              />
-
               {/* Slash commands button */}
               <button
                 type="button"
