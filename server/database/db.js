@@ -257,6 +257,26 @@ const userDb = {
     }
   },
 
+  // Get user by ID with password hash (for password verification)
+  getUserByIdWithPassword: (userId) => {
+    try {
+      const row = db.prepare('SELECT id, username, email, uuid, role, status, password_hash FROM users WHERE id = ? AND is_active = 1').get(userId);
+      return row;
+    } catch (err) {
+      throw err;
+    }
+  },
+
+  // Update user password
+  updateUserPassword: (userId, passwordHash) => {
+    try {
+      const stmt = db.prepare('UPDATE users SET password_hash = ? WHERE id = ?');
+      return stmt.run(passwordHash, userId);
+    } catch (err) {
+      throw err;
+    }
+  },
+
   getFirstUser: () => {
     try {
       const row = db.prepare('SELECT id, username, created_at, last_login FROM users WHERE is_active = 1 LIMIT 1').get();

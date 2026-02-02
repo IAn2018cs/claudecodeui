@@ -140,6 +140,46 @@ router.delete('/users/:id', async (req, res) => {
   }
 });
 
+// Reset user password (admin only)
+router.patch('/users/:id/password', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { new_password } = req.body;
+
+    // Validate new password
+    if (!new_password || new_password.length < 6) {
+      return res.status(400).json({ error: '新密码至少需要6个字符' });
+    }
+
+    // Prevent resetting own password via admin route
+    if (parseInt(id) === req.user.id) {
+      return res.status(400).json({ error: '请通过账户设置修改自己的密码' });
+    }
+
+    const user = userDb.getUserByIdWithPassword(id);
+    if (!user) {
+      return res.status(404).json({ error: '用户不存在' });
+    }
+
+    // Can only reset password for password-login users
+    if (!user.password_hash) {
+      return res.status(400).json({ error: '该用户使用邮箱验证码登录，无法重置密码' });
+    }
+
+    // Hash new password
+    const saltRounds = 12;
+    const passwordHash = await bcrypt.hash(new_password, saltRounds);
+
+    // Update database
+    userDb.updateUserPassword(id, passwordHash);
+
+    res.json({ success: true, message: '密码已重置' });
+  } catch (error) {
+    console.error('Error resetting password:', error);
+    res.status(500).json({ error: '重置密码失败' });
+  }
+});
+
 // ==================== User Spending Limits ====================
 
 // Get user spending limits

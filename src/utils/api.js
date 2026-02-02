@@ -47,6 +47,11 @@ export const api = {
     logout: () => authenticatedFetch('/api/auth/logout', { method: 'POST' }),
     // Spending limit status
     limitStatus: () => authenticatedFetch('/api/auth/limit-status'),
+    // Change password (for password-login users)
+    changePassword: (currentPassword, newPassword) => authenticatedFetch('/api/auth/change-password', {
+      method: 'PATCH',
+      body: JSON.stringify({ current_password: currentPassword, new_password: newPassword }),
+    }),
   },
 
   // Admin endpoints
@@ -77,6 +82,11 @@ export const api = {
     updateUserLimits: (userId, limits) => authenticatedFetch(`/api/admin/users/${userId}/limits`, {
       method: 'PATCH',
       body: JSON.stringify(limits),
+    }),
+    // Reset user password (admin only)
+    resetUserPassword: (userId, newPassword) => authenticatedFetch(`/api/admin/users/${userId}/password`, {
+      method: 'PATCH',
+      body: JSON.stringify({ new_password: newPassword }),
     }),
   },
 

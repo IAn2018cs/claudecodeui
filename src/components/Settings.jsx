@@ -3,11 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Badge } from './ui/badge';
-import { X, Plus, Settings as SettingsIcon, Shield, AlertTriangle, Moon, Sun, Server, Edit3, Trash2, Globe, Terminal, Zap, FolderOpen, Check, LogOut } from 'lucide-react';
+import { X, Plus, Settings as SettingsIcon, Shield, AlertTriangle, Moon, Sun, Server, Edit3, Trash2, Globe, Terminal, Zap, FolderOpen, Check, LogOut, Key } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
 import ClaudeLogo from './ClaudeLogo';
-import { authenticatedFetch } from '../utils/api';
+import { authenticatedFetch, api } from '../utils/api';
 
 // New settings components
 import PermissionsContent from './settings/PermissionsContent';
@@ -58,6 +58,14 @@ function Settings({ isOpen, onClose, projects = [], initialTab = 'agents' }) {
   const [jsonValidationError, setJsonValidationError] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('permissions'); // 'permissions' or 'mcp'
   const [showUsageDashboard, setShowUsageDashboard] = useState(false);
+
+  // Change password state (for password-login users)
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmNewPassword, setConfirmNewPassword] = useState('');
+  const [passwordError, setPasswordError] = useState('');
+  const [passwordSuccess, setPasswordSuccess] = useState('');
+  const [passwordLoading, setPasswordLoading] = useState(false);
 
   // Code Editor settings
   const [codeEditorTheme, setCodeEditorTheme] = useState(() =>
@@ -349,6 +357,57 @@ function Settings({ isOpen, onClose, projects = [], initialTab = 'agents' }) {
       setIsSaving(false);
     }
   };
+
+  // Handle password change
+  const handleChangePassword = async (e) => {
+    e.preventDefault();
+    setPasswordError('');
+    setPasswordSuccess('');
+
+    if (!currentPassword) {
+      setPasswordError('请输入当前密码');
+      return;
+    }
+
+    if (!newPassword) {
+      setPasswordError('请输入新密码');
+      return;
+    }
+
+    if (newPassword.length < 6) {
+      setPasswordError('新密码至少需要6个字符');
+      return;
+    }
+
+    if (newPassword !== confirmNewPassword) {
+      setPasswordError('两次输入的新密码不一致');
+      return;
+    }
+
+    setPasswordLoading(true);
+
+    try {
+      const response = await api.auth.changePassword(currentPassword, newPassword);
+      const data = await response.json();
+
+      if (response.ok) {
+        setPasswordSuccess('密码修改成功');
+        setCurrentPassword('');
+        setNewPassword('');
+        setConfirmNewPassword('');
+      } else {
+        setPasswordError(data.error || '修改密码失败');
+      }
+    } catch (error) {
+      console.error('Error changing password:', error);
+      setPasswordError('网络错误，请稍后再试');
+    } finally {
+      setPasswordLoading(false);
+    }
+  };
+
+  // Check if user is a password-login user (has username that doesn't look like an email)
+  const isPasswordLoginUser = user?.username && !user.username.includes('@');
 
   const addAllowedTool = (tool) => {
     if (tool && !allowedTools.includes(tool)) {
@@ -938,6 +997,82 @@ function Settings({ isOpen, onClose, projects = [], initialTab = 'agents' }) {
                       </div>
                     </div>
                   </div>
+
+                  {/* Change Password - Only for password-login users */}
+                  {isPasswordLoginUser && (
+                    <div className="bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+                      <div className="flex items-center gap-2 mb-4">
+                        <Key className="w-5 h-5 text-blue-600" />
+                        <div className="font-medium text-foreground">修改密码</div>
+                      </div>
+                      <form onSubmit={handleChangePassword} className="space-y-3">
+                        <div>
+                          <label htmlFor="currentPassword" className="block text-sm font-medium text-foreground mb-1">
+                            当前密码
+                          </label>
+                          <input
+                            type="password"
+                            id="currentPassword"
+                            value={currentPassword}
+                            onChange={(e) => setCurrentPassword(e.target.value)}
+                            className="w-full px-3 py-2 border border-border rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            placeholder="请输入当前密码"
+                            disabled={passwordLoading}
+                          />
+                        </div>
+                        <div>
+                          <label htmlFor="newPassword" className="block text-sm font-medium text-foreground mb-1">
+                            新密码
+                          </label>
+                          <input
+                            type="password"
+                            id="newPassword"
+                            value={newPassword}
+                            onChange={(e) => setNewPassword(e.target.value)}
+                            className="w-full px-3 py-2 border border-border rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            placeholder="请输入新密码（至少6个字符）"
+                            disabled={passwordLoading}
+                          />
+                        </div>
+                        <div>
+                          <label htmlFor="confirmNewPassword" className="block text-sm font-medium text-foreground mb-1">
+                            确认新密码
+                          </label>
+                          <input
+                            type="password"
+                            id="confirmNewPassword"
+                            value={confirmNewPassword}
+                            onChange={(e) => setConfirmNewPassword(e.target.value)}
+                            className="w-full px-3 py-2 border border-border rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            placeholder="请再次输入新密码"
+                            disabled={passwordLoading}
+                          />
+                        </div>
+
+                        {passwordError && (
+                          <div className="p-3 bg-red-100 dark:bg-red-900/20 border border-red-300 dark:border-red-800 rounded-md">
+                            <p className="text-sm text-red-700 dark:text-red-400">{passwordError}</p>
+                          </div>
+                        )}
+
+                        {passwordSuccess && (
+                          <div className="p-3 bg-green-100 dark:bg-green-900/20 border border-green-300 dark:border-green-800 rounded-md">
+                            <p className="text-sm text-green-700 dark:text-green-400">{passwordSuccess}</p>
+                          </div>
+                        )}
+
+                        <div className="flex justify-end">
+                          <Button
+                            type="submit"
+                            disabled={passwordLoading}
+                            className="bg-blue-600 hover:bg-blue-700"
+                          >
+                            {passwordLoading ? '修改中...' : '修改密码'}
+                          </Button>
+                        </div>
+                      </form>
+                    </div>
+                  )}
 
                   {/* Logout Button */}
                   <div className="bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 rounded-lg p-4">

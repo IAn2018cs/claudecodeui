@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Button } from '../ui/button';
-import { Trash2, UserCheck, UserX, Shield, User, BarChart3, UserPlus, X, DollarSign } from 'lucide-react';
+import { Trash2, UserCheck, UserX, Shield, User, BarChart3, UserPlus, X, DollarSign, Key } from 'lucide-react';
 import { authenticatedFetch, api } from '../../utils/api';
 
 function UserManagement({ onNavigateToUsage }) {
@@ -21,6 +21,13 @@ function UserManagement({ onNavigateToUsage }) {
   const [limitForm, setLimitForm] = useState({ total_limit_usd: '', daily_limit_usd: '' });
   const [limitError, setLimitError] = useState('');
   const [limitLoading, setLimitLoading] = useState(false);
+
+  // Reset password modal state
+  const [resetPasswordUser, setResetPasswordUser] = useState(null);
+  const [resetNewPassword, setResetNewPassword] = useState('');
+  const [resetConfirmPassword, setResetConfirmPassword] = useState('');
+  const [resetError, setResetError] = useState('');
+  const [resetLoading, setResetLoading] = useState(false);
 
   const fetchUsers = async () => {
     try {
@@ -225,6 +232,59 @@ function UserManagement({ onNavigateToUsage }) {
     return `$${value.toFixed(2)}`;
   };
 
+  // Open reset password modal
+  const openResetPasswordModal = (user) => {
+    setResetPasswordUser(user);
+    setResetNewPassword('');
+    setResetConfirmPassword('');
+    setResetError('');
+  };
+
+  const closeResetPasswordModal = () => {
+    setResetPasswordUser(null);
+    setResetNewPassword('');
+    setResetConfirmPassword('');
+    setResetError('');
+  };
+
+  const handleResetPassword = async (e) => {
+    e.preventDefault();
+    setResetError('');
+
+    if (!resetNewPassword) {
+      setResetError('请输入新密码');
+      return;
+    }
+
+    if (resetNewPassword.length < 6) {
+      setResetError('密码至少需要6个字符');
+      return;
+    }
+
+    if (resetNewPassword !== resetConfirmPassword) {
+      setResetError('两次输入的密码不一致');
+      return;
+    }
+
+    setResetLoading(true);
+
+    try {
+      const response = await api.admin.resetUserPassword(resetPasswordUser.id, resetNewPassword);
+      const data = await response.json();
+
+      if (response.ok) {
+        closeResetPasswordModal();
+      } else {
+        setResetError(data.error || '重置密码失败');
+      }
+    } catch (error) {
+      console.error('Error resetting password:', error);
+      setResetError('网络错误，请稍后再试');
+    } finally {
+      setResetLoading(false);
+    }
+  };
+
   if (loading) {
     return <div className="text-center py-8 text-muted-foreground">正在加载用户...</div>;
   }
@@ -339,6 +399,19 @@ function UserManagement({ onNavigateToUsage }) {
                   <div className="flex items-center justify-end gap-1">
                     {user.role !== 'admin' && (
                       <>
+                        {/* Reset password button - only for password-login users */}
+                        {user.username && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 w-7 p-0"
+                            onClick={() => openResetPasswordModal(user)}
+                            disabled={actionLoading === user.id}
+                            title="重置密码"
+                          >
+                            <Key className="w-4 h-4 text-blue-500" />
+                          </Button>
+                        )}
                         <Button
                           variant="ghost"
                           size="sm"
@@ -531,6 +604,80 @@ function UserManagement({ onNavigateToUsage }) {
                   disabled={limitLoading}
                 >
                   {limitLoading ? '保存中...' : '保存'}
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Reset Password Modal */}
+      {resetPasswordUser && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-card border border-border rounded-lg shadow-lg w-full max-w-md p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h4 className="text-lg font-semibold text-foreground">
+                重置密码 - {resetPasswordUser.username}
+              </h4>
+              <button
+                onClick={closeResetPasswordModal}
+                className="text-muted-foreground hover:text-foreground"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleResetPassword} className="space-y-4">
+              <div>
+                <label htmlFor="resetNewPassword" className="block text-sm font-medium text-foreground mb-1">
+                  新密码
+                </label>
+                <input
+                  type="password"
+                  id="resetNewPassword"
+                  value={resetNewPassword}
+                  onChange={(e) => setResetNewPassword(e.target.value)}
+                  className="w-full px-3 py-2 border border-border rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="请输入新密码（至少6个字符）"
+                  disabled={resetLoading}
+                />
+              </div>
+
+              <div>
+                <label htmlFor="resetConfirmPassword" className="block text-sm font-medium text-foreground mb-1">
+                  确认新密码
+                </label>
+                <input
+                  type="password"
+                  id="resetConfirmPassword"
+                  value={resetConfirmPassword}
+                  onChange={(e) => setResetConfirmPassword(e.target.value)}
+                  className="w-full px-3 py-2 border border-border rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="请再次输入新密码"
+                  disabled={resetLoading}
+                />
+              </div>
+
+              {resetError && (
+                <div className="p-3 bg-red-100 dark:bg-red-900/20 border border-red-300 dark:border-red-800 rounded-md">
+                  <p className="text-sm text-red-700 dark:text-red-400">{resetError}</p>
+                </div>
+              )}
+
+              <div className="flex justify-end gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={closeResetPasswordModal}
+                  disabled={resetLoading}
+                >
+                  取消
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={resetLoading}
+                >
+                  {resetLoading ? '重置中...' : '重置密码'}
                 </Button>
               </div>
             </form>

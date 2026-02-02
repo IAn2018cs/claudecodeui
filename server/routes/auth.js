@@ -216,6 +216,48 @@ router.post('/logout', authenticateToken, (req, res) => {
   res.json({ success: true, message: 'Logged out successfully' });
 });
 
+// Change password (for password-login users)
+router.patch('/change-password', authenticateToken, async (req, res) => {
+  try {
+    const { current_password, new_password } = req.body;
+
+    // Validate parameters
+    if (!current_password || !new_password) {
+      return res.status(400).json({ error: '当前密码和新密码不能为空' });
+    }
+
+    if (new_password.length < 6) {
+      return res.status(400).json({ error: '新密码至少需要6个字符' });
+    }
+
+    // Get user with password hash
+    const user = userDb.getUserByIdWithPassword(req.user.id);
+
+    // Verify this is a password-login user
+    if (!user || !user.password_hash) {
+      return res.status(400).json({ error: '您的账户不支持密码修改' });
+    }
+
+    // Verify current password
+    const isValid = await bcrypt.compare(current_password, user.password_hash);
+    if (!isValid) {
+      return res.status(401).json({ error: '当前密码错误' });
+    }
+
+    // Hash new password
+    const saltRounds = 12;
+    const passwordHash = await bcrypt.hash(new_password, saltRounds);
+
+    // Update database
+    userDb.updateUserPassword(user.id, passwordHash);
+
+    res.json({ success: true, message: '密码修改成功' });
+  } catch (error) {
+    console.error('Error changing password:', error);
+    res.status(500).json({ error: '修改密码失败' });
+  }
+});
+
 // Get current user's spending limit status
 router.get('/limit-status', authenticateToken, (req, res) => {
   try {
