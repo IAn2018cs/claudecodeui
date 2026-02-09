@@ -1814,6 +1814,10 @@ function ChatInterface({ selectedProject, selectedSession, ws, sendMessage, mess
   const [hasMoreMessages, setHasMoreMessages] = useState(false);
   const [totalMessages, setTotalMessages] = useState(0);
   const MESSAGES_PER_PAGE = 20;
+  const updateMessagesOffset = useCallback((newOffset) => {
+    messagesOffsetRef.current = newOffset;
+    setMessagesOffset(newOffset);
+  }, []);
   const [isSystemSessionChange, setIsSystemSessionChange] = useState(false);
   const [permissionMode, setPermissionMode] = useState('default');
   // In-memory queue of tool permission prompts for the current UI view.
@@ -1833,6 +1837,7 @@ function ChatInterface({ selectedProject, selectedSession, ws, sendMessage, mess
   const isLoadingMoreRef = useRef(false);
   const topLoadLockRef = useRef(false);
   const pendingScrollRestoreRef = useRef(null);
+  const messagesOffsetRef = useRef(0);
   // Streaming throttle buffers
   const streamBufferRef = useRef('');
   const streamTimerRef = useRef(null);
@@ -2251,7 +2256,7 @@ function ChatInterface({ selectedProject, selectedSession, ws, sendMessage, mess
     }
 
     try {
-      const currentOffset = loadMore ? messagesOffset : 0;
+      const currentOffset = loadMore ? messagesOffsetRef.current : 0;
       const response = await api.sessionMessages(projectName, sessionId, MESSAGES_PER_PAGE, currentOffset, provider);
       if (!response.ok) {
         throw new Error('Failed to load session messages');
@@ -2267,7 +2272,7 @@ function ChatInterface({ selectedProject, selectedSession, ws, sendMessage, mess
       if (data.hasMore !== undefined) {
         setHasMoreMessages(data.hasMore);
         setTotalMessages(data.total);
-        setMessagesOffset(currentOffset + (data.messages?.length || 0));
+        updateMessagesOffset(currentOffset + (data.messages?.length || 0));
         return data.messages || [];
       } else {
         // Backward compatibility for non-paginated response
@@ -2286,7 +2291,7 @@ function ChatInterface({ selectedProject, selectedSession, ws, sendMessage, mess
         setIsLoadingMoreMessages(false);
       }
     }
-  }, [messagesOffset]);
+  }, [updateMessagesOffset]);
 
   // Actual diff calculation function
   const calculateDiff = (oldStr, newStr) => {
@@ -2583,10 +2588,13 @@ function ChatInterface({ selectedProject, selectedSession, ws, sendMessage, mess
     pendingScrollRestoreRef.current = null;
 
     // Unlock top loading after scroll position is restored
-    // Use setTimeout to ensure it happens after the current event loop
+    // Only unlock if scroll position is no longer near the top to prevent re-triggering
     setTimeout(() => {
-      topLoadLockRef.current = false;
-    }, 100);
+      if (scrollContainerRef.current && scrollContainerRef.current.scrollTop >= 100) {
+        topLoadLockRef.current = false;
+      }
+      // If still near top, keep locked — handleScroll will unlock when user scrolls away
+    }, 300);
   }, [chatMessages.length]);
 
   useEffect(() => {
@@ -2603,7 +2611,7 @@ function ChatInterface({ selectedProject, selectedSession, ws, sendMessage, mess
 
         if (sessionChanged) {
           // Reset pagination state when switching sessions
-          setMessagesOffset(0);
+          updateMessagesOffset(0);
           setHasMoreMessages(false);
           setTotalMessages(0);
           // Reset token budget when switching sessions
@@ -2623,7 +2631,7 @@ function ChatInterface({ selectedProject, selectedSession, ws, sendMessage, mess
           }
         } else if (currentSessionId === null) {
           // Initial load - reset pagination but not token budget
-          setMessagesOffset(0);
+          updateMessagesOffset(0);
           setHasMoreMessages(false);
           setTotalMessages(0);
 
@@ -2659,7 +2667,7 @@ function ChatInterface({ selectedProject, selectedSession, ws, sendMessage, mess
           setSessionMessages([]);
         }
         setCurrentSessionId(null);
-        setMessagesOffset(0);
+        updateMessagesOffset(0);
         setHasMoreMessages(false);
         setTotalMessages(0);
       }
