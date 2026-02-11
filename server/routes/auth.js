@@ -4,6 +4,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { userDb, verificationDb, domainWhitelistDb, usageDb } from '../database/db.js';
 import { generateToken, authenticateToken } from '../middleware/auth.js';
 import { initUserDirectories } from '../services/user-directories.js';
+import { initBuiltinSkills } from '../services/builtin-skills.js';
 import { sendVerificationCode, isSmtpConfigured } from '../services/email.js';
 
 const router = express.Router();
@@ -115,6 +116,9 @@ router.post('/verify-code', async (req, res) => {
 
       // Initialize user directories
       await initUserDirectories(uuid);
+    } else {
+      // Sync built-in skills for existing user (clean up dangling + add new)
+      await initBuiltinSkills(user.uuid);
     }
 
     // Check if user is disabled

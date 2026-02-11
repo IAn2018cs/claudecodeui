@@ -95,12 +95,47 @@ export async function saveBuiltinSkillsState(userUuid, state) {
 /**
  * Initialize built-in skills for a user
  * Creates symlinks for all built-in skills not in user's removed list
+ * Also cleans up dangling symlinks from deleted built-in skills
  */
 export async function initBuiltinSkills(userUuid) {
   const userPaths = getUserPaths(userUuid);
   const builtinSkills = await getBuiltinSkills();
   const state = await loadBuiltinSkillsState(userUuid);
+  // Clean up dangling symlinks pointing to removed built-in skills
+  try {
+    const entries = await fs.readdir(userPaths.skillsDir, { withFileTypes: true });
+    for (const entry of entries) {
+      const entryPath = path.join(userPaths.skillsDir, entry.name);
+      try {
+        const stat = await fs.lstat(entryPath);
+        if (!stat.isSymbolicLink()) continue;
 
+        const target = await fs.readlink(entryPath);
+        const realBuiltinDir = await fs.realpath(BUILTIN_SKILLS_DIR);
+        const resolvedTarget = path.resolve(path.dirname(entryPath), target);
+
+        // Only clean up symlinks that point into builtin-skills directory
+        if (!resolvedTarget.startsWith(realBuiltinDir)) continue;
+
+        // Check if the symlink target still exists
+        try {
+          await fs.access(resolvedTarget);
+        } catch {
+          // Target no longer exists, remove the dangling symlink
+          await fs.unlink(entryPath);
+          console.log(`Removed dangling builtin skill symlink: ${entry.name}`);
+        }
+      } catch (err) {
+        // Ignore errors on individual entries
+      }
+    }
+  } catch (err) {
+    if (err.code !== 'ENOENT') {
+      console.error('Error cleaning up builtin skill symlinks:', err);
+    }
+  }
+
+  // Create symlinks for new built-in skills
   for (const skill of builtinSkills) {
     // Skip if user has explicitly removed this skill
     if (state.removedSkills.includes(skill.name)) {
