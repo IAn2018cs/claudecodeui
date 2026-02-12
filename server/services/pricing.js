@@ -10,7 +10,15 @@
 // Cache pricing: read = 0.1x base, write (5min) = 1.25x base, write (1h) = 2x base
 const PRICING_PER_MILLION = {
   // ============ Latest Models ============
-  // Claude Opus 4.5 (latest flagship)
+  // Claude Opus 4.6 (latest flagship)
+  'claude-opus-4-6': {
+    input: 5.00,
+    output: 25.00,
+    cacheRead: 0.50,
+    cacheCreate5m: 6.25,    // 1.25x base (5-minute ephemeral cache)
+    cacheCreate1h: 10.00    // 2x base (1-hour extended cache)
+  },
+  // Claude Opus 4.5
   'claude-opus-4-5-20251101': {
     input: 5.00,
     output: 25.00,
