@@ -185,6 +185,15 @@ const runMigrations = () => {
       db.exec('ALTER TABLE users ADD COLUMN daily_limit_usd REAL DEFAULT NULL');
     }
 
+    // Add raw_model column to usage_records for tracking actual model IDs
+    const usageTableInfo = db.prepare("PRAGMA table_info(usage_records)").all();
+    const usageColumnNames = usageTableInfo.map(col => col.name);
+
+    if (!usageColumnNames.includes('raw_model')) {
+      console.log('Running migration: Adding raw_model column to usage_records');
+      db.exec('ALTER TABLE usage_records ADD COLUMN raw_model TEXT DEFAULT NULL');
+    }
+
     console.log('Database migrations completed successfully');
   } catch (error) {
     console.error('Error running migrations:', error.message);
@@ -616,13 +625,14 @@ const usageDb = {
   insertRecord: (record) => {
     try {
       const stmt = db.prepare(`
-        INSERT INTO usage_records (user_uuid, session_id, model, input_tokens, output_tokens, cache_read_tokens, cache_creation_tokens, cost_usd, source, created_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO usage_records (user_uuid, session_id, model, raw_model, input_tokens, output_tokens, cache_read_tokens, cache_creation_tokens, cost_usd, source, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `);
       const result = stmt.run(
         record.user_uuid,
         record.session_id || null,
         record.model,
+        record.raw_model || null,
         record.input_tokens || 0,
         record.output_tokens || 0,
         record.cache_read_tokens || 0,
@@ -728,14 +738,15 @@ const usageDb = {
     try {
       return db.prepare(`
         SELECT
-          model,
-          SUM(total_cost_usd) as cost,
-          SUM(request_count) as requests
-        FROM usage_daily_summary
-        WHERE user_uuid = ? AND date >= ? AND date <= ?
-        GROUP BY model
+          COALESCE(raw_model, model) as model,
+          model as normalized_model,
+          SUM(cost_usd) as cost,
+          COUNT(*) as requests
+        FROM usage_records
+        WHERE user_uuid = ? AND created_at >= ? AND created_at <= ?
+        GROUP BY COALESCE(raw_model, model)
         ORDER BY cost DESC
-      `).all(userUuid, startDate, endDate);
+      `).all(userUuid, startDate + 'T00:00:00', endDate + 'T23:59:59');
     } catch (err) {
       throw err;
     }
@@ -767,14 +778,15 @@ const usageDb = {
 
       const modelDistribution = db.prepare(`
         SELECT
-          model,
-          SUM(total_cost_usd) as cost,
-          SUM(request_count) as requests
-        FROM usage_daily_summary
-        WHERE date >= ? AND date <= ?
-        GROUP BY model
+          COALESCE(raw_model, model) as model,
+          model as normalized_model,
+          SUM(cost_usd) as cost,
+          COUNT(*) as requests
+        FROM usage_records
+        WHERE created_at >= ? AND created_at <= ?
+        GROUP BY COALESCE(raw_model, model)
         ORDER BY cost DESC
-      `).all(startDate, endDate);
+      `).all(startDate + 'T00:00:00', endDate + 'T23:59:59');
 
       const topUsers = db.prepare(`
         SELECT

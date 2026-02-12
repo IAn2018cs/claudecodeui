@@ -204,7 +204,8 @@ async function scanSessionFile(userUuid, sessionId, filePath, startLine) {
       }
 
       const usage = entry.message.usage;
-      const model = normalizeModelName(entry.message?.model || 'sonnet');
+      const rawModel = entry.message?.model || 'sonnet';
+      const model = normalizeModelName(rawModel);
 
       const inputTokens = usage.input_tokens || 0;
       const outputTokens = usage.output_tokens || 0;
@@ -250,6 +251,7 @@ async function scanSessionFile(userUuid, sessionId, filePath, startLine) {
         user_uuid: userUuid,
         session_id: sessionId,
         model,
+        raw_model: rawModel,
         input_tokens: inputTokens,
         output_tokens: outputTokens,
         cache_read_tokens: cacheReadTokens,

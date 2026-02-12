@@ -12,6 +12,7 @@ import { authenticatedFetch, api } from '../utils/api';
 // New settings components
 import PermissionsContent from './settings/PermissionsContent';
 import McpServersContent from './settings/McpServersContent';
+import ModelsContent from './settings/ModelsContent';
 import UserManagement from './settings/UserManagement';
 import EmailDomainWhitelist from './settings/EmailDomainWhitelist';
 import UsageDashboard from './UsageDashboard';
@@ -620,7 +621,7 @@ function Settings({ isOpen, onClose, projects = [], initialTab = 'agents' }) {
                   : 'border-transparent text-muted-foreground hover:text-foreground'
                   }`}
               >
-                代理
+                Agent
               </button>
               <button
                 onClick={() => setActiveTab('appearance')}
@@ -912,6 +913,15 @@ function Settings({ isOpen, onClose, projects = [], initialTab = 'agents' }) {
                       >
                         技能
                       </button>
+                      <button
+                        onClick={() => setSelectedCategory('models')}
+                        className={`px-3 md:px-4 py-2 md:py-3 text-xs md:text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${selectedCategory === 'models'
+                          ? 'border-blue-600 text-blue-600 dark:text-blue-400'
+                          : 'border-transparent text-muted-foreground hover:text-foreground'
+                          }`}
+                      >
+                        模型
+                      </button>
                     </div>
                   </div>
 
@@ -953,6 +963,11 @@ function Settings({ isOpen, onClose, projects = [], initialTab = 'agents' }) {
                     {/* Skills Category */}
                     {selectedCategory === 'skills' && (
                       <SkillsContent />
+                    )}
+
+                    {/* Models Category */}
+                    {selectedCategory === 'models' && (
+                      <ModelsContent />
                     )}
                   </div>
                 </div>

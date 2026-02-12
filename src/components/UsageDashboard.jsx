@@ -204,22 +204,23 @@ function UsageDashboard({ onBack }) {
               {modelDistribution.map((model) => {
                 const totalCost = modelDistribution.reduce((sum, m) => sum + (m.cost || 0), 0) || 1;
                 const percentage = ((model.cost || 0) / totalCost) * 100;
+                const normalizedModel = (model.normalized_model || model.model || '').toLowerCase();
                 const colors = {
                   opus: 'bg-purple-500',
                   sonnet: 'bg-blue-500',
                   haiku: 'bg-green-500'
                 };
-                const bgColor = colors[model.model] || 'bg-gray-500';
+                const bgColor = colors[normalizedModel] || 'bg-gray-500';
                 return (
                   <div key={model.model} className="space-y-1">
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <Badge variant="secondary" className="capitalize">{model.model}</Badge>
-                        <span className="text-sm text-muted-foreground">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <Badge variant="secondary" className="truncate max-w-[200px]" title={model.model}>{model.model}</Badge>
+                        <span className="text-sm text-muted-foreground whitespace-nowrap">
                           {formatNumber(model.requests)} 请求
                         </span>
                       </div>
-                      <span className="text-sm font-mono text-foreground">{formatCost(model.cost)}</span>
+                      <span className="text-sm font-mono text-foreground whitespace-nowrap ml-2">{formatCost(model.cost)}</span>
                     </div>
                     <div className="h-2 bg-gray-100 dark:bg-gray-800 rounded overflow-hidden">
                       <div

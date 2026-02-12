@@ -667,6 +667,7 @@ async function queryClaudeSDK(command, options = {}, ws) {
                 user_uuid: userUuid,
                 session_id: capturedSessionId,
                 model: normalizedModel,
+                raw_model: modelKey,
                 input_tokens: inputTokens,
                 output_tokens: outputTokens,
                 cache_read_tokens: cacheReadTokens,
